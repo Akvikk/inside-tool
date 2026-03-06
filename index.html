@@ -4,18 +4,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OUTSIDE tool</title>
+    <title>INSIDE tool</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 
-<body class="h-screen flex flex-col text-sm bg-[#050505] selection:bg-blue-500/30">
+<body class="h-screen flex flex-col text-sm selection:bg-blue-500/30">
 
     <!-- AMBIENT ORBS (LIVING BACKGROUND) -->
     <div class="ambient-orb orb-1"></div>
     <div class="ambient-orb orb-2"></div>
     <div class="ambient-orb orb-3"></div>
+
+    <!-- HAMBURGER MENU BACKDROP (FULL SCREEN BLUR) -->
+    <div id="hamburgerBackdrop"
+        class="fixed inset-0 bg-[#030303]/40 backdrop-blur-[12px] hidden z-20 transition-all duration-300"
+        onclick="toggleHamburgerMenu()"></div>
 
     <!-- 1. CONTROLS HEADER (Compact) -->
     <div class="glass-header px-4 flex justify-between items-center shrink-0 z-30 h-[56px]">
@@ -36,25 +41,7 @@
             </button>
         </div>
 
-        <div class="flex gap-2">
-            <!-- DATA MENU -->
-            <div class="relative">
-                <button id="dataBtn" onclick="toggleDataMenu()"
-                    class="ios-btn h-8 px-3 bg-white/5 hover:bg-white/10 text-[#98989D] font-semibold rounded-lg border border-white/10 flex items-center gap-2 text-xs">
-                    <i class="fas fa-database"></i> DATA
-                </button>
-                <div id="dataMenu" class="hidden absolute top-full right-0 mt-2 w-48 glass-menu z-50 overflow-hidden">
-                    <button onclick="exportSpins()"
-                        class="w-full text-left px-4 py-3 text-xs text-gray-200 hover:bg-white/10 border-b border-white/5 transition-colors">
-                        <i class="fas fa-download mr-2 text-[#0A84FF]"></i> Export Spins
-                    </button>
-                    <label
-                        class="w-full text-left px-4 py-3 text-xs text-gray-200 hover:bg-white/10 transition-colors cursor-pointer block">
-                        <i class="fas fa-upload mr-2 text-[#30D158]"></i> Import Spins
-                        <input type="file" id="importFile" class="hidden" accept=".json" onchange="importSpins(this)">
-                    </label>
-                </div>
-            </div>
+        <div class="flex gap-2 items-center">
 
             <button onclick="toggleModal('patternsModal')"
                 class="ios-btn h-8 px-3 bg-white/5 hover:bg-white/10 text-[#BF5AF2] font-semibold rounded-lg border border-[#BF5AF2]/20 flex items-center gap-2 text-xs">
@@ -70,7 +57,71 @@
                 class="ios-btn h-8 px-3 bg-white/5 hover:bg-white/10 text-[#FFD60A] font-semibold rounded-lg border border-[#FFD60A]/20 flex items-center gap-2 text-xs">
                 <i class="fas fa-chart-line"></i> STATS
             </button>
+
+            <!-- HAMBURGER MENU -->
+            <div class="relative ml-2 border-l border-white/10 pl-2">
+                <button onclick="toggleHamburgerMenu()"
+                    class="ios-btn h-8 w-8 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-lg border border-white/20 flex items-center justify-center relative z-50">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div> <!-- Close second header flex group -->
+    </div> <!-- CLOSE THE GLASS-HEADER CONTAINER -->
+
+    <!-- HAMBURGER DROPDOWN MENU (Moved explicitly out of header to fix z-index clipping) -->
+    <div id="hamburgerMenu"
+        class="hidden fixed top-[64px] right-4 w-64 rounded-xl border border-white/10 bg-[#0A0A0C]/95 backdrop-blur-[40px] shadow-[0_20px_50px_rgba(0,0,0,0.9)] z-50 overflow-hidden transform origin-top-right transition-all duration-200">
+
+        <!-- DATA SECTION -->
+        <div class="px-4 py-3 border-b border-white/5 bg-white/5 flex justify-between items-center cursor-pointer hover:bg-white/10 transition-colors"
+            onclick="toggleAccordion('dataSubMenu')">
+            <span class="text-[10px] font-bold text-gray-300 uppercase tracking-wider">Data Settings</span>
+            <i class="fas fa-chevron-down text-gray-500 text-xs transition-transform duration-200"
+                id="dataSubMenuIcon"></i>
         </div>
+        <div id="dataSubMenu" class="hidden bg-black/40 overflow-hidden transition-all duration-200">
+            <button onclick="exportSpins()"
+                class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:bg-white/10 hover:text-white transition-colors flex items-center group">
+                <i
+                    class="fas fa-download mr-3 text-[#0A84FF] w-4 text-center group-hover:scale-110 transition-transform"></i>
+                Export History
+            </button>
+            <label
+                class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:bg-white/10 hover:text-white border-b border-white/5 transition-colors cursor-pointer flex items-center m-0 group">
+                <i
+                    class="fas fa-upload mr-3 text-[#30D158] w-4 text-center group-hover:scale-110 transition-transform"></i>
+                Import History
+                <input type="file" id="importFile" class="hidden" accept=".json" onchange="importSpins(this)">
+            </label>
+        </div>
+
+        <!-- INPUT SECTION -->
+        <div class="px-4 py-3 border-b border-white/5 bg-white/5 flex justify-between items-center cursor-pointer hover:bg-white/10 transition-colors"
+            onclick="toggleAccordion('inputSubMenu')">
+            <span class="text-[10px] font-bold text-gray-300 uppercase tracking-wider">Input Settings</span>
+            <i class="fas fa-chevron-down text-gray-500 text-xs transition-transform duration-200"
+                id="inputSubMenuIcon"></i>
+        </div>
+        <div id="inputSubMenu" class="hidden bg-black/40 overflow-hidden transition-all duration-200">
+            <div class="px-4 py-3 border-b border-white/5 hover:bg-white/10 transition-colors flex items-center justify-between cursor-pointer group"
+                onclick="toggleInputLayout()">
+                <div class="text-xs text-gray-300 group-hover:text-white flex items-center">
+                    <i
+                        class="fas fa-th mr-3 text-[#BF5AF2] w-4 text-center group-hover:scale-110 transition-transform"></i>
+                    Layout Map
+                </div>
+                <span id="layoutLabel"
+                    class="text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white shadow-inner">GRID</span>
+            </div>
+        </div>
+
+        <!-- SYSTEM -->
+        <button onclick="resetSession()"
+            class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:bg-[#ff1a33]/20 hover:text-[#ff1a33] transition-colors flex items-center group">
+            <i
+                class="fas fa-power-off mr-3 text-red-500/70 group-hover:text-[#ff1a33] w-4 text-center transition-colors"></i>
+            Reset Session
+        </button>
     </div>
 
     <!-- 2. DASHBOARD (Sleek, Slim, Effective) -->
@@ -102,7 +153,7 @@
                             <th class="w-[10%] text-center">#</th>
                             <th class="w-[15%] text-center">SPIN</th>
                             <th class="w-[30%] text-center">FACE</th>
-                            <th class="w-[45%] pl-4">PREDICTION</th>
+                            <th class="w-[45%] text-center">PREDICTION</th>
                         </tr>
                     </thead>
                     <tbody id="historyBody">
@@ -118,23 +169,22 @@
 
     <!-- PATTERNS MODAL -->
     <div id="patternsModal"
-        class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4 transition-all duration-300"
+        class="fixed inset-0 bg-black/60 backdrop-blur-md hidden z-50 flex items-center justify-center p-4 transition-all duration-300"
         onclick="toggleModal('patternsModal')">
-        <div class="glass-panel w-full max-w-sm rounded-2xl shadow-2xl flex flex-col overflow-hidden modal-content-animated"
-            onclick="event.stopPropagation()">
-            <div class="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
-                <h2 class="text-[#BF5AF2] font-bold text-sm tracking-wide uppercase">Filters</h2>
+        <div class="glass-menu w-full max-w-sm flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+            <div class="p-4 glass-header flex justify-between items-center">
+                <h2 class="font-bold text-sm tracking-wide uppercase" style="color: var(--text-primary);">Filters</h2>
                 <button onclick="toggleModal('patternsModal')"
                     class="text-gray-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
             </div>
-            <div class="bg-black/30 p-4 border-b border-white/5">
+            <div class="frosted-plate mx-4 mt-4 p-4 border-b border-white/5">
                 <div class="flex justify-between items-end mb-2">
-                    <div class="text-[10px] font-bold text-[#8E8E93] uppercase tracking-wider">Gap Counter (Cold > 15)
+                    <div class="text-[10px] font-bold text-white/50 uppercase tracking-wider">Gap Counter (Cold > 15)
                     </div>
                 </div>
                 <div class="grid grid-cols-5 gap-2" id="faceGapContainer"></div>
             </div>
-            <div class="p-4 space-y-2 bg-black/20 max-h-[50vh] overflow-y-auto custom-scroll">
+            <div class="p-4 space-y-2 max-h-[50vh] overflow-y-auto custom-scroll">
                 <div id="patternsList" class="space-y-2"></div>
             </div>
         </div>
@@ -142,31 +192,34 @@
 
     <!-- ACTUAL BETS MODAL -->
     <div id="betsModal"
-        class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4"
+        class="fixed inset-0 bg-black/60 backdrop-blur-md hidden z-50 flex items-center justify-center p-4"
         onclick="toggleModal('betsModal')">
-        <div class="glass-panel w-full max-w-3xl h-[80vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden modal-content-animated"
+        <div class="glass-menu w-full max-w-3xl h-[80vh] flex flex-col overflow-hidden"
             onclick="event.stopPropagation()">
-            <div class="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
-                <h2 class="text-[#0A84FF] font-bold text-sm tracking-wide uppercase">Bet History</h2>
+            <div class="p-4 glass-header flex justify-between items-center">
+                <h2 class="font-bold text-sm tracking-wide uppercase" style="color: var(--text-primary);">Bet History
+                </h2>
                 <button onclick="toggleModal('betsModal')" class="text-gray-400 hover:text-white transition-colors"><i
                         class="fas fa-times"></i></button>
             </div>
-            <div class="flex-1 overflow-y-auto p-6 space-y-6 bg-black/20 custom-scroll">
+            <div class="flex-1 overflow-y-auto p-6 space-y-6 custom-scroll">
                 <div class="grid grid-cols-3 gap-4">
-                    <div class="bg-white/5 p-4 rounded-xl border border-white/5 text-center shadow-lg">
-                        <div class="text-[#8E8E93] text-[10px] font-bold uppercase tracking-wider mb-1">Net Units</div>
+                    <div class="frosted-plate p-4 text-center">
+                        <div class="text-white/50 text-[10px] font-bold uppercase tracking-wider mb-1">Net Units</div>
                         <div id="userNet" class="text-4xl font-bold text-white tracking-tight">0</div>
                     </div>
-                    <div class="bg-white/5 p-4 rounded-xl border border-white/5 text-center shadow-lg">
-                        <div class="text-[#8E8E93] text-[10px] font-bold uppercase tracking-wider mb-1">Hit Rate</div>
-                        <div id="userHitRate" class="text-4xl font-bold text-[#0A84FF] tracking-tight">0%</div>
+                    <div class="frosted-plate p-4 text-center">
+                        <div class="text-white/50 text-[10px] font-bold uppercase tracking-wider mb-1">Hit Rate</div>
+                        <div id="userHitRate" class="text-4xl font-bold tracking-tight"
+                            style="color: var(--theme-emerald);">0%
+                        </div>
                     </div>
-                    <div class="bg-white/5 p-4 rounded-xl border border-white/5 text-center shadow-lg">
-                        <div class="text-[#8E8E93] text-[10px] font-bold uppercase tracking-wider mb-1">Total Bets</div>
-                        <div id="userTotal" class="text-4xl font-bold text-gray-300 tracking-tight">0</div>
+                    <div class="frosted-plate p-4 text-center">
+                        <div class="text-white/50 text-[10px] font-bold uppercase tracking-wider mb-1">Total Bets</div>
+                        <div id="userTotal" class="text-4xl font-bold text-white tracking-tight">0</div>
                     </div>
                 </div>
-                <div class="bg-white/5 border border-white/5 rounded-xl p-4 shadow-lg">
+                <div class="frosted-plate border-none p-4">
                     <div class="text-[#8E8E93] text-[10px] font-bold uppercase tracking-wide mb-2">Trend</div>
                     <!-- REPLACED: New container ID -->
                     <div class="h-36 w-full relative" id="userGraphContainer"></div>
@@ -194,16 +247,17 @@
 
     <!-- ANALYTICS MODAL -->
     <div id="analyticsModal"
-        class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4"
+        class="fixed inset-0 bg-black/60 backdrop-blur-md hidden z-50 flex items-center justify-center p-4"
         onclick="toggleModal('analyticsModal')">
-        <div class="glass-panel w-full max-w-3xl h-[85vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden modal-content-animated"
+        <div class="glass-menu w-full max-w-3xl h-[85vh] flex flex-col overflow-hidden"
             onclick="event.stopPropagation()">
-            <div class="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
-                <h2 class="text-[#FFD60A] font-bold text-sm tracking-wide uppercase">Analytics Engine</h2>
+            <div class="p-4 glass-header flex justify-between items-center">
+                <h2 class="font-bold text-sm tracking-wide uppercase" style="color: var(--text-primary);">Analytics
+                    Engine</h2>
                 <button onclick="toggleModal('analyticsModal')"
                     class="text-gray-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
             </div>
-            <div class="p-3 bg-black/30 border-b border-white/5">
+            <div class="p-3 border-b border-white/5">
                 <div class="segmented-control max-w-md mx-auto">
                     <button class="tab-btn active" id="tabGod" onclick="switchAnalyticsTab('god')">Strategy (God
                         View)</button>
@@ -211,36 +265,36 @@
                         View)</button>
                 </div>
             </div>
-            <div class="flex-1 overflow-y-auto p-6 space-y-5 bg-black/10 custom-scroll">
+            <div class="flex-1 overflow-y-auto p-6 space-y-5 custom-scroll">
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div class="bg-white/5 p-3 rounded-xl border border-white/5 text-center shadow-md">
-                        <div class="text-[#8E8E93] text-[9px] font-bold uppercase tracking-wider mb-1"><span
+                    <div class="frosted-plate p-3 text-center">
+                        <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1"><span
                                 id="labelHitRate">Global Hit Rate</span></div>
                         <div id="kpiHitRate" class="text-2xl font-bold text-white">0%</div>
                     </div>
-                    <div class="bg-white/5 p-3 rounded-xl border border-white/5 text-center shadow-md">
-                        <div class="text-[#8E8E93] text-[9px] font-bold uppercase tracking-wider mb-1"><span
+                    <div class="frosted-plate p-3 text-center">
+                        <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1"><span
                                 id="labelNet">Theoretical Net</span></div>
                         <div id="kpiNet" class="text-2xl font-bold text-white">0</div>
                     </div>
-                    <div class="bg-white/5 p-3 rounded-xl border border-white/5 text-center shadow-md">
-                        <div class="text-[#8E8E93] text-[9px] font-bold uppercase tracking-wider mb-1">Total Signals
+                    <div class="frosted-plate p-3 text-center">
+                        <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1">Total Signals
                         </div>
-                        <div id="kpiSignals" class="text-2xl font-bold text-[#0A84FF]">0</div>
+                        <div id="kpiSignals" class="text-2xl font-bold text-white">0</div>
                     </div>
-                    <div class="bg-white/5 p-3 rounded-xl border border-white/5 text-center shadow-md">
-                        <div class="text-[#8E8E93] text-[9px] font-bold uppercase tracking-wider mb-1">Form</div>
+                    <div class="frosted-plate p-3 text-center">
+                        <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1">Form</div>
                         <div id="kpiForm" class="text-2xl font-bold text-gray-400">-</div>
                     </div>
                 </div>
-                <div class="bg-white/5 border border-white/5 rounded-xl p-4 shadow-lg relative z-10">
+                <div class="frosted-plate border-none p-4 relative z-10">
                     <div class="flex justify-between items-center mb-3">
-                        <div class="text-[#8E8E93] text-[10px] font-bold uppercase tracking-wider" id="graphTitle">
+                        <div class="text-white/50 text-[10px] font-bold uppercase tracking-wider" id="graphTitle">
                             Theoretical Bankroll</div>
 
                         <div class="relative">
                             <button id="simFilterBtn" onclick="toggleSimMenu()"
-                                class="hidden text-[10px] bg-[#BF5AF2]/10 hover:bg-[#BF5AF2]/20 text-[#BF5AF2] border border-[#BF5AF2]/30 px-3 py-1 rounded-lg font-bold transition-colors flex items-center gap-2">
+                                class="hidden text-[10px] text-white border border-white/30 px-3 py-1 rounded-lg font-bold transition-colors flex items-center gap-2 hover:bg-white/10">
                                 <i class="fas fa-sliders-h"></i> SIMULATE
                             </button>
                             <!-- Dropdown -->
@@ -256,12 +310,12 @@
                     <!-- REPLACED: New container ID -->
                     <div class="h-36 w-full relative" id="graphContainer"></div>
                 </div>
-                <div class="bg-white/5 border border-white/5 rounded-xl overflow-hidden shadow-lg">
+                <div class="frosted-plate overflow-hidden">
                     <div
-                        class="p-3 bg-black/20 border-b border-white/5 text-[#8E8E93] text-[10px] font-bold uppercase tracking-wider">
+                        class="p-3 border-b border-white/5 text-white/50 text-[10px] font-bold uppercase tracking-wider">
                         Pattern Efficiency</div>
                     <table class="w-full text-left text-xs">
-                        <thead class="text-[#8E8E93] border-b border-white/5 bg-black/10">
+                        <thead class="text-white/50 border-b border-white/5">
                             <tr>
                                 <th class="p-3 font-semibold">Name</th>
                                 <th class="p-3 font-semibold text-right">Wins</th>
@@ -271,14 +325,15 @@
                         </thead>
                         <tbody id="heatmapBody" class="divide-y divide-white/5">
                             <tr>
-                                <td colspan="4" class="p-6 text-center text-[#8E8E93] italic">No data</td>
+                                <td colspan="4" class="p-6 text-center text-white/40 italic">No data</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
                 <div class="text-center pt-2">
                     <button onclick="resetData()"
-                        class="text-[10px] text-[#FF453A] hover:text-red-300 font-bold uppercase tracking-widest border border-[#FF453A]/30 px-4 py-2 rounded-lg hover:bg-[#FF453A]/10 transition-colors">
+                        class="text-[10px] font-bold uppercase tracking-widest border px-4 py-2 rounded-lg transition-colors hover:bg-[#ff1a33]/10"
+                        style="color: var(--theme-crimson); border-color: var(--theme-crimson-dim);">
                         RESET SESSION
                     </button>
                 </div>
@@ -288,19 +343,20 @@
 
     <!-- PATTERN DETAIL MODAL -->
     <div id="patternDetailModal"
-        class="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-4"
+        class="fixed inset-0 z-[60] bg-black/60 backdrop-blur-md hidden flex items-center justify-center p-4"
         onclick="toggleModal('patternDetailModal')">
-        <div class="glass-panel w-full max-w-xl rounded-2xl shadow-2xl flex flex-col overflow-hidden modal-content-animated"
-            onclick="event.stopPropagation()">
-            <div class="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
-                <h2 id="patternDetailTitle" class="text-[#0A84FF] font-bold text-sm tracking-wide uppercase">Pattern Log
+        <div class="glass-menu w-full max-w-xl flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+            <div class="p-4 glass-header flex justify-between items-center">
+                <h2 id="patternDetailTitle" class="font-bold text-sm tracking-wide uppercase"
+                    style="color: var(--text-primary);">
+                    Pattern Log
                 </h2>
                 <button onclick="toggleModal('patternDetailModal')"
                     class="text-gray-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
             </div>
-            <div class="flex-1 overflow-y-auto p-0 max-h-[60vh] bg-black/10 custom-scroll">
+            <div class="flex-1 overflow-y-auto p-0 max-h-[60vh] custom-scroll">
                 <table class="w-full text-left text-xs">
-                    <thead class="bg-[#1c1c1e] text-[#8E8E93] border-b border-white/5 sticky top-0 z-10">
+                    <thead class="text-white/50 border-b border-white/5 sticky top-0 z-10 glass-header">
                         <tr>
                             <th class="p-3 font-bold uppercase">Spin #</th>
                             <th class="p-3 font-bold uppercase text-center">Result</th>
