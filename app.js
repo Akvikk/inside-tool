@@ -1198,3 +1198,86 @@ function importSpins(input) {
     toggleDataMenu();
     input.value = ''; // Reset input to allow re-uploading same file
 }
+
+// --- STOPWATCH FUNCTIONS ---
+let stopwatchInterval = null;
+let stopwatchSeconds = 0;
+
+function formatStopwatchTime(totalSeconds) {
+    let hrs = Math.floor(totalSeconds / 3600);
+    let mins = Math.floor((totalSeconds % 3600) / 60);
+    let secs = totalSeconds % 60;
+    
+    let hStr = hrs.toString().padStart(2, '0');
+    let mStr = mins.toString().padStart(2, '0');
+    let sStr = secs.toString().padStart(2, '0');
+    
+    return `${hStr}:${mStr}:${sStr}`;
+}
+
+function updateStopwatchDisplay() {
+    const display = document.getElementById('stopwatchDisplay');
+    if (display) {
+        display.innerText = formatStopwatchTime(stopwatchSeconds);
+    }
+}
+
+function toggleStopwatch() {
+    const icon = document.getElementById('stopwatchIcon');
+    const text = document.getElementById('stopwatchText');
+    const btn = document.getElementById('stopwatchToggleBtn');
+
+    if (stopwatchInterval) {
+        // Pause
+        clearInterval(stopwatchInterval);
+        stopwatchInterval = null;
+        if (icon) {
+            icon.classList.remove('fa-pause');
+            icon.classList.add('fa-play');
+        }
+        if (text) text.innerText = 'Start';
+        if (btn) {
+            btn.classList.remove('bg-[#FFD60A]/20', 'text-[#FFD60A]', 'border-[#FFD60A]/30');
+            btn.classList.add('bg-[#30D158]/20', 'text-[#30D158]', 'border-[#30D158]/30');
+        }
+    } else {
+        // Start
+        stopwatchInterval = setInterval(() => {
+            stopwatchSeconds++;
+            updateStopwatchDisplay();
+        }, 1000);
+
+        if (icon) {
+            icon.classList.remove('fa-play');
+            icon.classList.add('fa-pause');
+        }
+        if (text) text.innerText = 'Pause';
+        if (btn) {
+            btn.classList.remove('bg-[#30D158]/20', 'text-[#30D158]', 'border-[#30D158]/30');
+            btn.classList.add('bg-[#FFD60A]/20', 'text-[#FFD60A]', 'border-[#FFD60A]/30');
+        }
+    }
+}
+
+function resetStopwatch() {
+    if (stopwatchInterval) {
+        clearInterval(stopwatchInterval);
+        stopwatchInterval = null;
+    }
+    stopwatchSeconds = 0;
+    updateStopwatchDisplay();
+
+    const icon = document.getElementById('stopwatchIcon');
+    const text = document.getElementById('stopwatchText');
+    const btn = document.getElementById('stopwatchToggleBtn');
+    
+    if (icon) {
+        icon.classList.remove('fa-pause');
+        icon.classList.add('fa-play');
+    }
+    if (text) text.innerText = 'Start';
+    if (btn) {
+        btn.classList.remove('bg-[#FFD60A]/20', 'text-[#FFD60A]', 'border-[#FFD60A]/30');
+        btn.classList.add('bg-[#30D158]/20', 'text-[#30D158]', 'border-[#30D158]/30');
+    }
+}

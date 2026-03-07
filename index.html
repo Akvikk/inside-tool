@@ -72,6 +72,20 @@
     <div id="hamburgerMenu"
         class="hidden fixed top-[64px] right-4 w-64 rounded-xl border border-white/10 bg-[#0A0A0C]/95 backdrop-blur-[40px] shadow-[0_20px_50px_rgba(0,0,0,0.9)] z-50 overflow-hidden transform origin-top-right transition-all duration-200">
 
+        <!-- STOPWATCH SECTION -->
+        <div class="px-4 py-3 border-b border-white/5 bg-white/5 flex flex-col items-center justify-center">
+            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 w-full text-left">Session Timer</div>
+            <div id="stopwatchDisplay" class="text-2xl font-mono text-white mb-3 tracking-widest font-bold drop-shadow-md">00:00:00</div>
+            <div class="flex gap-2 w-full justify-center">
+                <button onclick="toggleStopwatch()" id="stopwatchToggleBtn" class="flex-1 text-[10px] font-bold uppercase tracking-wider bg-[#30D158]/20 text-[#30D158] hover:bg-[#30D158]/30 py-2 rounded-lg flex items-center justify-center transition-colors border border-[#30D158]/30">
+                    <i class="fas fa-play mr-2" id="stopwatchIcon"></i> <span id="stopwatchText">Start</span>
+                </button>
+                <button onclick="resetStopwatch()" class="flex-1 text-[10px] font-bold uppercase tracking-wider bg-[#ff1a33]/20 text-[#ff1a33] hover:bg-[#ff1a33]/30 py-2 rounded-lg flex items-center justify-center transition-colors border border-[#ff1a33]/30">
+                    <i class="fas fa-undo mr-2"></i> Reset
+                </button>
+            </div>
+        </div>
+
         <!-- DATA SECTION -->
         <div class="px-4 py-3 border-b border-white/5 bg-white/5 flex justify-between items-center cursor-pointer hover:bg-white/10 transition-colors"
             onclick="toggleAccordion('dataSubMenu')">
