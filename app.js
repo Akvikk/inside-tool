@@ -952,6 +952,7 @@ function calculateDominantPerimeterCombo() {
     }
 
     const stats = PredictionEngine.calculatePerimeterStats(history, predictionPerimeterWindow);
+    if (!stats || !Array.isArray(stats.recentSpins) || stats.recentSpins.length < stats.windowSize) return null;
     if (!stats || !stats.dominantCombo) return null;
 
     const dominantCount = stats.counts[stats.dominantCombo.label] || 0;
@@ -960,21 +961,21 @@ function calculateDominantPerimeterCombo() {
     return {
         ...stats.dominantCombo,
         count: dominantCount,
-        counts: stats.counts
+        counts: stats.counts,
+        latestPrimaryFace: stats.latestPrimaryFace
     };
 }
 
 function scanAllStrategies() {
     let allNotifications = [];
     let allNextBets = [];
-    const latestSpin = history[history.length - 1];
 
-    if (perimeterRuleEnabled && latestSpin && latestSpin.faces && latestSpin.faces.length > 0) {
+    if (perimeterRuleEnabled && history.length >= predictionPerimeterWindow) {
         const dominantCombo = calculateDominantPerimeterCombo();
         if (dominantCombo) {
             let triggerFace = null;
-            if (latestSpin.faces.includes(dominantCombo.a)) triggerFace = dominantCombo.a;
-            else if (latestSpin.faces.includes(dominantCombo.b)) triggerFace = dominantCombo.b;
+            if (dominantCombo.latestPrimaryFace === dominantCombo.a) triggerFace = dominantCombo.a;
+            else if (dominantCombo.latestPrimaryFace === dominantCombo.b) triggerFace = dominantCombo.b;
 
             if (triggerFace !== null) {
                 const partnerFace = triggerFace === dominantCombo.a ? dominantCombo.b : dominantCombo.a;
@@ -1298,16 +1299,14 @@ function renderDashboard(alerts) {
         const subtitle = bet.comboLabel ? `${bet.comboLabel} combo` : bet.patternName;
         const accent = bet.accentColor || '#FF3B30';
         cards.push(`
-            <div class="min-w-[250px] h-[64px] px-3 py-2 rounded-lg border border-white/10 bg-[#0f0f12] flex items-center justify-between"
-                 style="border-left: 3px solid ${accent};">
+            <div class="min-w-[250px] h-[64px] px-3 py-2 rounded-lg border bg-[#0f0f12] flex items-center justify-between cursor-pointer select-none"
+                 ondblclick="toggleBetConfirmation(${index})"
+                 title="Double-click to ${bet.confirmed ? 'unselect' : 'select'}"
+                 style="border-left: 3px solid ${accent}; border-color: ${bet.confirmed ? accent : 'rgba(255,255,255,0.1)'}; background: ${bet.confirmed ? 'rgba(255,255,255,0.06)' : '#0f0f12'};">
                 <div class="min-w-0">
                     <div class="text-[15px] leading-tight font-black text-white tracking-wide">BET F${bet.targetFace}</div>
                     <div class="text-[11px] leading-tight text-white/75 font-semibold">${subtitle}</div>
                 </div>
-                <label class="flex items-center gap-2 shrink-0">
-                    <span class="status-pill">${bet.confirmed ? 'ON' : 'OFF'}</span>
-                    <input type="checkbox" class="bet-checkbox" ${bet.confirmed ? 'checked' : ''} onchange="toggleBetConfirmation(${index})">
-                </label>
             </div>
         `);
     });
