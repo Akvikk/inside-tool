@@ -1,4 +1,4 @@
-﻿// --- CONFIGURATION ---
+﻿﻿// --- CONFIGURATION ---
 const RED_NUMS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
 const PERIMETER_RULE_KEY = 'Perimeter Rule';
 const PREDICTION_PERIMETER_PATTERN = 'Prediction Perimeter';
@@ -108,6 +108,9 @@ window.onload = () => {
     window.addEventListener('resize', () => {
         requestAnimationFrame(layoutAllComboBridges);
     });
+
+    // Init HUD
+    initAnalyticsHUD();
 };
 
 function toggleHamburgerMenu() {
@@ -151,6 +154,136 @@ function toggleInputLayout() {
 
     initDesktopGrid(); // Re-render the grid
     requestAnimationFrame(layoutAllComboBridges);
+}
+
+// --- FLOATING HUD LOGIC ---
+function initAnalyticsHUD() {
+    const hud = document.getElementById('analyticsHUD');
+    const header = document.getElementById('hudHeader');
+    const resizer = document.getElementById('hudResizeHandle');
+
+    if (!hud || !header || !resizer) return;
+
+    // DRAG LOGIC
+    let isDragging = false;
+    let startX, startY, initialLeft, initialTop;
+
+    header.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // Prevent text selection
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        initialLeft = hud.offsetLeft;
+        initialTop = hud.offsetTop;
+        document.addEventListener('mousemove', onDrag);
+        document.addEventListener('mouseup', stopDrag);
+    });
+
+    function onDrag(e) {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        hud.style.left = `${initialLeft + dx}px`;
+        hud.style.top = `${initialTop + dy}px`;
+    }
+
+    function stopDrag() {
+        isDragging = false;
+        document.removeEventListener('mousemove', onDrag);
+        document.removeEventListener('mouseup', stopDrag);
+    }
+
+    // RESIZE LOGIC
+    let isResizing = false;
+    let startW, startH;
+
+    resizer.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // Prevent text selection
+        e.stopPropagation(); // Prevent drag
+        isResizing = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startW = hud.offsetWidth;
+        startH = hud.offsetHeight;
+        document.addEventListener('mousemove', onResize);
+        document.addEventListener('mouseup', stopResize);
+    });
+
+    function onResize(e) {
+        if (!isResizing) return;
+        const w = startW + (e.clientX - startX);
+        const h = startH + (e.clientY - startY);
+        hud.style.width = `${Math.max(200, w)}px`;
+        hud.style.height = `${Math.max(160, h)}px`;
+    }
+
+    function stopResize() {
+        isResizing = false;
+        document.removeEventListener('mousemove', onResize);
+        document.removeEventListener('mouseup', stopResize);
+    }
+}
+
+function toggleAnalyticsHUD() {
+    const hud = document.getElementById('analyticsHUD');
+    const btn = document.getElementById('hudToggleBtn');
+    
+    if (hud.classList.contains('hidden')) {
+        hud.classList.remove('hidden');
+        hud.classList.add('flex');
+        btn.classList.add('bg-white/10');
+        updateAnalyticsHUD();
+    } else {
+        hud.classList.add('hidden');
+        hud.classList.remove('flex');
+        btn.classList.remove('bg-white/10');
+    }
+}
+
+function updateAnalyticsHUD() {
+    const hud = document.getElementById('analyticsHUD');
+    if (hud.classList.contains('hidden')) return;
+
+    const content = document.getElementById('hudContent');
+    // Use the Engine to get raw stats
+    const stats = PredictionEngine.calculatePerimeterStats(history, predictionPerimeterWindow);
+    if (!stats || !stats.counts) return;
+    
+    let html = `
+        <div class="text-[9px] text-gray-400 font-bold uppercase mb-2 flex justify-between">
+            <span>Window: ${stats.windowSize} Spins</span>
+            <span>Total Hits: ${Object.values(stats.counts).reduce((a,b)=>a+b,0)}</span>
+        </div>
+        <table class="w-full text-left text-xs">
+            <thead class="text-white/30 border-b border-white/10">
+                <tr><th class="pb-1 font-bold">Combo</th><th class="pb-1 text-right font-bold">Hits</th><th class="pb-1 text-right font-bold">%</th></tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+    `;
+
+    const combos = [
+        { label: '5-2', color: '#FF3B30' },
+        { label: '5-3', color: '#FF9500' },
+        { label: '1-3', color: '#34C759' },
+        { label: '2-4', color: '#007AFF' }
+    ];
+
+    combos.forEach(c => {
+        const count = stats.counts[c.label] || 0;
+        const pct = stats.windowSize > 0 ? Math.round((count / stats.windowSize) * 100) : 0;
+        const opacity = count > 0 ? '1' : '0.4';
+        
+        html += `
+            <tr>
+                <td class="py-2 font-bold" style="color:${c.color}; opacity:${opacity}">${c.label}</td>
+                <td class="py-2 text-right font-mono text-gray-300" style="opacity:${opacity}">${count}</td>
+                <td class="py-2 text-right font-mono font-bold" style="color:${pct > 20 ? '#30D158' : '#8E8E93'}; opacity:${opacity}">${pct}%</td>
+            </tr>
+        `;
+    });
+
+    html += `</tbody></table>`;
+    content.innerHTML = html;
 }
 
 function buildRacetrackSVG() {
@@ -322,6 +455,7 @@ function adjustPredictionPerimeterWindow(delta) {
     scanAllStrategies();
     updateVisibility();
     updatePerimeterAnalytics();
+    updateAnalyticsHUD();
 }
 
 function renderFilterMenu() {
@@ -358,6 +492,7 @@ function togglePatternFilter(key, isChecked) {
     scanAllStrategies();
     updateVisibility();
     updatePerimeterAnalytics();
+    updateAnalyticsHUD();
 }
 
 function updateVisibility() {
@@ -411,6 +546,17 @@ function addSpin() {
     const input = document.getElementById('spinInput');
     const val = parseInt(input.value);
     if (isNaN(val) || val < 0 || val > 36) return;
+
+    // Animate the Plus Icon on Add
+    const btn = document.getElementById('addSpinBtn');
+    if (btn) {
+        const icon = btn.querySelector('.fa-plus');
+        if (icon) {
+            icon.classList.remove('animate-spin-pop');
+            void icon.offsetWidth; // Force reflow
+            icon.classList.add('animate-spin-pop');
+        }
+    }
 
     // NEW: Detect all matching faces
     let matchedFaces = [];
@@ -502,6 +648,7 @@ function addSpin() {
 
     // Update FON tracker in Patterns modal
     updatePerimeterAnalytics();
+    updateAnalyticsHUD();
 
     refreshHighlights();
 
@@ -1354,6 +1501,7 @@ function resetData(skipConfirm = false) {
 
         updatePredictionSettingsUI();
         updatePerimeterAnalytics();
+        updateAnalyticsHUD();
 
         if (!skipConfirm) {
             const am = document.getElementById('analyticsModal');
@@ -1374,6 +1522,7 @@ function undoSpin() {
     });
 
     updatePerimeterAnalytics();
+    updateAnalyticsHUD();
 }
 
 function toggleModal(id) {
@@ -1480,4 +1629,3 @@ function resetStopwatch() {
         btn.classList.add('bg-[#30D158]/20', 'text-[#30D158]', 'border-[#30D158]/30');
     }
 }
-

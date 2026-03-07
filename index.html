@@ -30,9 +30,10 @@
                     class="ios-input w-[64px] h-8 text-lg font-bold text-center placeholder-white/20" placeholder="#">
             </div>
 
-            <button onclick="addSpin()"
-                class="ios-btn h-8 px-5 bg-gradient-to-b from-[#0A84FF] to-[#0066CC] hover:from-[#3399FF] hover:to-[#0A84FF] text-white font-bold rounded-lg shadow-lg text-xs tracking-wider border border-[#0A84FF]/50">
-                ADD
+            <button id="addSpinBtn" onclick="addSpin()"
+                class="ios-btn h-8 w-8 sm:w-auto px-0 sm:px-5 bg-gradient-to-b from-[#0A84FF] to-[#0066CC] hover:from-[#3399FF] hover:to-[#0A84FF] text-white font-bold rounded-lg shadow-lg text-xs tracking-wider border border-[#0A84FF]/50 flex items-center justify-center">
+                <i class="fas fa-plus sm:hidden"></i>
+                <span class="hidden sm:inline">ADD</span>
             </button>
 
             <button onclick="undoSpin()"
@@ -56,6 +57,11 @@
             <button onclick="toggleModal('analyticsModal'); renderAnalytics();"
                 class="ios-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#FFD60A] font-semibold rounded-lg border border-[#FFD60A]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs">
                 <i class="fas fa-chart-line"></i> <span class="hidden sm:inline">STATS</span>
+            </button>
+
+            <button onclick="toggleAnalyticsHUD()" id="hudToggleBtn"
+                class="ios-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#30D158] font-semibold rounded-lg border border-[#30D158]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs">
+                <i class="fas fa-chart-pie"></i> <span class="hidden sm:inline">ANALYTICS</span>
             </button>
 
             <!-- HAMBURGER MENU -->
@@ -454,6 +460,25 @@
                 </table>
             </div>
         </div>
+    </div>
+
+    <!-- FLOATING ANALYTICS HUD -->
+    <div id="analyticsHUD" class="fixed hidden flex-col z-[100] bg-[#0A0A0C]/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.8)] overflow-hidden transition-opacity duration-200"
+         style="top: 100px; left: 20px; width: 260px; height: 220px; min-width: 200px; min-height: 160px;">
+        
+        <!-- Drag Handle / Header -->
+        <div id="hudHeader" class="h-8 bg-white/5 border-b border-white/5 flex justify-between items-center px-3 cursor-move select-none">
+            <span class="text-[10px] font-bold text-[#30D158] tracking-wider uppercase"><i class="fas fa-satellite-dish mr-1"></i> Live Feed</span>
+            <button onclick="toggleAnalyticsHUD()" class="text-gray-500 hover:text-white transition-colors"><i class="fas fa-times text-xs"></i></button>
+        </div>
+
+        <!-- Content Area -->
+        <div id="hudContent" class="flex-1 p-3 overflow-y-auto custom-scroll relative">
+            <!-- Injected via JS -->
+        </div>
+
+        <!-- Resize Handle -->
+        <div id="hudResizeHandle" class="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize z-10 flex items-end justify-end p-0.5 opacity-50 hover:opacity-100"><div class="w-1.5 h-1.5 border-r border-b border-white/30 rounded-br-sm"></div></div>
     </div>
 
     <script src="predictionEngine.js"></script>

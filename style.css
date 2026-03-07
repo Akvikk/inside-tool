@@ -232,6 +232,22 @@ body::after {
     background: rgba(255, 255, 255, 0.05);
 }
 
+/* Icon Animations */
+.ios-btn:active i {
+    transform: scale(1.2);
+    transition: transform 0.1s ease-out;
+}
+
+@keyframes spinPop {
+    0% { transform: scale(1) rotate(0deg); }
+    50% { transform: scale(1.4) rotate(90deg); }
+    100% { transform: scale(1) rotate(180deg); }
+}
+
+.animate-spin-pop {
+    animation: spinPop 0.4s var(--ease-strike);
+}
+
 /* The mighty ADD button - The only dominant color block in the nav */
 button.bg-gradient-to-b {
     background: var(--theme-crimson) !important;

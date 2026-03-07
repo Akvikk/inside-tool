@@ -24,22 +24,25 @@ const PredictionEngine = {
         const parsedWindow = parseInt(windowSize, 10);
         const safeWindow = Number.isNaN(parsedWindow) ? 14 : Math.max(2, Math.min(60, parsedWindow));
         const recentSpins = Array.isArray(history) ? history.slice(-safeWindow) : [];
-        const primaryFaces = recentSpins.map(spin => {
-            if (!spin || !Array.isArray(spin.faces) || spin.faces.length === 0) return null;
-            return spin.faces[0];
-        });
 
         let counts = { '5-2': 0, '5-3': 0, '1-3': 0, '2-4': 0 };
         let lastSeen = { '5-2': -1, '5-3': -1, '1-3': -1, '2-4': -1 };
 
-        for (let i = 1; i < primaryFaces.length; i++) {
-            const prevFace = primaryFaces[i - 1];
-            const currFace = primaryFaces[i];
-            if (prevFace === null || currFace === null) continue;
+        for (let i = 1; i < recentSpins.length; i++) {
+            const prevSpin = recentSpins[i - 1];
+            const currSpin = recentSpins[i];
+            
+            if (!prevSpin || !currSpin || !prevSpin.faces || !currSpin.faces) continue;
 
             PERIMETER_COMBOS.forEach(combo => {
-                const matched = ((prevFace === combo.a && currFace === combo.b) ||
-                    (prevFace === combo.b && currFace === combo.a));
+                // Check for ANY matching face pair (handling overlapping faces like 10, 15, 24)
+                const prevHasA = prevSpin.faces.includes(combo.a);
+                const prevHasB = prevSpin.faces.includes(combo.b);
+                const currHasA = currSpin.faces.includes(combo.a);
+                const currHasB = currSpin.faces.includes(combo.b);
+
+                const matched = (prevHasA && currHasB) || (prevHasB && currHasA);
+                
                 if (matched) {
                     counts[combo.label]++;
                     lastSeen[combo.label] = i;
@@ -64,9 +67,9 @@ const PredictionEngine = {
         return {
             windowSize: safeWindow,
             recentSpins: recentSpins,
-            primaryFaces: primaryFaces,
-            latestPrimaryFace: primaryFaces.length > 0 ? primaryFaces[primaryFaces.length - 1] : null,
-            sequence: primaryFaces.map(face => (face === null ? '?' : face)),
+            // Use the first face for simple sequence display, but stats used all faces
+            latestPrimaryFace: recentSpins.length > 0 && recentSpins[recentSpins.length - 1].faces ? recentSpins[recentSpins.length - 1].faces[0] : null,
+            sequence: recentSpins.map(s => (s.faces && s.faces.length > 0 ? s.faces[0] : '?')),
             counts: counts,
             dominantCombo: dominantCombo,
             lastSeen: lastSeen
