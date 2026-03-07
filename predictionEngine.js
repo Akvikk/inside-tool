@@ -24,46 +24,52 @@ const PredictionEngine = {
         const parsedWindow = parseInt(windowSize, 10);
         const safeWindow = Number.isNaN(parsedWindow) ? 14 : Math.max(2, Math.min(60, parsedWindow));
         const recentSpins = Array.isArray(history) ? history.slice(-safeWindow) : [];
+        const primaryFaces = recentSpins.map(spin => {
+            if (!spin || !Array.isArray(spin.faces) || spin.faces.length === 0) return null;
+            return spin.faces[0];
+        });
 
         let counts = { '5-2': 0, '5-3': 0, '1-3': 0, '2-4': 0 };
+        let lastSeen = { '5-2': -1, '5-3': -1, '1-3': -1, '2-4': -1 };
 
-        for (let i = 1; i < recentSpins.length; i++) {
-            const prevFaces = recentSpins[i - 1].faces || [];
-            const currFaces = recentSpins[i].faces || [];
+        for (let i = 1; i < primaryFaces.length; i++) {
+            const prevFace = primaryFaces[i - 1];
+            const currFace = primaryFaces[i];
+            if (prevFace === null || currFace === null) continue;
 
             PERIMETER_COMBOS.forEach(combo => {
-                let matched = false;
-                for (let p of prevFaces) {
-                    for (let c of currFaces) {
-                        if ((p === combo.a && c === combo.b) || (p === combo.b && c === combo.a)) {
-                            matched = true;
-                            break;
-                        }
-                    }
-                    if (matched) break;
+                const matched = ((prevFace === combo.a && currFace === combo.b) ||
+                    (prevFace === combo.b && currFace === combo.a));
+                if (matched) {
+                    counts[combo.label]++;
+                    lastSeen[combo.label] = i;
                 }
-                if (matched) counts[combo.label]++;
             });
         }
 
+        const highestCount = Math.max(counts['5-2'], counts['5-3'], counts['1-3'], counts['2-4']);
         let dominantCombo = null;
-        let highestCount = -1;
-        PERIMETER_COMBOS.forEach(combo => {
-            const count = counts[combo.label] || 0;
-            if (count > highestCount) {
-                highestCount = count;
-                dominantCombo = combo;
-            }
-        });
-
-        if (highestCount <= 0) dominantCombo = null;
+        if (highestCount > 0) {
+            const contenders = PERIMETER_COMBOS.filter(combo => (counts[combo.label] || 0) === highestCount);
+            dominantCombo = contenders[0] || null;
+            contenders.forEach(combo => {
+                const currentLastSeen = lastSeen[dominantCombo.label] || -1;
+                const nextLastSeen = lastSeen[combo.label] || -1;
+                if (nextLastSeen > currentLastSeen) {
+                    dominantCombo = combo;
+                }
+            });
+        }
 
         return {
             windowSize: safeWindow,
             recentSpins: recentSpins,
-            sequence: recentSpins.map(spin => (spin.faces && spin.faces.length > 0 ? spin.faces[0] : '?')),
+            primaryFaces: primaryFaces,
+            latestPrimaryFace: primaryFaces.length > 0 ? primaryFaces[primaryFaces.length - 1] : null,
+            sequence: primaryFaces.map(face => (face === null ? '?' : face)),
             counts: counts,
-            dominantCombo: dominantCombo
+            dominantCombo: dominantCombo,
+            lastSeen: lastSeen
         };
     },
 

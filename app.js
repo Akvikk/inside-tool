@@ -2,12 +2,6 @@
 const RED_NUMS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
 const PERIMETER_RULE_KEY = 'Perimeter Rule';
 const PREDICTION_PERIMETER_PATTERN = 'Prediction Perimeter';
-const PERIMETER_COMBOS = [
-    { label: '5-2', a: 5, b: 2, color: '#FF3B30' },
-    { label: '5-3', a: 5, b: 3, color: '#FF9500' },
-    { label: '1-3', a: 1, b: 3, color: '#34C759' },
-    { label: '2-4', a: 2, b: 4, color: '#007AFF' }
-];
 
 // --- STATE MANAGEMENT ---
 let currentInputLayout = 'grid'; // 'grid' or 'racetrack'
@@ -1304,12 +1298,11 @@ function renderDashboard(alerts) {
         const subtitle = bet.comboLabel ? `${bet.comboLabel} combo` : bet.patternName;
         const accent = bet.accentColor || '#FF3B30';
         cards.push(`
-            <div class="card-active min-w-[260px] h-[60px] px-3 py-2 flex items-center justify-between ${bet.confirmed ? 'card-confirmed' : ''}"
-                 style="border-left-color:${accent}; box-shadow: 0 10px 24px rgba(0,0,0,0.75), -4px 0 14px ${accent}44;">
+            <div class="min-w-[250px] h-[64px] px-3 py-2 rounded-lg border border-white/10 bg-[#0f0f12] flex items-center justify-between"
+                 style="border-left: 3px solid ${accent}; box-shadow: 0 8px 16px rgba(0,0,0,0.55);">
                 <div class="min-w-0">
-                    <div class="text-[9px] uppercase tracking-wider text-white/45 font-bold">${PERIMETER_RULE_KEY}</div>
-                    <div class="text-[14px] leading-tight font-black text-white tracking-wide">BET F${bet.targetFace}</div>
-                    <div class="text-[10px] text-white/65 font-semibold">${subtitle}</div>
+                    <div class="text-[15px] leading-tight font-black text-white tracking-wide">BET F${bet.targetFace}</div>
+                    <div class="text-[11px] leading-tight text-white/75 font-semibold">${subtitle}</div>
                 </div>
                 <label class="flex items-center gap-2 shrink-0">
                     <span class="status-pill">${bet.confirmed ? 'ON' : 'OFF'}</span>
@@ -1388,14 +1381,9 @@ function toggleModal(id) {
     document.getElementById(id).classList.toggle('hidden');
 }
 
-function toggleDataMenu() {
-    document.getElementById('dataMenu').classList.toggle('hidden');
-}
-
 function exportSpins() {
     if (history.length === 0) {
         alert("No spins to export!");
-        toggleDataMenu();
         return;
     }
     const spins = history.map(h => h.num);
@@ -1410,7 +1398,6 @@ function exportSpins() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toggleDataMenu();
 }
 
 function importSpins(input) {
@@ -1437,7 +1424,6 @@ function importSpins(input) {
         }
     };
     reader.readAsText(file);
-    toggleDataMenu();
     input.value = '';
 }
 
