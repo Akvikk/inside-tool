@@ -1,5 +1,13 @@
-// --- CONFIGURATION ---
+﻿// --- CONFIGURATION ---
 const RED_NUMS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+const PERIMETER_RULE_KEY = 'Perimeter Rule';
+const PREDICTION_PERIMETER_PATTERN = 'Prediction Perimeter';
+const PERIMETER_COMBOS = [
+    { label: '5-2', a: 5, b: 2, color: '#FF3B30' },
+    { label: '5-3', a: 5, b: 3, color: '#FF9500' },
+    { label: '1-3', a: 1, b: 3, color: '#34C759' },
+    { label: '2-4', a: 2, b: 4, color: '#007AFF' }
+];
 
 // --- STATE MANAGEMENT ---
 let currentInputLayout = 'grid'; // 'grid' or 'racetrack'
@@ -8,9 +16,13 @@ const RACETRACK_ORDER = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11,
 let history = [];
 let activeBets = [];
 let faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+let predictionPerimeterWindow = 14;
+let perimeterRuleEnabled = true;
 
 // Global Pattern Configuration - The Source of Truth
-let patternConfig = {};
+let patternConfig = {
+    [PERIMETER_RULE_KEY]: perimeterRuleEnabled
+};
 
 // Independent Simulation Configuration for Analytics
 let simulationConfig = {};
@@ -30,11 +42,13 @@ let userStats = {
 let strategies = {};
 
 let currentAnalyticsTab = 'god';
+window.currentAlerts = [];
 
 function resetSession() {
     history = [];
     activeBets = [];
     faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    window.currentAlerts = [];
 
     engineStats = {
         totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0,
@@ -48,6 +62,8 @@ function resetSession() {
         betLog: []
     };
 
+    updatePredictionSettingsUI();
+    updatePerimeterAnalytics();
     updateVisibility();
     document.getElementById('hamburgerMenu').classList.add('hidden');
     document.getElementById('hamburgerBackdrop').classList.add('hidden');
@@ -58,8 +74,13 @@ window.onload = () => {
     initDesktopGrid();
     renderFilterMenu();
     renderGapStats();
+    syncPerimeterRuleState();
+    updatePredictionSettingsUI();
     // Init sim config
     simulationConfig = JSON.parse(JSON.stringify(patternConfig));
+    if (typeof PredictionEngine !== 'undefined' && PredictionEngine.updateFONTracker) {
+        PredictionEngine.updateFONTracker(history, predictionPerimeterWindow);
+    }
 
     document.getElementById('spinInput').focus();
     document.getElementById('spinInput').addEventListener("keypress", (e) => {
@@ -277,12 +298,46 @@ function initDesktopGrid() {
     }
 }
 
+function syncPerimeterRuleState() {
+    perimeterRuleEnabled = patternConfig[PERIMETER_RULE_KEY] !== false;
+    patternConfig[PERIMETER_RULE_KEY] = perimeterRuleEnabled;
+}
+
+function updatePredictionSettingsUI() {
+    const windowLabel = document.getElementById('perimeterWindowValue');
+    if (windowLabel) {
+        windowLabel.innerText = `${predictionPerimeterWindow} Spins`;
+    }
+}
+
+function updatePerimeterAnalytics() {
+    if (typeof PredictionEngine !== 'undefined' && PredictionEngine.updateFONTracker) {
+        PredictionEngine.updateFONTracker(history, predictionPerimeterWindow);
+    }
+}
+
+function adjustPredictionPerimeterWindow(delta) {
+    const parsedDelta = parseInt(delta, 10);
+    if (Number.isNaN(parsedDelta) || parsedDelta === 0) return;
+
+    const nextWindow = Math.max(2, Math.min(60, predictionPerimeterWindow + parsedDelta));
+    if (nextWindow === predictionPerimeterWindow) return;
+
+    predictionPerimeterWindow = nextWindow;
+    updatePredictionSettingsUI();
+    scanAllStrategies();
+    updateVisibility();
+    updatePerimeterAnalytics();
+}
+
 function renderFilterMenu() {
     const list = document.getElementById('patternsList');
     list.innerHTML = '';
 
     // Define display labels for keys
-    const labels = {};
+    const labels = {
+        [PERIMETER_RULE_KEY]: 'Perimeter Rule'
+    };
 
     for (let key in patternConfig) {
         let isChecked = patternConfig[key];
@@ -303,7 +358,12 @@ function renderFilterMenu() {
 
 function togglePatternFilter(key, isChecked) {
     patternConfig[key] = isChecked;
+    if (key === PERIMETER_RULE_KEY) {
+        perimeterRuleEnabled = isChecked;
+    }
+    scanAllStrategies();
     updateVisibility();
+    updatePerimeterAnalytics();
 }
 
 function updateVisibility() {
@@ -447,9 +507,7 @@ function addSpin() {
     if (!document.getElementById('betsModal').classList.contains('hidden')) renderUserAnalytics();
 
     // Update FON tracker in Patterns modal
-    if (typeof PredictionEngine !== 'undefined' && PredictionEngine.updateFONTracker) {
-        PredictionEngine.updateFONTracker(history);
-    }
+    updatePerimeterAnalytics();
 
     refreshHighlights();
 
@@ -890,17 +948,67 @@ function updateUserBetLog() {
 function toggleBetConfirmation(index) {
     if (activeBets[index]) {
         activeBets[index].confirmed = !activeBets[index].confirmed;
-        renderDashboard(null);
+        renderDashboard(window.currentAlerts || []);
     }
+}
+
+function calculateDominantPerimeterCombo() {
+    if (typeof PredictionEngine === 'undefined' || !PredictionEngine.calculatePerimeterStats) {
+        return null;
+    }
+
+    const stats = PredictionEngine.calculatePerimeterStats(history, predictionPerimeterWindow);
+    if (!stats || !stats.dominantCombo) return null;
+
+    const dominantCount = stats.counts[stats.dominantCombo.label] || 0;
+    if (dominantCount <= 0) return null;
+
+    return {
+        ...stats.dominantCombo,
+        count: dominantCount,
+        counts: stats.counts
+    };
 }
 
 function scanAllStrategies() {
     let allNotifications = [];
     let allNextBets = [];
+    const latestSpin = history[history.length - 1];
 
-    // Pattern Engine Logic pending New Implementation
+    if (perimeterRuleEnabled && latestSpin && latestSpin.faces && latestSpin.faces.length > 0) {
+        const dominantCombo = calculateDominantPerimeterCombo();
+        if (dominantCombo) {
+            let triggerFace = null;
+            if (latestSpin.faces.includes(dominantCombo.a)) triggerFace = dominantCombo.a;
+            else if (latestSpin.faces.includes(dominantCombo.b)) triggerFace = dominantCombo.b;
+
+            if (triggerFace !== null) {
+                const partnerFace = triggerFace === dominantCombo.a ? dominantCombo.b : dominantCombo.a;
+
+                allNextBets.push({
+                    patternName: PREDICTION_PERIMETER_PATTERN,
+                    filterKey: PERIMETER_RULE_KEY,
+                    strategy: PREDICTION_PERIMETER_PATTERN,
+                    targetFace: partnerFace,
+                    triggerFace: triggerFace,
+                    comboLabel: dominantCombo.label,
+                    accentColor: dominantCombo.color,
+                    confirmed: false
+                });
+
+                allNotifications.push({
+                    type: 'ACTIVE',
+                    patternName: PREDICTION_PERIMETER_PATTERN,
+                    targetFace: partnerFace,
+                    comboLabel: dominantCombo.label,
+                    accentColor: dominantCombo.color
+                });
+            }
+        }
+    }
 
     activeBets = allNextBets;
+    window.currentAlerts = allNotifications;
     return allNotifications;
 }
 
@@ -982,11 +1090,11 @@ function renderRow(spin) {
     let predHTMLParts = [];
     if (spin.resolvedBets && spin.resolvedBets.length > 0) {
         spin.resolvedBets.forEach(bet => {
-            let win = bet.won;
+            let win = bet.isWin;
             let icon = win ? '<i class="fas fa-check-circle text-[#30D158] mr-1"></i>' : '<i class="fas fa-times-circle text-[#FF453A] mr-1"></i>';
             let status = win ? 'WIN' : 'LOSS';
             let colorClass = win ? 'text-[#30D158]' : 'text-[#FF453A]';
-            predHTMLParts.push(`<div class="flex items-center text-[10px] font-bold ${colorClass}">${icon}${status}: F${bet.fB} (${bet.patternName})</div>`);
+            predHTMLParts.push(`<div class="flex items-center text-[10px] font-bold ${colorClass}">${icon}${status}: F${bet.targetFace} (${bet.patternName})</div>`);
         });
     }
 
@@ -1057,10 +1165,56 @@ function layoutComboBridge(spinId) {
         y: badgeRect.top + badgeRect.height / 2 - cellRect.top
     };
 
-    const minX = Math.min(prevPoint.x, currPoint.x, targetPoint.x) - 10;
-    const maxX = Math.max(prevPoint.x, currPoint.x, targetPoint.x) + 6;
-    const minY = Math.min(prevPoint.y, currPoint.y, targetPoint.y) - 12;
-    const maxY = Math.max(prevPoint.y, currPoint.y, targetPoint.y) + 12;
+    const nextGeom = {
+        p1: prevPoint,
+        p2: currPoint,
+        t: targetPoint,
+        color: color
+    };
+
+    const prevGeom = layer._comboGeom || {
+        p1: { ...targetPoint },
+        p2: { ...targetPoint },
+        t: { ...targetPoint },
+        color: color
+    };
+
+    animateComboBridge(layer, prevGeom, nextGeom, 260);
+    layer._comboGeom = nextGeom;
+}
+
+function layoutAllComboBridges() {
+    history.forEach(spin => layoutComboBridge(spin.id));
+}
+
+function ensureComboBridgeElements(layer) {
+    let svg = layer.querySelector('svg');
+    if (!svg) {
+        layer.innerHTML = `
+            <svg class="overflow-visible">
+                <path class="combo-path-1" fill="none" stroke-linecap="round" stroke-width="2.5" stroke-opacity="0.85" />
+                <path class="combo-path-2" fill="none" stroke-linecap="round" stroke-width="2.5" stroke-opacity="0.85" />
+                <circle class="combo-dot" r="2.5" />
+            </svg>
+        `;
+        svg = layer.querySelector('svg');
+    }
+
+    return {
+        svg,
+        path1: layer.querySelector('.combo-path-1'),
+        path2: layer.querySelector('.combo-path-2'),
+        dot: layer.querySelector('.combo-dot')
+    };
+}
+
+function drawComboBridge(layer, geom) {
+    const { svg, path1, path2, dot } = ensureComboBridgeElements(layer);
+
+    const minX = Math.min(geom.p1.x, geom.p2.x, geom.t.x) - 10;
+    const maxX = Math.max(geom.p1.x, geom.p2.x, geom.t.x) + 6;
+    const minY = Math.min(geom.p1.y, geom.p2.y, geom.t.y) - 12;
+    const maxY = Math.max(geom.p1.y, geom.p2.y, geom.t.y) + 12;
 
     const width = Math.max(24, maxX - minX);
     const height = Math.max(24, maxY - minY);
@@ -1070,32 +1224,107 @@ function layoutComboBridge(spinId) {
     layer.style.width = `${width}px`;
     layer.style.height = `${height}px`;
 
-    const p1 = { x: prevPoint.x - minX, y: prevPoint.y - minY };
-    const p2 = { x: currPoint.x - minX, y: currPoint.y - minY };
-    const t = { x: targetPoint.x - minX, y: targetPoint.y - minY };
+    svg.setAttribute('width', width);
+    svg.setAttribute('height', height);
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+    const p1 = { x: geom.p1.x - minX, y: geom.p1.y - minY };
+    const p2 = { x: geom.p2.x - minX, y: geom.p2.y - minY };
+    const t = { x: geom.t.x - minX, y: geom.t.y - minY };
 
     const c1x = p1.x + Math.max(12, Math.abs(t.x - p1.x) * 0.45);
     const c2x = p2.x + Math.max(12, Math.abs(t.x - p2.x) * 0.45);
     const cx = t.x - Math.max(10, Math.min(20, Math.abs(t.x - Math.min(p1.x, p2.x)) * 0.2));
 
-    layer.innerHTML = `
-        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="overflow-visible">
-            <path d="M ${p1.x} ${p1.y} C ${c1x} ${p1.y}, ${cx} ${t.y}, ${t.x} ${t.y}"
-                  stroke="${color}" stroke-width="2.5" stroke-opacity="0.85" fill="none" stroke-linecap="round" />
-            <path d="M ${p2.x} ${p2.y} C ${c2x} ${p2.y}, ${cx} ${t.y}, ${t.x} ${t.y}"
-                  stroke="${color}" stroke-width="2.5" stroke-opacity="0.85" fill="none" stroke-linecap="round" />
-            <circle cx="${t.x}" cy="${t.y}" r="2.5" fill="${color}" />
-        </svg>
-    `;
+    path1.setAttribute('d', `M ${p1.x} ${p1.y} C ${c1x} ${p1.y}, ${cx} ${t.y}, ${t.x} ${t.y}`);
+    path2.setAttribute('d', `M ${p2.x} ${p2.y} C ${c2x} ${p2.y}, ${cx} ${t.y}, ${t.x} ${t.y}`);
+    path1.setAttribute('stroke', geom.color);
+    path2.setAttribute('stroke', geom.color);
+
+    dot.setAttribute('cx', t.x);
+    dot.setAttribute('cy', t.y);
+    dot.setAttribute('fill', geom.color);
 }
 
-function layoutAllComboBridges() {
-    history.forEach(spin => layoutComboBridge(spin.id));
+function animateComboBridge(layer, fromGeom, toGeom, duration = 260) {
+    if (layer._comboAnimFrame) {
+        cancelAnimationFrame(layer._comboAnimFrame);
+    }
+
+    const startTime = performance.now();
+
+    const easeInOutCubic = (x) => x < 0.5
+        ? 4 * x * x * x
+        : 1 - Math.pow(-2 * x + 2, 3) / 2;
+
+    const lerp = (a, b, t) => a + (b - a) * t;
+
+    const tick = (now) => {
+        const raw = Math.min(1, (now - startTime) / duration);
+        const t = easeInOutCubic(raw);
+
+        const geom = {
+            p1: {
+                x: lerp(fromGeom.p1.x, toGeom.p1.x, t),
+                y: lerp(fromGeom.p1.y, toGeom.p1.y, t)
+            },
+            p2: {
+                x: lerp(fromGeom.p2.x, toGeom.p2.x, t),
+                y: lerp(fromGeom.p2.y, toGeom.p2.y, t)
+            },
+            t: {
+                x: lerp(fromGeom.t.x, toGeom.t.x, t),
+                y: lerp(fromGeom.t.y, toGeom.t.y, t)
+            },
+            color: toGeom.color
+        };
+
+        drawComboBridge(layer, geom);
+
+        if (raw < 1) {
+            layer._comboAnimFrame = requestAnimationFrame(tick);
+        } else {
+            layer._comboAnimFrame = null;
+            layer._comboGeom = toGeom;
+        }
+    };
+
+    layer._comboAnimFrame = requestAnimationFrame(tick);
 }
 
 function renderDashboard(alerts) {
     const dash = document.getElementById('dashboard');
-    dash.innerHTML = `<div class="w-full text-center text-[10px] font-medium text-[#8E8E93]/60 border border-dashed border-white/5 rounded-xl p-2 select-none tracking-wide flex items-center justify-center h-[60px]"><span>GHOST MODE ACTIVE • SCANNING...</span></div>`;
+    if (!dash) return;
+
+    let cards = [];
+    activeBets.forEach((bet, index) => {
+        const filterKey = bet.filterKey || bet.patternName;
+        if (patternConfig[filterKey] === false) return;
+
+        const subtitle = bet.comboLabel ? `${bet.comboLabel} combo` : bet.patternName;
+        const accent = bet.accentColor || '#FF3B30';
+        cards.push(`
+            <div class="card-active min-w-[260px] h-[60px] px-3 py-2 flex items-center justify-between ${bet.confirmed ? 'card-confirmed' : ''}"
+                 style="border-left-color:${accent}; box-shadow: 0 10px 24px rgba(0,0,0,0.75), -4px 0 14px ${accent}44;">
+                <div class="min-w-0">
+                    <div class="text-[9px] uppercase tracking-wider text-white/45 font-bold">${PERIMETER_RULE_KEY}</div>
+                    <div class="text-[14px] leading-tight font-black text-white tracking-wide">BET F${bet.targetFace}</div>
+                    <div class="text-[10px] text-white/65 font-semibold">${subtitle}</div>
+                </div>
+                <label class="flex items-center gap-2 shrink-0">
+                    <span class="status-pill">${bet.confirmed ? 'ON' : 'OFF'}</span>
+                    <input type="checkbox" class="bet-checkbox" ${bet.confirmed ? 'checked' : ''} onchange="toggleBetConfirmation(${index})">
+                </label>
+            </div>
+        `);
+    });
+
+    if (cards.length === 0) {
+        dash.innerHTML = `<div class="w-full text-center text-[10px] font-medium text-[#8E8E93]/60 border border-dashed border-white/5 rounded-xl p-2 select-none tracking-wide flex items-center justify-center h-[60px]"><span>GHOST MODE ACTIVE - SCANNING...</span></div>`;
+        return;
+    }
+
+    dash.innerHTML = cards.join('');
 }
 
 function refreshHighlights() {
@@ -1116,6 +1345,7 @@ function resetData(skipConfirm = false) {
     if (skipConfirm || confirm("Reset all session data?")) {
         history = [];
         activeBets = [];
+        window.currentAlerts = [];
         strategies = {};
         engineStats = {
             totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0,
@@ -1130,9 +1360,8 @@ function resetData(skipConfirm = false) {
         renderUserAnalytics();
         renderGapStats();
 
-        if (typeof PredictionEngine !== 'undefined' && PredictionEngine.updateFONTracker) {
-            PredictionEngine.updateFONTracker(history);
-        }
+        updatePredictionSettingsUI();
+        updatePerimeterAnalytics();
 
         if (!skipConfirm) {
             const am = document.getElementById('analyticsModal');
@@ -1152,9 +1381,7 @@ function undoSpin() {
         addSpin();
     });
 
-    if (typeof PredictionEngine !== 'undefined' && PredictionEngine.updateFONTracker) {
-        PredictionEngine.updateFONTracker(history);
-    }
+    updatePerimeterAnalytics();
 }
 
 function toggleModal(id) {
@@ -1268,3 +1495,4 @@ function resetStopwatch() {
         btn.classList.add('bg-[#30D158]/20', 'text-[#30D158]', 'border-[#30D158]/30');
     }
 }
+

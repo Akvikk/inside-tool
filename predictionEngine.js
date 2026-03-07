@@ -12,52 +12,86 @@ const FACES = {
     5: { id: 5, nums: [0, 5, 10, 14, 15, 19, 23, 28, 32], color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)', border: '#dc2626' } // Red
 };
 
+const PERIMETER_COMBOS = [
+    { label: '5-2', a: 5, b: 2, color: '#FF3B30' },
+    { label: '5-3', a: 5, b: 3, color: '#FF9500' },
+    { label: '1-3', a: 1, b: 3, color: '#34C759' },
+    { label: '2-4', a: 2, b: 4, color: '#007AFF' }
+];
+
 const PredictionEngine = {
-    updateFONTracker: function (history) {
-        if (!history || history.length === 0) return;
+    calculatePerimeterStats: function (history, windowSize = 14) {
+        const parsedWindow = parseInt(windowSize, 10);
+        const safeWindow = Number.isNaN(parsedWindow) ? 14 : Math.max(2, Math.min(60, parsedWindow));
+        const recentSpins = Array.isArray(history) ? history.slice(-safeWindow) : [];
 
-        // 1. Get last 14 spins
-        const last14 = history.slice(-14);
-
-        // 2. Build Sequence Display
-        const sequenceDisplay = document.getElementById('fonSequenceDisplay');
-        if (sequenceDisplay) {
-            const sequenceArray = last14.map(spin => {
-                if (spin.faces && spin.faces.length > 0) return spin.faces[0];
-                return '?';
-            });
-            sequenceDisplay.innerHTML = sequenceArray.join(' <i class="fas fa-arrow-right text-[6px] text-white/20 mx-1"></i> ');
-        }
-
-        // 3. Calculate Combo Counts
         let counts = { '5-2': 0, '5-3': 0, '1-3': 0, '2-4': 0 };
 
-        for (let i = 1; i < last14.length; i++) {
-            let prevFaces = last14[i - 1].faces || [];
-            let currFaces = last14[i].faces || [];
+        for (let i = 1; i < recentSpins.length; i++) {
+            const prevFaces = recentSpins[i - 1].faces || [];
+            const currFaces = recentSpins[i].faces || [];
 
-            let found = { '5-2': false, '5-3': false, '1-3': false, '2-4': false };
-
-            for (let p of prevFaces) {
-                for (let c of currFaces) {
-                    if ((p === 5 && c === 2) || (p === 2 && c === 5)) found['5-2'] = true;
-                    if ((p === 5 && c === 3) || (p === 3 && c === 5)) found['5-3'] = true;
-                    if ((p === 1 && c === 3) || (p === 3 && c === 1)) found['1-3'] = true;
-                    if ((p === 2 && c === 4) || (p === 4 && c === 2)) found['2-4'] = true;
+            PERIMETER_COMBOS.forEach(combo => {
+                let matched = false;
+                for (let p of prevFaces) {
+                    for (let c of currFaces) {
+                        if ((p === combo.a && c === combo.b) || (p === combo.b && c === combo.a)) {
+                            matched = true;
+                            break;
+                        }
+                    }
+                    if (matched) break;
                 }
-            }
-
-            if (found['5-2']) counts['5-2']++;
-            if (found['5-3']) counts['5-3']++;
-            if (found['1-3']) counts['1-3']++;
-            if (found['2-4']) counts['2-4']++;
+                if (matched) counts[combo.label]++;
+            });
         }
 
-        // 4. Update UI
-        document.getElementById('combo-52').innerText = counts['5-2'];
-        document.getElementById('combo-53').innerText = counts['5-3'];
-        document.getElementById('combo-13').innerText = counts['1-3'];
-        document.getElementById('combo-24').innerText = counts['2-4'];
+        let dominantCombo = null;
+        let highestCount = -1;
+        PERIMETER_COMBOS.forEach(combo => {
+            const count = counts[combo.label] || 0;
+            if (count > highestCount) {
+                highestCount = count;
+                dominantCombo = combo;
+            }
+        });
+
+        if (highestCount <= 0) dominantCombo = null;
+
+        return {
+            windowSize: safeWindow,
+            recentSpins: recentSpins,
+            sequence: recentSpins.map(spin => (spin.faces && spin.faces.length > 0 ? spin.faces[0] : '?')),
+            counts: counts,
+            dominantCombo: dominantCombo
+        };
+    },
+
+    updateFONTracker: function (history, windowSize = 14) {
+        const stats = this.calculatePerimeterStats(history, windowSize);
+
+        const titleEl = document.getElementById('fonTrackerWindowLabel');
+        if (titleEl) {
+            titleEl.innerText = `FON Combo Tracker (${stats.windowSize} Spins)`;
+        }
+
+        const sequenceDisplay = document.getElementById('fonSequenceDisplay');
+        if (sequenceDisplay) {
+            if (!stats.sequence || stats.sequence.length === 0) {
+                sequenceDisplay.innerHTML = '<span class="italic text-white/10">Awaiting data...</span>';
+            } else {
+                sequenceDisplay.innerHTML = stats.sequence.join(' <i class="fas fa-arrow-right text-[6px] text-white/20 mx-1"></i> ');
+            }
+        }
+
+        const c52 = document.getElementById('combo-52');
+        const c53 = document.getElementById('combo-53');
+        const c13 = document.getElementById('combo-13');
+        const c24 = document.getElementById('combo-24');
+        if (c52) c52.innerText = stats.counts['5-2'];
+        if (c53) c53.innerText = stats.counts['5-3'];
+        if (c13) c13.innerText = stats.counts['1-3'];
+        if (c24) c24.innerText = stats.counts['2-4'];
     }
 };
 
