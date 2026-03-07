@@ -44,18 +44,18 @@
         <div class="flex gap-2 items-center">
 
             <button onclick="toggleModal('patternsModal')"
-                class="ios-btn h-8 px-3 bg-white/5 hover:bg-white/10 text-[#BF5AF2] font-semibold rounded-lg border border-[#BF5AF2]/20 flex items-center gap-2 text-xs">
-                <i class="fas fa-filter"></i> PATTERNS
+                class="ios-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#BF5AF2] font-semibold rounded-lg border border-[#BF5AF2]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs">
+                <i class="fas fa-filter"></i> <span class="hidden sm:inline">PATTERNS</span>
             </button>
 
             <button onclick="toggleModal('betsModal'); renderUserAnalytics();"
-                class="ios-btn h-8 px-3 bg-white/5 hover:bg-white/10 text-[#0A84FF] font-semibold rounded-lg border border-[#0A84FF]/20 flex items-center gap-2 text-xs">
-                <i class="fas fa-list-check"></i> BETS
+                class="ios-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#0A84FF] font-semibold rounded-lg border border-[#0A84FF]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs">
+                <i class="fas fa-list-check"></i> <span class="hidden sm:inline">BETS</span>
             </button>
 
             <button onclick="toggleModal('analyticsModal'); renderAnalytics();"
-                class="ios-btn h-8 px-3 bg-white/5 hover:bg-white/10 text-[#FFD60A] font-semibold rounded-lg border border-[#FFD60A]/20 flex items-center gap-2 text-xs">
-                <i class="fas fa-chart-line"></i> STATS
+                class="ios-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#FFD60A] font-semibold rounded-lg border border-[#FFD60A]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs">
+                <i class="fas fa-chart-line"></i> <span class="hidden sm:inline">STATS</span>
             </button>
 
             <!-- HAMBURGER MENU -->
