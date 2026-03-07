@@ -901,7 +901,7 @@ function scanAllStrategies() {
 function renderRow(spin) {
     const tbody = document.getElementById('historyBody');
     const tr = document.createElement('tr');
-    tr.className = "history-row";
+    tr.className = "history-row relative hover:bg-white/[0.02] transition-colors";
     tr.id = 'row-' + spin.id;
 
     let bgClass = spin.num === 0 ? 'bg-green' : (RED_NUMS.includes(spin.num) ? 'bg-red' : 'bg-black');
@@ -917,7 +917,7 @@ function renderRow(spin) {
         faceHTML = `<span class="text-gray-600">-</span>`;
     }
 
-    // NEW: Combo Column Logic
+    // COMBO COLUMN LOGIC
     let comboHTML = `<span class="text-gray-600">-</span>`;
     if (spin.index > 0) {
         const prevSpin = history[spin.index - 1];
@@ -948,14 +948,33 @@ function renderRow(spin) {
             }
 
             if (detectedCombo) {
+                // VISUAL COMBO BRIDGE: Floating bracket connecting rows
                 comboHTML = `
-                    <div class="flex items-center justify-center gap-2">
-                        <div class="h-[1px] w-4" style="background-color: ${detectedCombo.color}; opacity: 0.3;"></div>
-                        <span class="px-2 py-0.5 rounded text-[10px] font-black border" 
-                              style="color: ${detectedCombo.color}; border-color: ${detectedCombo.color}4d; background-color: ${detectedCombo.color}1a;">
-                            ${detectedCombo.label}
-                        </span>
-                        <div class="h-[1px] w-4" style="background-color: ${detectedCombo.color}; opacity: 0.3;"></div>
+                    <div class="absolute left-0 top-0 -translate-y-1/2 w-full h-0 pointer-events-none select-none z-[100] overflow-visible flex items-center justify-center">
+                        <!-- The SVG Bracket -->
+                        <div class="absolute right-[50%] mr-[24px] h-[80px] w-[120px] pointer-events-none overflow-visible flex items-center justify-end">
+                             <svg width="120" height="80" viewBox="0 0 120 80" fill="none" class="overflow-visible">
+                                <!-- Top Arm (Previous Row) - Cubic Bezier for organic C-shape -->
+                                <path d="M 0 15 C 50 15, 80 40, 120 40" 
+                                      stroke="${detectedCombo.color}" stroke-width="2.5" stroke-opacity="0.8" fill="none" stroke-linecap="round" />
+                                <!-- Bottom Arm (Current Row) -->
+                                <path d="M 0 65 C 50 65, 80 40, 120 40" 
+                                      stroke="${detectedCombo.color}" stroke-width="2.5" stroke-opacity="0.8" fill="none" stroke-linecap="round" />
+                                <!-- Junction Dot -->
+                                <circle cx="120" cy="40" r="2.5" fill="${detectedCombo.color}" />
+                            </svg>
+                        </div>
+
+                        <!-- The Floating Label -->
+                        <div class="relative flex items-center justify-center z-10">
+                            <!-- Glow behind -->
+                            <div class="absolute inset-0 rounded-lg blur-md opacity-50" style="background-color: ${detectedCombo.color};"></div>
+                            <!-- Label -->
+                            <span class="px-3 py-1 rounded-md text-[11px] font-black border border-white/10 relative shadow-lg tracking-wider" 
+                                  style="color: ${detectedCombo.color}; background-color: #0c0c0e; box-shadow: 0 0 10px ${detectedCombo.color}30;">
+                                ${detectedCombo.label}
+                            </span>
+                        </div>
                     </div>
                 `;
             }
@@ -963,53 +982,42 @@ function renderRow(spin) {
     }
 
     let predHTMLParts = [];
-
     if (spin.resolvedBets && spin.resolvedBets.length > 0) {
         spin.resolvedBets.forEach(bet => {
-            if (patternConfig[bet.filterKey]) {
-                let pat = `<span class="text-[9px] text-gray-400 font-normal ml-1">${bet.patternName}</span>`;
-                if (bet.isWin) {
-                    predHTMLParts.push(`<span class="text-[#30D158] font-bold drop-shadow-sm">${bet.label} (WIN)</span>${pat}`);
-                } else {
-                    predHTMLParts.push(`<span class="text-[#FF453A] font-bold drop-shadow-sm">${bet.label} (LOSS)</span>${pat}`);
-                }
-            }
+            let win = bet.won;
+            let icon = win ? '<i class="fas fa-check-circle text-[#30D158] mr-1"></i>' : '<i class="fas fa-times-circle text-[#FF453A] mr-1"></i>';
+            let status = win ? 'WIN' : 'LOSS';
+            let colorClass = win ? 'text-[#30D158]' : 'text-[#FF453A]';
+            predHTMLParts.push(`<div class="flex items-center text-[10px] font-bold ${colorClass}">${icon}${status}: F${bet.fB} (${bet.patternName})</div>`);
         });
     }
 
     if (spin.newSignals && spin.newSignals.length > 0) {
-        let activeStrings = [];
         spin.newSignals.forEach(sig => {
             if (patternConfig[sig.filterKey]) {
-                activeStrings.push(`BET F${sig.targetFace} <span class="text-[9px] text-gray-400 font-normal">${sig.patternName}</span>`);
+                predHTMLParts.push(`<div class="text-[10px] font-bold text-[#F5F5F7]/40">Active Signal: ${sig.patternName}</div>`);
             }
         });
-
-        if (activeStrings.length > 0) {
-            let uniqueBets = [...new Set(activeStrings)];
-            let betText = `<span class="text-[#0A84FF] font-black animate-pulse drop-shadow-[0_0_8px_rgba(10,132,255,0.6)]">${uniqueBets.join(' | ')}</span>`;
-
-            if (predHTMLParts.length > 0) {
-                predHTMLParts.push(`<span class="text-gray-600 mx-2">|</span> ${betText}`);
-            } else {
-                predHTMLParts.push(betText);
-            }
-        }
     }
 
-    let finalHTML = predHTMLParts.length > 0 ? predHTMLParts.join(" ") : `<span class="text-gray-600">-</span>`;
+    let finalHTML = predHTMLParts.length > 0 ? predHTMLParts.join('') : '<span class="text-gray-600">-</span>';
 
     tr.innerHTML = `
-            <td class="text-center font-mono text-xs text-gray-400">#${spin.index + 1}</td>
-            <td class="text-center"><div class="num-box ${bgClass}">${spin.num}</div></td>
-            <td class="text-center">${faceHTML}</td>
-            <td class="text-center">${comboHTML}</td>
-            <td class="pl-4">${finalHTML}</td>
-        `;
-
+        <td class="text-center font-mono text-xs text-gray-400">#${spin.index + 1}</td>
+        <td class="text-center"><div class="num-box ${bgClass}">${spin.num}</div></td>
+        <td class="text-center">${faceHTML}</td>
+        <td class="text-center">${comboHTML}</td>
+        <td class="pl-4">${finalHTML}</td>
+    `;
     tbody.appendChild(tr);
-    const sc = document.getElementById('scrollContainer').firstElementChild;
-    if (sc) setTimeout(() => sc.scrollTop = sc.scrollHeight, 10);
+
+    // Auto-scroll to bottom of the correct container
+    const sc = document.querySelector('#scrollContainer > div');
+    if (sc) {
+        setTimeout(() => {
+            sc.scrollTop = sc.scrollHeight;
+        }, 50);
+    }
 }
 
 function renderDashboard(alerts) {
@@ -1049,12 +1057,10 @@ function resetData(skipConfirm = false) {
         renderUserAnalytics();
         renderGapStats();
 
-        // Update FON tracker
         if (typeof PredictionEngine !== 'undefined' && PredictionEngine.updateFONTracker) {
             PredictionEngine.updateFONTracker(history);
         }
 
-        // Close Analytics modal if it was open (unless importing)
         if (!skipConfirm) {
             const am = document.getElementById('analyticsModal');
             if (!am.classList.contains('hidden')) am.classList.add('hidden');
@@ -1064,26 +1070,15 @@ function resetData(skipConfirm = false) {
 
 function undoSpin() {
     if (history.length === 0) return;
-    history.pop();
     let oldHist = [...history];
+    oldHist.pop();
 
-    history = [];
-    activeBets = [];
-    strategies = {};
-    engineStats = {
-        totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0,
-        bankrollHistory: [0], patternStats: {}, signalLog: []
-    };
-    userStats = { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
-    faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-
-    document.getElementById('historyBody').innerHTML = '';
+    resetData(true);
     oldHist.forEach(h => {
         document.getElementById('spinInput').value = h.num;
         addSpin();
     });
 
-    // Final refresh for FON tracker after undo
     if (typeof PredictionEngine !== 'undefined' && PredictionEngine.updateFONTracker) {
         PredictionEngine.updateFONTracker(history);
     }
@@ -1092,8 +1087,6 @@ function undoSpin() {
 function toggleModal(id) {
     document.getElementById(id).classList.toggle('hidden');
 }
-
-// --- DATA MANAGER FUNCTIONS ---
 
 function toggleDataMenu() {
     document.getElementById('dataMenu').classList.toggle('hidden');
@@ -1105,13 +1098,8 @@ function exportSpins() {
         toggleDataMenu();
         return;
     }
-
     const spins = history.map(h => h.num);
-    const data = {
-        timestamp: Date.now(),
-        spins: spins
-    };
-
+    const data = { timestamp: Date.now(), spins: spins };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1128,30 +1116,19 @@ function exportSpins() {
 function importSpins(input) {
     const file = input.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = function (e) {
         try {
             const data = JSON.parse(e.target.result);
             if (Array.isArray(data.spins)) {
-                // Step 1: Wipe current state without asking
                 resetData(true);
-
-                // Step 2: Replay spins
                 const inputField = document.getElementById('spinInput');
-                // Optimization: Temporarily disable some UI updates if dataset is large? 
-                // For now, simple replay is safest to ensure full state reconstruction.
                 data.spins.forEach(num => {
                     inputField.value = num;
                     addSpin();
                 });
-
-                // Step 3: Finish
                 inputField.value = '';
                 inputField.focus();
-
-                // Optional: Show success message
-                // alert(`Imported ${data.spins.length} spins successfully.`);
             } else {
                 alert("Invalid file format: 'spins' array missing.");
             }
@@ -1161,10 +1138,9 @@ function importSpins(input) {
     };
     reader.readAsText(file);
     toggleDataMenu();
-    input.value = ''; // Reset input to allow re-uploading same file
+    input.value = '';
 }
 
-// --- STOPWATCH FUNCTIONS ---
 let stopwatchInterval = null;
 let stopwatchSeconds = 0;
 
@@ -1172,19 +1148,12 @@ function formatStopwatchTime(totalSeconds) {
     let hrs = Math.floor(totalSeconds / 3600);
     let mins = Math.floor((totalSeconds % 3600) / 60);
     let secs = totalSeconds % 60;
-
-    let hStr = hrs.toString().padStart(2, '0');
-    let mStr = mins.toString().padStart(2, '0');
-    let sStr = secs.toString().padStart(2, '0');
-
-    return `${hStr}:${mStr}:${sStr}`;
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
 function updateStopwatchDisplay() {
     const display = document.getElementById('stopwatchDisplay');
-    if (display) {
-        display.innerText = formatStopwatchTime(stopwatchSeconds);
-    }
+    if (display) display.innerText = formatStopwatchTime(stopwatchSeconds);
 }
 
 function toggleStopwatch() {
@@ -1193,29 +1162,17 @@ function toggleStopwatch() {
     const btn = document.getElementById('stopwatchToggleBtn');
 
     if (stopwatchInterval) {
-        // Pause
         clearInterval(stopwatchInterval);
         stopwatchInterval = null;
-        if (icon) {
-            icon.classList.remove('fa-pause');
-            icon.classList.add('fa-play');
-        }
+        if (icon) { icon.classList.remove('fa-pause'); icon.classList.add('fa-play'); }
         if (text) text.innerText = 'Start';
         if (btn) {
             btn.classList.remove('bg-[#FFD60A]/20', 'text-[#FFD60A]', 'border-[#FFD60A]/30');
             btn.classList.add('bg-[#30D158]/20', 'text-[#30D158]', 'border-[#30D158]/30');
         }
     } else {
-        // Start
-        stopwatchInterval = setInterval(() => {
-            stopwatchSeconds++;
-            updateStopwatchDisplay();
-        }, 1000);
-
-        if (icon) {
-            icon.classList.remove('fa-play');
-            icon.classList.add('fa-pause');
-        }
+        stopwatchInterval = setInterval(() => { stopwatchSeconds++; updateStopwatchDisplay(); }, 1000);
+        if (icon) { icon.classList.remove('fa-play'); icon.classList.add('fa-pause'); }
         if (text) text.innerText = 'Pause';
         if (btn) {
             btn.classList.remove('bg-[#30D158]/20', 'text-[#30D158]', 'border-[#30D158]/30');
@@ -1225,21 +1182,13 @@ function toggleStopwatch() {
 }
 
 function resetStopwatch() {
-    if (stopwatchInterval) {
-        clearInterval(stopwatchInterval);
-        stopwatchInterval = null;
-    }
+    if (stopwatchInterval) { clearInterval(stopwatchInterval); stopwatchInterval = null; }
     stopwatchSeconds = 0;
     updateStopwatchDisplay();
-
     const icon = document.getElementById('stopwatchIcon');
     const text = document.getElementById('stopwatchText');
     const btn = document.getElementById('stopwatchToggleBtn');
-
-    if (icon) {
-        icon.classList.remove('fa-pause');
-        icon.classList.add('fa-play');
-    }
+    if (icon) { icon.classList.remove('fa-pause'); icon.classList.add('fa-play'); }
     if (text) text.innerText = 'Start';
     if (btn) {
         btn.classList.remove('bg-[#FFD60A]/20', 'text-[#FFD60A]', 'border-[#FFD60A]/30');
