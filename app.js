@@ -1299,7 +1299,7 @@ function renderDashboard(alerts) {
         const accent = bet.accentColor || '#FF3B30';
         cards.push(`
             <div class="min-w-[250px] h-[64px] px-3 py-2 rounded-lg border border-white/10 bg-[#0f0f12] flex items-center justify-between"
-                 style="border-left: 3px solid ${accent}; box-shadow: 0 8px 16px rgba(0,0,0,0.55);">
+                 style="border-left: 3px solid ${accent};">
                 <div class="min-w-0">
                     <div class="text-[15px] leading-tight font-black text-white tracking-wide">BET F${bet.targetFace}</div>
                     <div class="text-[11px] leading-tight text-white/75 font-semibold">${subtitle}</div>
@@ -1313,7 +1313,7 @@ function renderDashboard(alerts) {
     });
 
     if (cards.length === 0) {
-        dash.innerHTML = `<div class="w-full text-center text-[10px] font-medium text-[#8E8E93]/60 border border-dashed border-white/5 rounded-xl p-2 select-none tracking-wide flex items-center justify-center h-[60px]"><span>GHOST MODE ACTIVE - SCANNING...</span></div>`;
+        dash.innerHTML = `<div class="dashboard-empty w-full text-center text-[10px] font-medium text-[#8E8E93]/60 border border-dashed border-white/5 rounded-xl p-2 select-none tracking-wide flex items-center justify-center h-[60px]"><span>GHOST MODE ACTIVE - SCANNING...</span></div>`;
         return;
     }
 

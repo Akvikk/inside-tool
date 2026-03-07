@@ -263,7 +263,7 @@ button.bg-gradient-to-b:hover {
     }
 }
 
-#dashboard div {
+#dashboard .dashboard-empty {
     font-family: inherit;
     color: var(--theme-emerald);
     /* GHOST MODE is green */
