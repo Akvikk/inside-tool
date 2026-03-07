@@ -89,6 +89,10 @@ window.onload = () => {
             burgerMenu.classList.add('hidden');
         }
     });
+
+    window.addEventListener('resize', () => {
+        requestAnimationFrame(layoutAllComboBridges);
+    });
 };
 
 function toggleHamburgerMenu() {
@@ -131,6 +135,7 @@ function toggleInputLayout() {
     }
 
     initDesktopGrid(); // Re-render the grid
+    requestAnimationFrame(layoutAllComboBridges);
 }
 
 function buildRacetrackSVG() {
@@ -318,6 +323,7 @@ function reRenderHistory() {
     const tbody = document.getElementById('historyBody');
     tbody.innerHTML = '';
     history.forEach(spin => renderRow(spin));
+    requestAnimationFrame(layoutAllComboBridges);
 }
 
 function handleGridClick(n) {
@@ -910,7 +916,7 @@ function renderRow(spin) {
     if (spin.faces && spin.faces.length > 0) {
         let faceTags = spin.faces.map(fId => {
             let fStyle = FACES[fId];
-            return `<span class="face-tag mb-1 mr-1" data-spin-id="${spin.id}" style="color:${fStyle.color}; border:1px solid ${fStyle.border}; background:${fStyle.bg};">F${fId}</span>`;
+            return `<span class="face-tag mb-1 mr-1" data-spin-id="${spin.id}" data-face-id="${fId}" style="color:${fStyle.color}; border:1px solid ${fStyle.border}; background:${fStyle.bg};">F${fId}</span>`;
         }).join('');
         faceHTML = `<div class="flex flex-wrap justify-center">${faceTags}</div>`;
     } else {
@@ -923,6 +929,8 @@ function renderRow(spin) {
         const prevSpin = history[spin.index - 1];
         if (prevSpin && prevSpin.faces && spin.faces) {
             let detectedCombo = null;
+            let matchedPrevFace = null;
+            let matchedCurrFace = null;
             const tracked = [
                 { a: 5, b: 2, label: '5-2', color: '#FF3B30' },
                 { a: 5, b: 3, label: '5-3', color: '#FF9500' },
@@ -936,6 +944,8 @@ function renderRow(spin) {
                     for (let cf of spin.faces) {
                         if ((pf === t.a && cf === t.b) || (pf === t.b && cf === t.a)) {
                             match = true;
+                            matchedPrevFace = pf;
+                            matchedCurrFace = cf;
                             break;
                         }
                     }
@@ -948,29 +958,17 @@ function renderRow(spin) {
             }
 
             if (detectedCombo) {
-                // VISUAL COMBO BRIDGE: Floating bracket connecting rows
+                // VISUAL COMBO BRIDGE: dynamically laid out from tag positions
                 comboHTML = `
-                    <div class="absolute left-0 top-0 -translate-y-1/2 w-full h-0 pointer-events-none select-none z-[100] overflow-visible flex items-center justify-center">
-                        <!-- The SVG Bracket -->
-                        <div class="absolute right-[50%] mr-[24px] h-[80px] w-[120px] pointer-events-none overflow-visible flex items-center justify-end">
-                             <svg width="120" height="80" viewBox="0 0 120 80" fill="none" class="overflow-visible">
-                                <!-- Top Arm (Previous Row) - Cubic Bezier for organic C-shape -->
-                                <path d="M 0 15 C 50 15, 80 40, 120 40" 
-                                      stroke="${detectedCombo.color}" stroke-width="2.5" stroke-opacity="0.8" fill="none" stroke-linecap="round" />
-                                <!-- Bottom Arm (Current Row) -->
-                                <path d="M 0 65 C 50 65, 80 40, 120 40" 
-                                      stroke="${detectedCombo.color}" stroke-width="2.5" stroke-opacity="0.8" fill="none" stroke-linecap="round" />
-                                <!-- Junction Dot -->
-                                <circle cx="120" cy="40" r="2.5" fill="${detectedCombo.color}" />
-                            </svg>
-                        </div>
-
-                        <!-- The Floating Label -->
-                        <div class="relative flex items-center justify-center z-10">
-                            <!-- Glow behind -->
-                            <div class="absolute inset-0 rounded-lg blur-md opacity-50" style="background-color: ${detectedCombo.color};"></div>
-                            <!-- Label -->
-                            <span class="px-3 py-1 rounded-md text-[11px] font-black border border-white/10 relative shadow-lg tracking-wider" 
+                    <div class="absolute inset-x-0 top-0 -translate-y-1/2 h-0 pointer-events-none select-none z-[1] flex items-center justify-center">
+                        <div class="combo-link-layer absolute overflow-visible"
+                             data-prev-spin-id="${prevSpin.id}"
+                             data-prev-face="${matchedPrevFace}"
+                             data-curr-face="${matchedCurrFace}"
+                             data-color="${detectedCombo.color}"></div>
+                        <div class="relative z-[2] inline-flex items-center justify-center">
+                            <div class="absolute inset-0 rounded-lg blur-md opacity-45" style="background-color: ${detectedCombo.color};"></div>
+                            <span class="combo-badge relative px-3 py-1 rounded-md text-[11px] font-black border border-white/10 shadow-lg tracking-wider"
                                   style="color: ${detectedCombo.color}; background-color: #0c0c0e; box-shadow: 0 0 10px ${detectedCombo.color}30;">
                                 ${detectedCombo.label}
                             </span>
@@ -1005,11 +1003,12 @@ function renderRow(spin) {
     tr.innerHTML = `
         <td class="text-center font-mono text-xs text-gray-400">#${spin.index + 1}</td>
         <td class="text-center"><div class="num-box ${bgClass}">${spin.num}</div></td>
-        <td class="text-center">${faceHTML}</td>
-        <td class="text-center">${comboHTML}</td>
+        <td class="text-center relative z-[5]">${faceHTML}</td>
+        <td class="text-center relative overflow-visible z-[1]">${comboHTML}</td>
         <td class="pl-4">${finalHTML}</td>
     `;
     tbody.appendChild(tr);
+    requestAnimationFrame(() => layoutComboBridge(spin.id));
 
     // Auto-scroll to bottom of the correct container
     const sc = document.querySelector('#scrollContainer > div');
@@ -1018,6 +1017,80 @@ function renderRow(spin) {
             sc.scrollTop = sc.scrollHeight;
         }, 50);
     }
+}
+
+function layoutComboBridge(spinId) {
+    const row = document.getElementById(`row-${spinId}`);
+    if (!row) return;
+
+    const layer = row.querySelector('.combo-link-layer');
+    const badge = row.querySelector('.combo-badge');
+    const comboCell = row.querySelector('td:nth-child(4)');
+    if (!layer || !badge || !comboCell) return;
+
+    const prevSpinId = layer.dataset.prevSpinId;
+    const prevFace = parseInt(layer.dataset.prevFace, 10);
+    const currFace = parseInt(layer.dataset.currFace, 10);
+    const color = layer.dataset.color || '#ffffff';
+
+    if (!prevSpinId || Number.isNaN(prevFace) || Number.isNaN(currFace)) return;
+
+    const prevTag = document.querySelector(`.face-tag[data-spin-id="${prevSpinId}"][data-face-id="${prevFace}"]`);
+    const currTag = row.querySelector(`.face-tag[data-spin-id="${spinId}"][data-face-id="${currFace}"]`);
+    if (!prevTag || !currTag) return;
+
+    const cellRect = comboCell.getBoundingClientRect();
+    const prevRect = prevTag.getBoundingClientRect();
+    const currRect = currTag.getBoundingClientRect();
+    const badgeRect = badge.getBoundingClientRect();
+
+    const prevPoint = {
+        x: prevRect.right - cellRect.left + 2,
+        y: prevRect.top + prevRect.height / 2 - cellRect.top
+    };
+    const currPoint = {
+        x: currRect.right - cellRect.left + 2,
+        y: currRect.top + currRect.height / 2 - cellRect.top
+    };
+    const targetPoint = {
+        x: badgeRect.left - cellRect.left + 4,
+        y: badgeRect.top + badgeRect.height / 2 - cellRect.top
+    };
+
+    const minX = Math.min(prevPoint.x, currPoint.x, targetPoint.x) - 10;
+    const maxX = Math.max(prevPoint.x, currPoint.x, targetPoint.x) + 6;
+    const minY = Math.min(prevPoint.y, currPoint.y, targetPoint.y) - 12;
+    const maxY = Math.max(prevPoint.y, currPoint.y, targetPoint.y) + 12;
+
+    const width = Math.max(24, maxX - minX);
+    const height = Math.max(24, maxY - minY);
+
+    layer.style.left = `${minX}px`;
+    layer.style.top = `${minY}px`;
+    layer.style.width = `${width}px`;
+    layer.style.height = `${height}px`;
+
+    const p1 = { x: prevPoint.x - minX, y: prevPoint.y - minY };
+    const p2 = { x: currPoint.x - minX, y: currPoint.y - minY };
+    const t = { x: targetPoint.x - minX, y: targetPoint.y - minY };
+
+    const c1x = p1.x + Math.max(12, Math.abs(t.x - p1.x) * 0.45);
+    const c2x = p2.x + Math.max(12, Math.abs(t.x - p2.x) * 0.45);
+    const cx = t.x - Math.max(10, Math.min(20, Math.abs(t.x - Math.min(p1.x, p2.x)) * 0.2));
+
+    layer.innerHTML = `
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="overflow-visible">
+            <path d="M ${p1.x} ${p1.y} C ${c1x} ${p1.y}, ${cx} ${t.y}, ${t.x} ${t.y}"
+                  stroke="${color}" stroke-width="2.5" stroke-opacity="0.85" fill="none" stroke-linecap="round" />
+            <path d="M ${p2.x} ${p2.y} C ${c2x} ${p2.y}, ${cx} ${t.y}, ${t.x} ${t.y}"
+                  stroke="${color}" stroke-width="2.5" stroke-opacity="0.85" fill="none" stroke-linecap="round" />
+            <circle cx="${t.x}" cy="${t.y}" r="2.5" fill="${color}" />
+        </svg>
+    `;
+}
+
+function layoutAllComboBridges() {
+    history.forEach(spin => layoutComboBridge(spin.id));
 }
 
 function renderDashboard(alerts) {
