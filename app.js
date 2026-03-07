@@ -1,14 +1,4 @@
 // --- CONFIGURATION ---
-const FACES = {
-    1: { id: 1, nums: [1, 6, 10, 15, 24, 29, 33], color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)', border: '#0891b2' }, // Cyan
-    2: { id: 2, nums: [2, 7, 11, 16, 20, 24, 25, 29, 34], color: '#f97316', bg: 'rgba(249, 115, 22, 0.15)', border: '#ea580c' }, // Orange
-    3: { id: 3, nums: [3, 8, 12, 17, 21, 26, 30, 35], color: '#a855f7', bg: 'rgba(168, 85, 247, 0.15)', border: '#9333ea' }, // Purple
-    4: { id: 4, nums: [4, 9, 13, 18, 22, 27, 31, 36], color: '#eab308', bg: 'rgba(234, 179, 8, 0.15)', border: '#ca8a04' }, // Yellow
-    5: { id: 5, nums: [0, 5, 10, 14, 15, 19, 23, 28, 32], color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)', border: '#dc2626' } // Red
-};
-
-// Old sequences stripped
-
 const RED_NUMS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
 
 // --- STATE MANAGEMENT ---
@@ -449,6 +439,11 @@ function addSpin() {
 
     if (!document.getElementById('analyticsModal').classList.contains('hidden')) renderAnalytics();
     if (!document.getElementById('betsModal').classList.contains('hidden')) renderUserAnalytics();
+
+    // Update FON tracker in Patterns modal
+    if (typeof PredictionEngine !== 'undefined' && PredictionEngine.updateFONTracker) {
+        PredictionEngine.updateFONTracker(history);
+    }
 
     refreshHighlights();
 
@@ -922,6 +917,51 @@ function renderRow(spin) {
         faceHTML = `<span class="text-gray-600">-</span>`;
     }
 
+    // NEW: Combo Column Logic
+    let comboHTML = `<span class="text-gray-600">-</span>`;
+    if (spin.index > 0) {
+        const prevSpin = history[spin.index - 1];
+        if (prevSpin && prevSpin.faces && spin.faces) {
+            let detectedCombo = null;
+            const tracked = [
+                { a: 5, b: 2, label: '5-2', color: '#FF3B30' },
+                { a: 5, b: 3, label: '5-3', color: '#FF9500' },
+                { a: 1, b: 3, label: '1-3', color: '#34C759' },
+                { a: 2, b: 4, label: '2-4', color: '#007AFF' }
+            ];
+
+            for (let t of tracked) {
+                let match = false;
+                for (let pf of prevSpin.faces) {
+                    for (let cf of spin.faces) {
+                        if ((pf === t.a && cf === t.b) || (pf === t.b && cf === t.a)) {
+                            match = true;
+                            break;
+                        }
+                    }
+                    if (match) break;
+                }
+                if (match) {
+                    detectedCombo = t;
+                    break;
+                }
+            }
+
+            if (detectedCombo) {
+                comboHTML = `
+                    <div class="flex items-center justify-center gap-2">
+                        <div class="h-[1px] w-4" style="background-color: ${detectedCombo.color}; opacity: 0.3;"></div>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-black border" 
+                              style="color: ${detectedCombo.color}; border-color: ${detectedCombo.color}4d; background-color: ${detectedCombo.color}1a;">
+                            ${detectedCombo.label}
+                        </span>
+                        <div class="h-[1px] w-4" style="background-color: ${detectedCombo.color}; opacity: 0.3;"></div>
+                    </div>
+                `;
+            }
+        }
+    }
+
     let predHTMLParts = [];
 
     if (spin.resolvedBets && spin.resolvedBets.length > 0) {
@@ -963,6 +1003,7 @@ function renderRow(spin) {
             <td class="text-center font-mono text-xs text-gray-400">#${spin.index + 1}</td>
             <td class="text-center"><div class="num-box ${bgClass}">${spin.num}</div></td>
             <td class="text-center">${faceHTML}</td>
+            <td class="text-center">${comboHTML}</td>
             <td class="pl-4">${finalHTML}</td>
         `;
 
@@ -973,94 +1014,7 @@ function renderRow(spin) {
 
 function renderDashboard(alerts) {
     const dash = document.getElementById('dashboard');
-    dash.innerHTML = '';
-
-    if (alerts) window.currentAlerts = alerts;
-    const displayList = window.currentAlerts || [];
-
-    const visibleList = displayList.filter(a => {
-        if (a.type !== 'ACTIVE' && a.type !== 'LOCKED') return false;
-        return true;
-    });
-
-    if (visibleList.length === 0) {
-        dash.innerHTML = `<div class="w-full text-center text-xs font-medium text-[#8E8E93]/70 border border-dashed border-white/5 rounded-2xl p-4 select-none tracking-wide flex items-center justify-center h-[60px]"><span>GHOST MODE ACTIVE • SCANNING...</span></div>`;
-        return;
-    }
-
-    visibleList.sort((a, b) => (a.type === 'ACTIVE' ? -1 : 1));
-
-    // NEW: Calculate Win Rates to find Hot Patterns
-    let maxWinRate = 0;
-    visibleList.forEach(a => {
-        if (a.type === 'ACTIVE') {
-            let key = a.patternName;
-            let s = engineStats.patternStats[key];
-            if (s && (s.wins + s.losses) > 0) {
-                let rate = (s.wins / (s.wins + s.losses)) * 100;
-                if (rate > maxWinRate) maxWinRate = rate;
-            }
-        }
-    });
-
-    const targetCounts = {};
-    visibleList.forEach(a => {
-        if (a.type === 'ACTIVE') {
-            targetCounts[a.fB] = (targetCounts[a.fB] || 0) + 1;
-        }
-    });
-
-    visibleList.forEach((a, i) => {
-        let div = document.createElement('div');
-        div.style.animationDelay = `${i * 0.05}s`;
-
-        if (a.type === 'ACTIVE') {
-            let betIndex = activeBets.findIndex(b => b.patternName === a.patternName);
-
-            let isConfirmed = (betIndex !== -1 && activeBets[betIndex] && activeBets[betIndex].confirmed);
-            let isPower = (targetCounts[a.fB] > 1);
-            let isFatigued = checkFatigue(a.patternName);
-
-            // NEW: Hot Check
-            let isHot = false;
-            let key = a.patternName;
-            let s = engineStats.patternStats[key];
-            if (s && (s.wins + s.losses) > 0) {
-                let rate = (s.wins / (s.wins + s.losses)) * 100;
-                if (rate === maxWinRate && maxWinRate >= 50) isHot = true;
-            }
-
-            // Elemental Classes
-            let specialClass = '';
-            if (isHot) specialClass = 'card-fire';
-            else if (isFatigued) specialClass = 'card-ice';
-            else if (isPower) specialClass = 'card-power';
-
-            div.className = `card-active ${isConfirmed ? 'card-confirmed' : ''} ${specialClass} p-2 px-3 rounded-xl min-w-[110px] flex flex-col justify-center relative`;
-
-            div.ondblclick = () => toggleBetConfirmation(betIndex);
-
-            div.innerHTML = `
-                    <div class="card-content">
-                        <div class="absolute top-1 right-1">
-                            <input type="checkbox" class="bet-checkbox" ${isConfirmed ? 'checked' : ''} onclick="event.stopPropagation(); toggleBetConfirmation(${betIndex})">
-                        </div>
-                        <div class="text-[8px] font-bold ${isConfirmed ? 'text-white' : 'text-[#30D158]'} uppercase tracking-widest mb-0.5 opacity-90">${isPower ? 'POWER BET' : 'TRIGGERED'}</div>
-                        <div class="text-xl font-black text-white mt-0.5 mb-0.5">BET F${a.fB}</div>
-                        <div class="text-[8px] ${isConfirmed ? 'text-white/80' : 'text-gray-400'} font-bold truncate">
-                            ${a.patternName}
-                        </div>
-                    </div>
-                `;
-        } else {
-            div.className = "card-lock px-3 py-2 rounded-xl min-w-[90px] flex flex-col items-center justify-center opacity-70 select-none border border-white/5 transition-all hover:bg-white/5";
-            div.innerHTML = `
-                    <div class="text-[8px] font-bold text-[#8E8E93] uppercase tracking-widest mb-0.5">LOCKED</div>
-                    <div class="text-[10px] font-bold text-gray-300 flex items-center gap-1">F${a.fA} <i class="fas fa-arrow-right text-[8px] text-gray-500"></i> F${a.fB}</div>
-                `;
-        }
-        dash.appendChild(div);
-    });
+    dash.innerHTML = `<div class="w-full text-center text-[10px] font-medium text-[#8E8E93]/60 border border-dashed border-white/5 rounded-xl p-2 select-none tracking-wide flex items-center justify-center h-[60px]"><span>GHOST MODE ACTIVE • SCANNING...</span></div>`;
 }
 
 function refreshHighlights() {
@@ -1094,6 +1048,12 @@ function resetData(skipConfirm = false) {
         renderAnalytics();
         renderUserAnalytics();
         renderGapStats();
+
+        // Update FON tracker
+        if (typeof PredictionEngine !== 'undefined' && PredictionEngine.updateFONTracker) {
+            PredictionEngine.updateFONTracker(history);
+        }
+
         // Close Analytics modal if it was open (unless importing)
         if (!skipConfirm) {
             const am = document.getElementById('analyticsModal');
@@ -1122,6 +1082,11 @@ function undoSpin() {
         document.getElementById('spinInput').value = h.num;
         addSpin();
     });
+
+    // Final refresh for FON tracker after undo
+    if (typeof PredictionEngine !== 'undefined' && PredictionEngine.updateFONTracker) {
+        PredictionEngine.updateFONTracker(history);
+    }
 }
 
 function toggleModal(id) {
@@ -1207,11 +1172,11 @@ function formatStopwatchTime(totalSeconds) {
     let hrs = Math.floor(totalSeconds / 3600);
     let mins = Math.floor((totalSeconds % 3600) / 60);
     let secs = totalSeconds % 60;
-    
+
     let hStr = hrs.toString().padStart(2, '0');
     let mStr = mins.toString().padStart(2, '0');
     let sStr = secs.toString().padStart(2, '0');
-    
+
     return `${hStr}:${mStr}:${sStr}`;
 }
 
@@ -1270,7 +1235,7 @@ function resetStopwatch() {
     const icon = document.getElementById('stopwatchIcon');
     const text = document.getElementById('stopwatchText');
     const btn = document.getElementById('stopwatchToggleBtn');
-    
+
     if (icon) {
         icon.classList.remove('fa-pause');
         icon.classList.add('fa-play');
