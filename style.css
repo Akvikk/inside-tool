@@ -218,7 +218,6 @@ body::after {
     letter-spacing: 0.05em;
     border: 1px solid rgba(255, 255, 255, 0.05);
     background: rgba(255, 255, 255, 0.02);
-    color: var(--text-secondary);
 }
 
 .ios-btn:active {
@@ -227,9 +226,9 @@ body::after {
 }
 
 .ios-btn:hover {
-    color: var(--text-primary);
     border-color: rgba(255, 255, 255, 0.15);
     background: rgba(255, 255, 255, 0.05);
+    text-shadow: 0 0 8px currentColor;
 }
 
 /* Icon Animations */

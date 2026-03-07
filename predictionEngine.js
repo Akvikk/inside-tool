@@ -24,6 +24,7 @@ const PredictionEngine = {
         const parsedWindow = parseInt(windowSize, 10);
         const safeWindow = Number.isNaN(parsedWindow) ? 14 : Math.max(2, Math.min(60, parsedWindow));
         const recentSpins = Array.isArray(history) ? history.slice(-safeWindow) : [];
+        const transitionCount = Math.max(0, recentSpins.length - 1);
 
         let counts = { '5-2': 0, '5-3': 0, '1-3': 0, '2-4': 0 };
         let lastSeen = { '5-2': -1, '5-3': -1, '1-3': -1, '2-4': -1 };
@@ -31,6 +32,7 @@ const PredictionEngine = {
         for (let i = 1; i < recentSpins.length; i++) {
             const prevSpin = recentSpins[i - 1];
             const currSpin = recentSpins[i];
+            const transitionIndex = i - 1;
             
             if (!prevSpin || !currSpin || !prevSpin.faces || !currSpin.faces) continue;
 
@@ -45,15 +47,46 @@ const PredictionEngine = {
                 
                 if (matched) {
                     counts[combo.label]++;
-                    lastSeen[combo.label] = i;
+                    lastSeen[combo.label] = transitionIndex;
                 }
             });
         }
 
-        const highestCount = Math.max(counts['5-2'], counts['5-3'], counts['1-3'], counts['2-4']);
+        const comboStats = PERIMETER_COMBOS.map(combo => {
+            const hits = counts[combo.label] || 0;
+            const lastSeenIndex = lastSeen[combo.label];
+            const drought = transitionCount === 0
+                ? 0
+                : (lastSeenIndex === -1
+                    ? transitionCount
+                    : Math.max(0, (transitionCount - 1) - lastSeenIndex));
+            const misses = Math.max(0, transitionCount - hits);
+            const hitRate = transitionCount > 0 ? Math.round((hits / transitionCount) * 100) : 0;
+            const missRate = transitionCount > 0 ? Math.round((misses / transitionCount) * 100) : 0;
+            const recencyWeight = transitionCount > 0 ? drought / transitionCount : 0;
+            const scarcityWeight = transitionCount > 0 ? misses / transitionCount : 0;
+            const coldScore = transitionCount > 0
+                ? Math.round(((recencyWeight * 0.72) + (scarcityWeight * 0.28)) * 100)
+                : 0;
+
+            return {
+                ...combo,
+                hits,
+                misses,
+                hitRate,
+                missRate,
+                drought,
+                lastSeenIndex,
+                lastSeenDistance: drought,
+                coldScore,
+                transitionCount
+            };
+        });
+
+        const highestCount = comboStats.reduce((best, combo) => Math.max(best, combo.hits), 0);
         let dominantCombo = null;
         if (highestCount > 0) {
-            const contenders = PERIMETER_COMBOS.filter(combo => (counts[combo.label] || 0) === highestCount);
+            const contenders = comboStats.filter(combo => combo.hits === highestCount);
             dominantCombo = contenders[0] || null;
             contenders.forEach(combo => {
                 const currentLastSeen = lastSeen[dominantCombo.label] || -1;
@@ -64,15 +97,22 @@ const PredictionEngine = {
             });
         }
 
+        const coldLeader = comboStats
+            .slice()
+            .sort((a, b) => b.coldScore - a.coldScore || b.drought - a.drought || a.hits - b.hits)[0] || null;
+
         return {
             windowSize: safeWindow,
             recentSpins: recentSpins,
+            transitionCount: transitionCount,
             // Use the first face for simple sequence display, but stats used all faces
             latestPrimaryFace: recentSpins.length > 0 && recentSpins[recentSpins.length - 1].faces ? recentSpins[recentSpins.length - 1].faces[0] : null,
             sequence: recentSpins.map(s => (s.faces && s.faces.length > 0 ? s.faces[0] : '?')),
             counts: counts,
             dominantCombo: dominantCombo,
-            lastSeen: lastSeen
+            lastSeen: lastSeen,
+            comboStats: comboStats,
+            coldLeader: coldLeader
         };
     },
 

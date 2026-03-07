@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -181,7 +181,6 @@
         <!-- Content filled via JS -->
         <div
             class="dashboard-empty w-full text-center text-[10px] font-medium text-[#8E8E93]/60 border border-dashed border-white/5 rounded-xl p-2 select-none tracking-wide flex items-center justify-center h-[60px]">
-            <span>GHOST MODE ACTIVE - SCANNING...</span>
         </div>
     </div>
 
@@ -230,11 +229,36 @@
                     class="text-gray-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
             </div>
             <div class="frosted-plate mx-4 mt-4 p-4 border-b border-white/5">
-                <div class="flex justify-between items-end mb-2">
-                    <div class="text-[10px] font-bold text-white/50 uppercase tracking-wider">Gap Counter (Cold > 15)
+                <div class="cold-tracker-shell">
+                    <div class="cold-tracker-overview">
+                        <div>
+                            <div class="cold-tracker-title">
+                                <i class="fas fa-snowflake"></i>
+                                <span>Cold Tracker</span>
+                            </div>
+                            <div id="coldTrackerMeta" class="cold-tracker-meta">Need at least 2 spins to track combo
+                                droughts.</div>
+                        </div>
+                        <div id="coldTrackerLead" class="cold-chip">WAITING</div>
+                    </div>
+
+                    <div class="cold-tracker-panel">
+                        <div class="cold-tracker-head">
+                            <span>Combo</span>
+                            <span>Drought</span>
+                            <span>Hit Rate</span>
+                        </div>
+                        <div id="coldTrackerList" class="cold-tracker-list"></div>
+                    </div>
+
+                    <div class="cold-face-footer">
+                        <div class="cold-face-header">
+                            <span>Face Drift</span>
+                            <span>Live gap count</span>
+                        </div>
+                        <div class="grid grid-cols-5 gap-2" id="faceGapContainer"></div>
                     </div>
                 </div>
-                <div class="grid grid-cols-5 gap-2" id="faceGapContainer"></div>
             </div>
 
             <!-- FON COMBO TRACKER -->
@@ -463,18 +487,44 @@
     </div>
 
     <!-- FLOATING ANALYTICS HUD -->
-    <div id="analyticsHUD" class="fixed hidden flex-col z-[100] bg-[#0A0A0C]/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.8)] overflow-hidden transition-opacity duration-200"
+    <div id="analyticsHUD" class="fixed hidden flex-col z-[100] bg-gradient-to-br from-[#1a1a1e]/95 to-[#050505]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden transition-all duration-300"
          style="top: 100px; left: 20px; width: 260px; height: 220px; min-width: 200px; min-height: 160px;">
         
         <!-- Drag Handle / Header -->
-        <div id="hudHeader" class="h-8 bg-white/5 border-b border-white/5 flex justify-between items-center px-3 cursor-move select-none">
+        <div id="hudHeader" class="h-9 flex justify-between items-center px-3 cursor-move select-none transition-colors duration-300">
             <span class="text-[10px] font-bold text-[#30D158] tracking-wider uppercase"><i class="fas fa-satellite-dish mr-1"></i> Live Feed</span>
             <button onclick="toggleAnalyticsHUD()" class="text-gray-500 hover:text-white transition-colors"><i class="fas fa-times text-xs"></i></button>
         </div>
 
         <!-- Content Area -->
-        <div id="hudContent" class="flex-1 p-3 overflow-y-auto custom-scroll relative">
-            <!-- Injected via JS -->
+        <div class="flex-1 flex flex-col overflow-hidden relative">
+            <!-- Settings Icon Toggle -->
+            <div class="px-3 pt-3 pb-2 shrink-0 flex items-center gap-2">
+                <button onclick="toggleHUDControls()" class="w-6 h-6 flex items-center justify-center rounded bg-white/10 hover:bg-white/20 text-[#30D158] text-xs transition-colors border border-[#30D158]/30">
+                    <i class="fas fa-sliders-h"></i>
+                </button>
+                <button onclick="toggleHudColdMode()" id="hudColdBtn" class="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 text-gray-500 transition-colors" title="Toggle Cold Mode"><i class="fas fa-snowflake text-[10px]"></i></button>
+            </div>
+
+            <!-- Controls (Hidden by default) -->
+            <div id="hudControls" class="px-3 pb-2 shrink-0 hidden transition-all duration-200">
+                <div class="flex flex-col gap-2 bg-white/5 p-2 rounded-lg border border-white/5">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Window Size</span>
+                        <span id="hudWindowValue" class="text-[10px] font-mono font-bold text-[#30D158]">14 Spins</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="adjustPredictionPerimeterWindow(-1)" class="w-5 h-5 flex items-center justify-center rounded bg-white/10 hover:bg-white/20 text-white text-[10px] transition-colors"><i class="fas fa-minus"></i></button>
+                        <input id="hudWindowSlider" type="range" min="2" max="60" value="14" class="flex-1 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-[#30D158]" oninput="setPerimeterWindow(this.value)">
+                        <button onclick="adjustPredictionPerimeterWindow(1)" class="w-5 h-5 flex items-center justify-center rounded bg-white/10 hover:bg-white/20 text-white text-[10px] transition-colors"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Table -->
+            <div id="hudStats" class="flex-1 px-3 pb-3 overflow-y-auto custom-scroll">
+                <!-- Injected via JS -->
+            </div>
         </div>
 
         <!-- Resize Handle -->

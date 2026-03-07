@@ -1,4 +1,4 @@
-﻿﻿// --- CONFIGURATION ---
+﻿﻿﻿﻿﻿﻿// --- CONFIGURATION ---
 const RED_NUMS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
 const PERIMETER_RULE_KEY = 'Perimeter Rule';
 const PREDICTION_PERIMETER_PATTERN = 'Prediction Perimeter';
@@ -12,6 +12,9 @@ let activeBets = [];
 let faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
 let predictionPerimeterWindow = 14;
 let perimeterRuleEnabled = true;
+
+// Constants PERIMETER_COMBOS and FACES are already defined in predictionEngine.js
+// Removing duplicate declarations to prevent SyntaxError
 
 // Global Pattern Configuration - The Source of Truth
 let patternConfig = {
@@ -36,9 +39,21 @@ let userStats = {
 let strategies = {};
 
 let currentAnalyticsTab = 'god';
+let isHudColdMode = false;
 window.currentAlerts = [];
 
 function resetSession() {
+    const modal = document.getElementById('confirmModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        document.getElementById('confirmResetBtn').onclick = () => {
+            performReset();
+            modal.classList.add('hidden');
+        };
+    }
+}
+
+function performReset() {
     history = [];
     activeBets = [];
     faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
@@ -57,10 +72,18 @@ function resetSession() {
     };
 
     updatePredictionSettingsUI();
+    renderGapStats();
     updatePerimeterAnalytics();
     updateVisibility();
-    document.getElementById('hamburgerMenu').classList.add('hidden');
-    document.getElementById('hamburgerBackdrop').classList.add('hidden');
+    updateAnalyticsHUD();
+    const hm = document.getElementById('hamburgerMenu');
+    if (hm) hm.classList.add('hidden');
+    const hb = document.getElementById('hamburgerBackdrop');
+    if (hb) hb.classList.add('hidden');
+
+    // Clear history body
+    const body = document.getElementById('historyBody');
+    if (body) body.innerHTML = '';
 }
 
 // --- INIT ---
@@ -72,9 +95,9 @@ window.onload = () => {
     updatePredictionSettingsUI();
     // Init sim config
     simulationConfig = JSON.parse(JSON.stringify(patternConfig));
-    if (typeof PredictionEngine !== 'undefined' && PredictionEngine.updateFONTracker) {
-        PredictionEngine.updateFONTracker(history, predictionPerimeterWindow);
-    }
+    
+    updatePerimeterAnalytics();
+    updateAnalyticsHUD();
 
     document.getElementById('spinInput').focus();
     document.getElementById('spinInput').addEventListener("keypress", (e) => {
@@ -168,66 +191,87 @@ function initAnalyticsHUD() {
     let isDragging = false;
     let startX, startY, initialLeft, initialTop;
 
-    header.addEventListener('mousedown', (e) => {
-        e.preventDefault(); // Prevent text selection
+    header.addEventListener('mousedown', startDrag);
+    header.addEventListener('touchstart', startDrag, { passive: false });
+
+    function startDrag(e) {
+        if (e.type === 'mousedown') e.preventDefault();
         isDragging = true;
-        startX = e.clientX;
-        startY = e.clientY;
+        const clientX = e.type === 'mousedown' ? e.clientX : e.touches[0].clientX;
+        const clientY = e.type === 'mousedown' ? e.clientY : e.touches[0].clientY;
+        startX = clientX;
+        startY = clientY;
         initialLeft = hud.offsetLeft;
         initialTop = hud.offsetTop;
         document.addEventListener('mousemove', onDrag);
         document.addEventListener('mouseup', stopDrag);
-    });
+        document.addEventListener('touchmove', onDrag, { passive: false });
+        document.addEventListener('touchend', stopDrag);
+    }
 
     function onDrag(e) {
         if (!isDragging) return;
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
+        const clientX = e.type === 'mousemove' ? e.clientX : e.touches[0].clientX;
+        const clientY = e.type === 'mousemove' ? e.clientY : e.touches[0].clientY;
+        const dx = clientX - startX;
+        const dy = clientY - startY;
         hud.style.left = `${initialLeft + dx}px`;
         hud.style.top = `${initialTop + dy}px`;
+        if (e.type === 'touchmove') e.preventDefault(); // Prevent scrolling while dragging
     }
 
     function stopDrag() {
         isDragging = false;
         document.removeEventListener('mousemove', onDrag);
         document.removeEventListener('mouseup', stopDrag);
+        document.removeEventListener('touchmove', onDrag);
+        document.removeEventListener('touchend', stopDrag);
     }
 
     // RESIZE LOGIC
-    let isResizing = false;
-    let startW, startH;
+    resizer.addEventListener('mousedown', startResize);
+    resizer.addEventListener('touchstart', startResize, { passive: false });
 
-    resizer.addEventListener('mousedown', (e) => {
-        e.preventDefault(); // Prevent text selection
-        e.stopPropagation(); // Prevent drag
+    function startResize(e) {
+        if (e.type === 'mousedown') e.preventDefault();
+        e.stopPropagation();
         isResizing = true;
-        startX = e.clientX;
-        startY = e.clientY;
+        const clientX = e.type === 'mousedown' ? e.clientX : e.touches[0].clientX;
+        const clientY = e.type === 'mousedown' ? e.clientY : e.touches[0].clientY;
+        startX = clientX;
+        startY = clientY;
         startW = hud.offsetWidth;
         startH = hud.offsetHeight;
         document.addEventListener('mousemove', onResize);
         document.addEventListener('mouseup', stopResize);
-    });
+        document.addEventListener('touchmove', onResize, { passive: false });
+        document.addEventListener('touchend', stopResize);
+    }
 
     function onResize(e) {
         if (!isResizing) return;
-        const w = startW + (e.clientX - startX);
-        const h = startH + (e.clientY - startY);
+        const clientX = e.type === 'mousemove' ? e.clientX : e.touches[0].clientX;
+        const clientY = e.type === 'mousemove' ? e.clientY : e.touches[0].clientY;
+        const w = startW + (clientX - startX);
+        const h = startH + (clientY - startY);
         hud.style.width = `${Math.max(200, w)}px`;
         hud.style.height = `${Math.max(160, h)}px`;
+        if (e.type === 'touchmove') e.preventDefault();
     }
 
     function stopResize() {
         isResizing = false;
         document.removeEventListener('mousemove', onResize);
         document.removeEventListener('mouseup', stopResize);
+        document.removeEventListener('touchmove', onResize);
+        document.removeEventListener('touchend', stopResize);
     }
 }
 
 function toggleAnalyticsHUD() {
     const hud = document.getElementById('analyticsHUD');
     const btn = document.getElementById('hudToggleBtn');
-    
+
     if (hud.classList.contains('hidden')) {
         hud.classList.remove('hidden');
         hud.classList.add('flex');
@@ -240,44 +284,98 @@ function toggleAnalyticsHUD() {
     }
 }
 
+function toggleHUDControls() {
+    const controls = document.getElementById('hudControls');
+    if (controls.classList.contains('hidden')) {
+        controls.classList.remove('hidden');
+    } else {
+        controls.classList.add('hidden');
+    }
+}
+
+function toggleHudColdMode() {
+    isHudColdMode = !isHudColdMode;
+    const btn = document.getElementById('hudColdBtn');
+    if (btn) {
+        if (isHudColdMode) btn.classList.replace('text-gray-500', 'text-[#06b6d4]');
+        else btn.classList.replace('text-[#06b6d4]', 'text-gray-500');
+    }
+    // Refresh HUD
+    updateAnalyticsHUD();
+}
+
 function updateAnalyticsHUD() {
     const hud = document.getElementById('analyticsHUD');
-    if (hud.classList.contains('hidden')) return;
+    if (!hud || hud.classList.contains('hidden')) return;
 
-    const content = document.getElementById('hudContent');
-    // Use the Engine to get raw stats
-    const stats = PredictionEngine.calculatePerimeterStats(history, predictionPerimeterWindow);
-    if (!stats || !stats.counts) return;
+    // Update Controls
+    const hudSlider = document.getElementById('hudWindowSlider');
+    const hudLabel = document.getElementById('hudWindowValue');
+    if (hudSlider && parseInt(hudSlider.value) !== predictionPerimeterWindow) hudSlider.value = predictionPerimeterWindow;
     
+    const themeColor = isHudColdMode ? '#06b6d4' : '#30D158';
+    
+    if (hudLabel) {
+        hudLabel.innerText = `${predictionPerimeterWindow} Spins`;
+        hudLabel.style.color = themeColor;
+    }
+    
+    // Update Header Title based on mode
+    const headerTitle = hud.querySelector('#hudHeader span');
+    if (headerTitle) {
+        headerTitle.innerHTML = isHudColdMode 
+            ? `<i class="fas fa-snowflake mr-1"></i> Cold Tracker`
+            : `<i class="fas fa-satellite-dish mr-1"></i> Live Feed`;
+        headerTitle.className = `text-[10px] font-bold tracking-wider uppercase ${isHudColdMode ? 'text-[#06b6d4]' : 'text-[#30D158]'}`;
+    }
+
+    // Update Stats Table
+    const content = document.getElementById('hudStats');
+    if (!content) return;
+
+    const stats = calculatePerimeterStats(history, predictionPerimeterWindow);
+    if (!stats || !stats.counts) return;
+    const transitionCount = Math.max(0, stats.transitionCount || 0);
+
+    // Sort Combos based on Mode
+    let displayCombos = [...PERIMETER_COMBOS];
+    if (isHudColdMode) {
+        // Cold Mode: Sort by Misses Descending (which is Hits Ascending)
+        displayCombos.sort((a, b) => (stats.counts[a.label] || 0) - (stats.counts[b.label] || 0));
+    } else {
+        // Hot Mode: Sort by Hits Descending
+        displayCombos.sort((a, b) => (stats.counts[b.label] || 0) - (stats.counts[a.label] || 0));
+    }
+
+    const col2Title = isHudColdMode ? 'Miss' : 'Hits';
+    const col3Title = isHudColdMode ? 'Cold %' : '%';
+
     let html = `
-        <div class="text-[9px] text-gray-400 font-bold uppercase mb-2 flex justify-between">
-            <span>Window: ${stats.windowSize} Spins</span>
-            <span>Total Hits: ${Object.values(stats.counts).reduce((a,b)=>a+b,0)}</span>
-        </div>
         <table class="w-full text-left text-xs">
             <thead class="text-white/30 border-b border-white/10">
-                <tr><th class="pb-1 font-bold">Combo</th><th class="pb-1 text-right font-bold">Hits</th><th class="pb-1 text-right font-bold">%</th></tr>
+                <tr><th class="pb-1 font-bold">Combo</th><th class="pb-1 text-right font-bold">${col2Title}</th><th class="pb-1 text-right font-bold">${col3Title}</th></tr>
             </thead>
             <tbody class="divide-y divide-white/5">
     `;
 
-    const combos = [
-        { label: '5-2', color: '#FF3B30' },
-        { label: '5-3', color: '#FF9500' },
-        { label: '1-3', color: '#34C759' },
-        { label: '2-4', color: '#007AFF' }
-    ];
-
-    combos.forEach(c => {
+    displayCombos.forEach(c => {
         const count = stats.counts[c.label] || 0;
-        const pct = stats.windowSize > 0 ? Math.round((count / stats.windowSize) * 100) : 0;
-        const opacity = count > 0 ? '1' : '0.4';
+        let val1 = count;
+        let val2 = transitionCount > 0 ? Math.round((count / transitionCount) * 100) : 0;
         
+        if (isHudColdMode) {
+            val1 = Math.max(0, transitionCount - count); // Misses
+            val2 = transitionCount > 0 ? Math.max(0, 100 - val2) : 0; // Cold % across real transitions
+        }
+
+        const opacity = (isHudColdMode ? val2 > 80 : val2 > 20) ? '1' : '0.5';
+        const valColor = (isHudColdMode ? val2 > 80 : val2 > 20) ? themeColor : '#8E8E93';
+
         html += `
             <tr>
                 <td class="py-2 font-bold" style="color:${c.color}; opacity:${opacity}">${c.label}</td>
-                <td class="py-2 text-right font-mono text-gray-300" style="opacity:${opacity}">${count}</td>
-                <td class="py-2 text-right font-mono font-bold" style="color:${pct > 20 ? '#30D158' : '#8E8E93'}; opacity:${opacity}">${pct}%</td>
+                <td class="py-2 text-right font-mono text-gray-300" style="opacity:${opacity}">${val1}</td>
+                <td class="py-2 text-right font-mono font-bold" style="color:${valColor}; opacity:${opacity}">${val2}%</td>
             </tr>
         `;
     });
@@ -438,9 +536,74 @@ function updatePredictionSettingsUI() {
 }
 
 function updatePerimeterAnalytics() {
-    if (typeof PredictionEngine !== 'undefined' && PredictionEngine.updateFONTracker) {
-        PredictionEngine.updateFONTracker(history, predictionPerimeterWindow);
+    const stats = calculatePerimeterStats(history, predictionPerimeterWindow);
+
+    const titleEl = document.getElementById('fonTrackerWindowLabel');
+    if (titleEl) {
+        titleEl.innerText = `FON Combo Tracker (${stats.windowSize} Spins)`;
     }
+
+    const sequenceDisplay = document.getElementById('fonSequenceDisplay');
+    if (sequenceDisplay) {
+        if (!stats.sequence || stats.sequence.length === 0) {
+            sequenceDisplay.innerHTML = '<span class="italic text-white/10">Awaiting data...</span>';
+        } else {
+            sequenceDisplay.innerHTML = stats.sequence.join(' <i class="fas fa-arrow-right text-[6px] text-white/20 mx-1"></i> ');
+        }
+    }
+
+    const c52 = document.getElementById('combo-52');
+    const c53 = document.getElementById('combo-53');
+    const c13 = document.getElementById('combo-13');
+    const c24 = document.getElementById('combo-24');
+    if (c52) c52.innerText = stats.counts['5-2'];
+    if (c53) c53.innerText = stats.counts['5-3'];
+    if (c13) c13.innerText = stats.counts['1-3'];
+    if (c24) c24.innerText = stats.counts['2-4'];
+}
+
+function calculatePerimeterStats(history, windowSize = 14) {
+    if (typeof PredictionEngine !== 'undefined' && typeof PredictionEngine.calculatePerimeterStats === 'function') {
+        return PredictionEngine.calculatePerimeterStats(history, windowSize);
+    }
+
+    const safeWindow = Math.max(2, Math.min(60, windowSize));
+    const recentSpins = history.slice(-safeWindow);
+    const transitionCount = Math.max(0, recentSpins.length - 1);
+
+    let counts = { '5-2': 0, '5-3': 0, '1-3': 0, '2-4': 0 };
+
+    for (let i = 1; i < recentSpins.length; i++) {
+        const prevSpin = recentSpins[i - 1];
+        const currSpin = recentSpins[i];
+        if (!prevSpin || !currSpin || !prevSpin.faces || !currSpin.faces) continue;
+
+        PERIMETER_COMBOS.forEach(combo => {
+            const matched = (prevSpin.faces.includes(combo.a) && currSpin.faces.includes(combo.b)) ||
+                (prevSpin.faces.includes(combo.b) && currSpin.faces.includes(combo.a));
+            if (matched) counts[combo.label]++;
+        });
+    }
+
+    let dominantCombo = null;
+    let highestCount = -1;
+    PERIMETER_COMBOS.forEach(combo => {
+        const count = counts[combo.label] || 0;
+        if (count > highestCount) {
+            highestCount = count;
+            dominantCombo = combo;
+        }
+    });
+
+    if (highestCount <= 0) dominantCombo = null;
+
+    return {
+        windowSize: safeWindow,
+        transitionCount: transitionCount,
+        sequence: recentSpins.map(s => (s.faces && s.faces.length > 0 ? s.faces[0] : '?')),
+        counts: counts,
+        dominantCombo: dominantCombo
+    };
 }
 
 function adjustPredictionPerimeterWindow(delta) {
@@ -451,6 +614,20 @@ function adjustPredictionPerimeterWindow(delta) {
     if (nextWindow === predictionPerimeterWindow) return;
 
     predictionPerimeterWindow = nextWindow;
+    updatePredictionSettingsUI();
+    scanAllStrategies();
+    updateVisibility();
+    updatePerimeterAnalytics();
+    updateAnalyticsHUD();
+}
+
+function setPerimeterWindow(val) {
+    const nextWindow = parseInt(val, 10);
+    if (isNaN(nextWindow) || nextWindow < 2 || nextWindow > 60) return;
+    if (nextWindow === predictionPerimeterWindow) return;
+
+    predictionPerimeterWindow = nextWindow;
+    
     updatePredictionSettingsUI();
     scanAllStrategies();
     updateVisibility();
@@ -1094,12 +1271,7 @@ function toggleBetConfirmation(index) {
 }
 
 function calculateDominantPerimeterCombo() {
-    if (typeof PredictionEngine === 'undefined' || !PredictionEngine.calculatePerimeterStats) {
-        return null;
-    }
-
-    const stats = PredictionEngine.calculatePerimeterStats(history, predictionPerimeterWindow);
-    if (!stats || !Array.isArray(stats.recentSpins) || stats.recentSpins.length < stats.windowSize) return null;
+    const stats = calculatePerimeterStats(history, predictionPerimeterWindow);
     if (!stats || !stats.dominantCombo) return null;
 
     const dominantCount = stats.counts[stats.dominantCombo.label] || 0;
@@ -1109,7 +1281,7 @@ function calculateDominantPerimeterCombo() {
         ...stats.dominantCombo,
         count: dominantCount,
         counts: stats.counts,
-        latestPrimaryFace: stats.latestPrimaryFace
+        latestPrimaryFace: stats.sequence.length > 0 ? stats.sequence[stats.sequence.length - 1] : null
     };
 }
 
@@ -1117,9 +1289,9 @@ function scanAllStrategies() {
     let allNotifications = [];
     let allNextBets = [];
 
-    if (perimeterRuleEnabled && history.length >= predictionPerimeterWindow) {
+    if (perimeterRuleEnabled) {
         const dominantCombo = calculateDominantPerimeterCombo();
-        if (dominantCombo) {
+        if (dominantCombo && dominantCombo.latestPrimaryFace) {
             let triggerFace = null;
             if (dominantCombo.latestPrimaryFace === dominantCombo.a) triggerFace = dominantCombo.a;
             else if (dominantCombo.latestPrimaryFace === dominantCombo.b) triggerFace = dominantCombo.b;
@@ -1181,12 +1353,7 @@ function renderRow(spin) {
             let detectedCombo = null;
             let matchedPrevFace = null;
             let matchedCurrFace = null;
-            const tracked = [
-                { a: 5, b: 2, label: '5-2', color: '#FF3B30' },
-                { a: 5, b: 3, label: '5-3', color: '#FF9500' },
-                { a: 1, b: 3, label: '1-3', color: '#34C759' },
-                { a: 2, b: 4, label: '2-4', color: '#007AFF' }
-            ];
+            const tracked = PERIMETER_COMBOS;
 
             for (let t of tracked) {
                 let match = false;
@@ -1459,7 +1626,7 @@ function renderDashboard(alerts) {
     });
 
     if (cards.length === 0) {
-        dash.innerHTML = `<div class="dashboard-empty w-full text-center text-[10px] font-medium text-[#8E8E93]/60 border border-dashed border-white/5 rounded-xl p-2 select-none tracking-wide flex items-center justify-center h-[60px]"><span>GHOST MODE ACTIVE - SCANNING...</span></div>`;
+        dash.innerHTML = `<div class="dashboard-empty w-full text-center text-[10px] font-medium text-[#8E8E93]/60 border border-dashed border-white/5 rounded-xl p-2 select-none tracking-wide flex items-center justify-center h-[60px]"><span>SCANNING...</span></div>`;
         return;
     }
 
