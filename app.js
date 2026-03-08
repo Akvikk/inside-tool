@@ -5,8 +5,17 @@ const PREDICTION_PERIMETER_PATTERN = 'Prediction Perimeter';
 const ENGINE_PRIMARY_WINDOW = 14;
 const ENGINE_FOLLOW_UP_STEP = 5;
 const ENGINE_CONFIRMATION_WINDOW = 5;
+const HUD_RECENT_WINDOW = 14;
 const INTELLIGENCE_VIEW_KEY = 'insideTool.intelligenceViewMode';
 const INTELLIGENCE_VIEWS = ['brief', 'diagnostic', 'minimal'];
+const PATTERN_FILTER_META = Object.fromEntries(
+    PERIMETER_COMBOS.map(combo => [combo.label, {
+        label: combo.label,
+        hint: `Track ${combo.label} inside the prediction engine and dashboard flow.`,
+        icon: 'fa-link',
+        accent: combo.color
+    }])
+);
 
 // --- STATE MANAGEMENT ---
 let currentInputLayout = 'grid'; // 'grid' or 'racetrack'
@@ -23,7 +32,7 @@ let perimeterRuleEnabled = true;
 
 // Global Pattern Configuration - The Source of Truth
 let patternConfig = {
-    [PERIMETER_RULE_KEY]: perimeterRuleEnabled
+    ...Object.fromEntries(PERIMETER_COMBOS.map(combo => [combo.label, true]))
 };
 
 let engineStats = {
@@ -40,9 +49,81 @@ let userStats = {
 
 let strategies = {};
 
+// --- PERSISTENCE ---
+const SESSION_STORAGE_KEY = 'insideTool_session_v1';
+
+function saveSessionData() {
+    const data = {
+        history,
+        activeBets,
+        faceGaps,
+        predictionPerimeterWindow,
+        perimeterRuleEnabled,
+        patternConfig,
+        engineStats,
+        userStats,
+        stopwatchSeconds,
+        currentInputLayout,
+        isHudColdMode,
+        hudHistoryScope
+    };
+    try {
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+        console.warn("Session save failed", e);
+    }
+}
+
+function buildDefaultPatternConfig(enabled = true) {
+    return Object.fromEntries(PERIMETER_COMBOS.map(combo => [combo.label, enabled]));
+}
+
+function normalizePatternConfig(rawConfig, fallbackEnabled = true) {
+    if (!rawConfig || typeof rawConfig !== 'object') {
+        return buildDefaultPatternConfig(fallbackEnabled);
+    }
+
+    const hasComboKeys = PERIMETER_COMBOS.some(combo => Object.prototype.hasOwnProperty.call(rawConfig, combo.label));
+    if (hasComboKeys) {
+        return Object.fromEntries(PERIMETER_COMBOS.map(combo => [combo.label, rawConfig[combo.label] !== false]));
+    }
+
+    const legacyEnabled = rawConfig[PERIMETER_RULE_KEY] !== false && fallbackEnabled !== false;
+    return buildDefaultPatternConfig(legacyEnabled);
+}
+
+function isComboFilterEnabled(label) {
+    return patternConfig[label] !== false;
+}
+
+function loadSessionData() {
+    const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (!raw) return false;
+    try {
+        const data = JSON.parse(raw);
+        if (Array.isArray(data.history)) history = data.history;
+        if (Array.isArray(data.activeBets)) activeBets = data.activeBets;
+        if (data.faceGaps) faceGaps = data.faceGaps;
+        if (data.predictionPerimeterWindow) predictionPerimeterWindow = data.predictionPerimeterWindow;
+        if (data.perimeterRuleEnabled !== undefined) perimeterRuleEnabled = data.perimeterRuleEnabled;
+        if (data.patternConfig) patternConfig = data.patternConfig;
+        if (data.engineStats) engineStats = data.engineStats;
+        if (data.userStats) userStats = data.userStats;
+        if (data.stopwatchSeconds) stopwatchSeconds = data.stopwatchSeconds;
+        if (data.currentInputLayout) currentInputLayout = data.currentInputLayout;
+        if (data.isHudColdMode !== undefined) isHudColdMode = data.isHudColdMode;
+        if (data.hudHistoryScope) hudHistoryScope = data.hudHistoryScope;
+        return true;
+    } catch (e) {
+        console.error("Session load failed", e);
+        return false;
+    }
+}
+
 let currentAnalyticsTab = 'strategy';
 let currentIntelligenceMode = 'brief';
 let isHudColdMode = false;
+let hudHistoryScope = 'all';
 let engineSnapshot = null;
 let lastActionableComboLabel = null;
 let lastActionableCheckpointSpin = 0;
@@ -176,17 +257,32 @@ function performReset() {
     // Clear history body
     const body = document.getElementById('historyBody');
     if (body) body.innerHTML = '';
+
+    saveSessionData();
 }
 
 // --- INIT ---
 window.onload = () => {
+    const hasSession = loadSessionData();
+
     initDesktopGrid();
     renderFilterMenu();
     renderGapStats();
     syncPerimeterRuleState();
     hydrateIntelligenceMode();
     updatePredictionSettingsUI();
-    engineSnapshot = createEmptyEngineSnapshot(0);
+    
+    if (hasSession) {
+        updateStopwatchDisplay();
+        syncPredictionEngine();
+        reRenderHistory();
+        setTimeout(() => {
+            const sc = document.querySelector('#scrollContainer > div');
+            if (sc) sc.scrollTop = sc.scrollHeight;
+        }, 100);
+    } else {
+        engineSnapshot = createEmptyEngineSnapshot(0);
+    }
     
     updatePerimeterAnalytics();
     updateAnalyticsHUD();
@@ -207,6 +303,12 @@ window.onload = () => {
 
     // Global Click listener for menus
     document.addEventListener('click', (e) => {
+        const patternShell = document.getElementById('patternFilterShell');
+        const patternPopover = document.getElementById('patternFilterPopover');
+        if (patternShell && patternPopover && !patternPopover.classList.contains('hidden') && !patternShell.contains(e.target)) {
+            closePatternFilterPopover();
+        }
+
         // Hamburger Menu
         const burgerMenu = document.getElementById('hamburgerMenu');
         const burgerBtn = burgerMenu ? burgerMenu.previousElementSibling : null;
@@ -221,6 +323,11 @@ window.onload = () => {
 
     // Init HUD
     initAnalyticsHUD();
+    syncPatternFilterButton();
+
+    window.addEventListener('beforeunload', () => {
+        saveSessionData();
+    });
 };
 
 function toggleHamburgerMenu() {
@@ -419,6 +526,75 @@ function toggleHudColdMode() {
     }
     // Refresh HUD
     updateAnalyticsHUD();
+}
+
+function getPatternFilterEnabledCount() {
+    return Object.keys(patternConfig).reduce((count, key) => count + (patternConfig[key] !== false ? 1 : 0), 0);
+}
+
+function closePatternFilterPopover() {
+    const popover = document.getElementById('patternFilterPopover');
+    const button = document.getElementById('patternsToggleBtn');
+    if (popover) popover.classList.add('hidden');
+    if (button) button.classList.remove('pattern-toggle-active');
+}
+
+function syncPatternFilterButton() {
+    const button = document.getElementById('patternsToggleBtn');
+    const badge = document.getElementById('patternsActiveCount');
+    const summary = document.getElementById('patternFilterSummary');
+    const enabledCount = getPatternFilterEnabledCount();
+    const totalCount = Object.keys(patternConfig).length;
+    const isOpen = !!document.getElementById('patternFilterPopover') && !document.getElementById('patternFilterPopover').classList.contains('hidden');
+
+    if (badge) {
+        badge.innerText = String(enabledCount);
+        badge.classList.toggle('pattern-toggle-badge-off', enabledCount === 0);
+    }
+
+    if (summary) {
+        summary.innerText = `${enabledCount} of ${totalCount} active`;
+    }
+
+    if (button) {
+        button.classList.toggle('pattern-toggle-active', isOpen);
+    }
+}
+
+function togglePatternFilterPopover(forceOpen = null) {
+    const popover = document.getElementById('patternFilterPopover');
+    if (!popover) return;
+
+    const shouldOpen = typeof forceOpen === 'boolean'
+        ? forceOpen
+        : popover.classList.contains('hidden');
+
+    if (shouldOpen) {
+        renderFilterMenu();
+        popover.classList.remove('hidden');
+    } else {
+        popover.classList.add('hidden');
+    }
+
+    syncPatternFilterButton();
+}
+
+function toggleHudHistoryScope() {
+    hudHistoryScope = hudHistoryScope === 'all' ? 'recent' : 'all';
+    updateAnalyticsHUD();
+}
+
+function getHudWindowSetting() {
+    return hudHistoryScope === 'recent' ? HUD_RECENT_WINDOW : 'all';
+}
+
+function getHudScopeSummary() {
+    if (hudHistoryScope === 'recent') {
+        return history.length > 0
+            ? `Last ${Math.min(HUD_RECENT_WINDOW, history.length)} Spins`
+            : `Last ${HUD_RECENT_WINDOW} Spins`;
+    }
+    return history.length > 0 ? `All ${history.length} Spins` : 'All History';
 }
 
 function getComboCoverageStats(stats) {
@@ -902,16 +1078,27 @@ function updateAnalyticsHUD() {
     const hud = document.getElementById('analyticsHUD');
     if (!hud || hud.classList.contains('hidden')) return;
 
-    // Update Controls
-    const hudSlider = document.getElementById('hudWindowSlider');
     const hudLabel = document.getElementById('hudWindowValue');
-    if (hudSlider && parseInt(hudSlider.value) !== predictionPerimeterWindow) hudSlider.value = predictionPerimeterWindow;
+    const hudScopeBtn = document.getElementById('hudScopeBtn');
     
     const themeColor = isHudColdMode ? '#06b6d4' : '#30D158';
     
     if (hudLabel) {
-        hudLabel.innerText = `${predictionPerimeterWindow} Spins`;
+        hudLabel.innerText = getHudScopeSummary();
         hudLabel.style.color = themeColor;
+    }
+
+    if (hudScopeBtn) {
+        hudScopeBtn.innerText = hudHistoryScope === 'all' ? '14' : 'ALL';
+        hudScopeBtn.title = hudHistoryScope === 'all' ? 'Show only last 14 spins' : 'Show all history';
+        hudScopeBtn.className = 'w-7 h-6 flex items-center justify-center rounded text-[9px] font-black tracking-wide border transition-colors';
+        hudScopeBtn.style.color = hudHistoryScope === 'recent' ? themeColor : 'rgba(255,255,255,0.65)';
+        hudScopeBtn.style.borderColor = hudHistoryScope === 'recent'
+            ? `${themeColor}55`
+            : 'rgba(255,255,255,0.10)';
+        hudScopeBtn.style.background = hudHistoryScope === 'recent'
+            ? `${themeColor}22`
+            : 'rgba(255,255,255,0.05)';
     }
     
     // Update Header Title based on mode
@@ -927,7 +1114,7 @@ function updateAnalyticsHUD() {
     const content = document.getElementById('hudStats');
     if (!content) return;
 
-    const stats = calculatePerimeterStats(history, predictionPerimeterWindow);
+    const stats = calculatePerimeterStats(history, getHudWindowSetting());
     if (!stats || !stats.counts) return;
     const comboStats = getComboCoverageStats(stats);
     const sampleSize = comboStats.length > 0 ? comboStats[0].sampleSize : 0;
@@ -1164,8 +1351,13 @@ function calculatePerimeterStats(history, windowSize = 14) {
         return PredictionEngine.calculatePerimeterStats(history, windowSize);
     }
 
-    const safeWindow = Math.max(2, Math.min(60, windowSize));
-    const recentSpins = history.slice(-safeWindow);
+    const historyArray = Array.isArray(history) ? history : [];
+    const parsedWindow = parseInt(windowSize, 10);
+    const useAllHistory = windowSize === 'all' || windowSize === Infinity || windowSize === null;
+    const safeWindow = useAllHistory
+        ? Math.max(2, historyArray.length)
+        : (Number.isNaN(parsedWindow) ? 14 : Math.max(2, Math.min(60, parsedWindow)));
+    const recentSpins = historyArray.slice(-safeWindow);
     const sampleSize = recentSpins.length;
     const transitionCount = Math.max(0, recentSpins.length - 1);
 
@@ -1262,35 +1454,40 @@ function setPerimeterWindow(val) {
 
 function renderFilterMenu() {
     const list = document.getElementById('patternsList');
-    list.innerHTML = '';
+    if (!list) return;
 
-    // Define display labels for keys
-    const labels = {
-        [PERIMETER_RULE_KEY]: 'Perimeter Rule'
-    };
+    const entries = Object.keys(patternConfig).map(key => {
+        const meta = PATTERN_FILTER_META[key] || {
+            label: key,
+            hint: 'No description configured yet.',
+            icon: 'fa-sliders-h',
+            accent: '#8E8E93'
+        };
+        const isEnabled = patternConfig[key] !== false;
+        return `
+            <div class="pattern-filter-card ${isEnabled ? 'pattern-filter-card-on' : 'pattern-filter-card-off'}"
+                 style="--pattern-accent:${meta.accent};">
+                <div class="pattern-filter-title">${meta.label}</div>
+                <button class="pattern-filter-switch ${isEnabled ? 'pattern-filter-switch-on' : 'pattern-filter-switch-off'}"
+                        onclick="event.stopPropagation(); togglePatternFilter('${key}')"
+                        aria-label="Toggle ${meta.label}">
+                    <span class="pattern-filter-switch-knob"></span>
+                </button>
+            </div>
+        `;
+    });
 
-    for (let key in patternConfig) {
-        let isChecked = patternConfig[key];
-        let label = labels[key] || key;
-
-        let item = document.createElement('div');
-        item.className = "flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5 transition-colors hover:bg-white/10";
-        item.innerHTML = `
-                <span class="text-gray-200 font-semibold text-xs tracking-wide">${label}</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" class="sr-only peer" ${isChecked ? 'checked' : ''} onchange="togglePatternFilter('${key}', this.checked)">
-                    <div class="w-10 h-6 bg-black/40 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#30D158] shadow-inner"></div>
-                </label>
-            `;
-        list.appendChild(item);
-    }
+    list.innerHTML = entries.join('');
+    syncPatternFilterButton();
 }
 
-function togglePatternFilter(key, isChecked) {
-    patternConfig[key] = isChecked;
+function togglePatternFilter(key, isChecked = null) {
+    const nextState = typeof isChecked === 'boolean' ? isChecked : patternConfig[key] === false;
+    patternConfig[key] = nextState;
     if (key === PERIMETER_RULE_KEY) {
-        perimeterRuleEnabled = isChecked;
+        perimeterRuleEnabled = nextState;
     }
+    renderFilterMenu();
     scanAllStrategies();
     updateVisibility();
     updatePerimeterAnalytics();
@@ -1320,28 +1517,6 @@ function reRenderHistory() {
 function handleGridClick(n) {
     document.getElementById('spinInput').value = n;
     addSpin();
-}
-
-function playNotificationSound() {
-    try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(500, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(1000, ctx.currentTime + 0.1);
-
-        gain.gain.setValueAtTime(0.05, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-
-        osc.start();
-        osc.stop(ctx.currentTime + 0.3);
-    } catch (e) {
-        console.warn("Audio play failed (interaction required)", e);
-    }
 }
 
 function addSpin() {
@@ -1426,12 +1601,6 @@ function addSpin() {
     // 3. SCAN FOR NEW PATTERNS
     const alerts = scanAllStrategies();
 
-    // Check Audio on unfiltered alerts (or filtered? usually audio triggers on ANY detection)
-    // Let's trigger audio if ANY active alert exists, visibility handles the rest
-    if (alerts.some(a => a.type === 'ACTIVE')) {
-        playNotificationSound();
-    }
-
     // 4. PREPARE NEW SIGNALS FOR DISPLAY (Next Spin's Bets)
     // These are what show up on the dashboard, but we also want to show them in the table row
     if (activeBets.length > 0) {
@@ -1456,6 +1625,7 @@ function addSpin() {
 
     input.value = '';
     input.focus();
+    saveSessionData();
 }
 
 function updateEngineStats(isWin, patternName, unitChange, rawStrategy, rawPattern, spinIndex, spinNum) {
@@ -2149,14 +2319,24 @@ function renderDashboard(alerts) {
 
         const subtitle = bet.subtitle || (bet.comboLabel ? `${bet.comboLabel} combo` : bet.patternName);
         const accent = bet.accentColor || '#FF3B30';
+
+        // Dynamic styling based on combo color (Theme Matching)
+        const bgStyle = bet.confirmed
+            ? `background: linear-gradient(135deg, ${accent}50, ${accent}15)`
+            : `background: linear-gradient(135deg, ${accent}25, ${accent}05)`;
+
+        const borderStyle = bet.confirmed
+            ? `border-color: ${accent}`
+            : `border-color: ${accent}40`;
+
         cards.push(`
-            <div class="min-w-[250px] h-[64px] px-3 py-2 rounded-lg border bg-[#0f0f12] flex items-center justify-between cursor-pointer select-none"
+            <div class="min-w-[250px] h-[64px] px-3 py-2 rounded-lg border flex items-center justify-between cursor-pointer select-none transition-all hover:brightness-110"
                  ondblclick="toggleBetConfirmation(${index})"
                  title="Double-click to ${bet.confirmed ? 'unselect' : 'select'}"
-                 style="border-left: 3px solid ${accent}; border-color: ${bet.confirmed ? accent : 'rgba(255,255,255,0.1)'}; background: ${bet.confirmed ? 'rgba(255,255,255,0.06)' : '#0f0f12'};">
+                 style="border-left: 3px solid ${accent}; ${borderStyle}; ${bgStyle}; box-shadow: 0 4px 15px ${accent}15;">
                 <div class="min-w-0">
-                    <div class="text-[15px] leading-tight font-black text-white tracking-wide">BET F${bet.targetFace}</div>
-                    <div class="text-[11px] leading-tight text-white/75 font-semibold">${subtitle}</div>
+                    <div class="text-[15px] leading-tight font-black text-white tracking-wide drop-shadow-sm">BET F${bet.targetFace}</div>
+                    <div class="text-[11px] leading-tight text-white/80 font-semibold mt-0.5">${subtitle}</div>
                 </div>
             </div>
         `);
@@ -2227,6 +2407,7 @@ function resetData(skipConfirm = false) {
             const am = document.getElementById('analyticsModal');
             if (!am.classList.contains('hidden')) am.classList.add('hidden');
         }
+        saveSessionData();
     }
 }
 
@@ -2243,6 +2424,7 @@ function undoSpin() {
 
     updatePerimeterAnalytics();
     updateAnalyticsHUD();
+    saveSessionData();
 }
 
 function toggleModal(id) {

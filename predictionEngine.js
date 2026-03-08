@@ -21,9 +21,13 @@ const PERIMETER_COMBOS = [
 
 const PredictionEngine = {
     calculatePerimeterStats: function (history, windowSize = 14) {
+        const historyArray = Array.isArray(history) ? history : [];
         const parsedWindow = parseInt(windowSize, 10);
-        const safeWindow = Number.isNaN(parsedWindow) ? 14 : Math.max(2, Math.min(60, parsedWindow));
-        const recentSpins = Array.isArray(history) ? history.slice(-safeWindow) : [];
+        const useAllHistory = windowSize === 'all' || windowSize === Infinity || windowSize === null;
+        const safeWindow = useAllHistory
+            ? Math.max(2, historyArray.length)
+            : (Number.isNaN(parsedWindow) ? 14 : Math.max(2, Math.min(60, parsedWindow)));
+        const recentSpins = historyArray.slice(-safeWindow);
         const sampleSize = recentSpins.length;
         const transitionCount = Math.max(0, recentSpins.length - 1);
 

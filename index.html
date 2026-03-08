@@ -44,10 +44,26 @@
 
         <div class="flex gap-2 items-center">
 
-            <button onclick="toggleModal('patternsModal')"
-                class="ios-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#BF5AF2] font-semibold rounded-lg border border-[#BF5AF2]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs">
-                <i class="fas fa-filter"></i> <span class="hidden sm:inline">PATTERNS</span>
-            </button>
+            <div id="patternFilterShell" class="relative">
+                <button id="patternsToggleBtn" onclick="togglePatternFilterPopover()"
+                    class="ios-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#BF5AF2] font-semibold rounded-lg border border-[#BF5AF2]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs pattern-toggle-btn">
+                    <i class="fas fa-filter"></i>
+                    <span class="hidden sm:inline">PATTERNS</span>
+                    <span id="patternsActiveCount" class="pattern-toggle-badge">1</span>
+                </button>
+                <div id="patternFilterPopover" class="pattern-filter-popover hidden">
+                    <div class="pattern-popover-head">
+                        <div>
+                            <div class="pattern-popover-title">Pattern Filters</div>
+                            <div id="patternFilterSummary" class="pattern-popover-meta">0 of 0 active</div>
+                        </div>
+                        <button onclick="event.stopPropagation(); closePatternFilterPopover()" class="pattern-popover-close">
+                            <i class="fas fa-times text-[10px]"></i>
+                        </button>
+                    </div>
+                    <div id="patternsList" class="pattern-filter-list"></div>
+                </div>
+            </div>
 
             <button onclick="toggleModal('betsModal'); renderUserAnalytics();"
                 class="ios-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#0A84FF] font-semibold rounded-lg border border-[#0A84FF]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs">
@@ -217,92 +233,6 @@
     </div>
 
     <!-- MODAL TEMPLATES -->
-
-    <!-- PATTERNS MODAL -->
-    <div id="patternsModal"
-        class="fixed inset-0 bg-black/60 backdrop-blur-md hidden z-50 flex items-center justify-center p-4 transition-all duration-300"
-        onclick="toggleModal('patternsModal')">
-        <div class="glass-menu w-full max-w-sm flex flex-col overflow-hidden" onclick="event.stopPropagation()">
-            <div class="p-4 glass-header flex justify-between items-center">
-                <h2 class="font-bold text-sm tracking-wide uppercase" style="color: var(--text-primary);">Filters</h2>
-                <button onclick="toggleModal('patternsModal')"
-                    class="text-gray-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="frosted-plate mx-4 mt-4 p-4 border-b border-white/5">
-                <div class="cold-tracker-shell">
-                    <div class="cold-tracker-overview">
-                        <div>
-                            <div class="cold-tracker-title">
-                                <i class="fas fa-snowflake"></i>
-                                <span>Cold Tracker</span>
-                            </div>
-                            <div id="coldTrackerMeta" class="cold-tracker-meta">Live roulette-style combo coverage.
-                            </div>
-                        </div>
-                        <div id="coldTrackerLead" class="cold-chip">WAITING</div>
-                    </div>
-
-                    <div class="cold-tracker-panel">
-                        <div class="cold-tracker-head">
-                            <span>Combo</span>
-                            <span>Span</span>
-                            <span>Cold %</span>
-                        </div>
-                        <div id="coldTrackerList" class="cold-tracker-list"></div>
-                    </div>
-
-                    <div class="cold-face-footer">
-                        <div class="cold-face-header">
-                            <span>Face Drift</span>
-                            <span>Live gap count</span>
-                        </div>
-                        <div class="grid grid-cols-5 gap-2" id="faceGapContainer"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- FON COMBO TRACKER -->
-            <div class="frosted-plate mx-4 mt-4 p-4 border-b border-white/5">
-                <div class="flex justify-between items-end mb-3">
-                    <div id="fonTrackerWindowLabel" class="text-[10px] font-bold text-white/50 uppercase tracking-wider">
-                        FON Combo Tracker (14 Spins)
-                    </div>
-                </div>
-
-                <!-- Sequence Display -->
-                <div class="bg-black/40 rounded-lg p-2 mb-3 border border-white/5">
-                    <div class="text-[8px] font-bold text-white/30 uppercase tracking-widest mb-1">Face Sequence</div>
-                    <div id="fonSequenceDisplay"
-                        class="text-[10px] font-bold text-gray-300 flex items-center overflow-x-auto whitespace-nowrap custom-scroll py-1">
-                        <span class="italic text-white/10">Awaiting data...</span>
-                    </div>
-                </div>
-
-                <!-- Combo Grid -->
-                <div class="grid grid-cols-4 gap-2" id="fonComboGrid">
-                    <div class="text-center p-2 rounded-lg bg-white/5 border border-white/5">
-                        <span class="block text-[8px] font-bold text-[#FF3B30] uppercase mb-0.5">5-2</span>
-                        <span id="combo-52" class="font-bold text-lg text-white">0</span>
-                    </div>
-                    <div class="text-center p-2 rounded-lg bg-white/5 border border-white/5">
-                        <span class="block text-[8px] font-bold text-[#FF9500] uppercase mb-0.5">5-3</span>
-                        <span id="combo-53" class="font-bold text-lg text-white">0</span>
-                    </div>
-                    <div class="text-center p-2 rounded-lg bg-white/5 border border-white/5">
-                        <span class="block text-[8px] font-bold text-[#34C759] uppercase mb-0.5">1-3</span>
-                        <span id="combo-13" class="font-bold text-lg text-white">0</span>
-                    </div>
-                    <div class="text-center p-2 rounded-lg bg-white/5 border border-white/5">
-                        <span class="block text-[8px] font-bold text-[#007AFF] uppercase mb-0.5">2-4</span>
-                        <span id="combo-24" class="font-bold text-lg text-white">0</span>
-                    </div>
-                </div>
-            </div>
-            <div class="p-4 space-y-2 max-h-[50vh] overflow-y-auto custom-scroll">
-                <div id="patternsList" class="space-y-2"></div>
-            </div>
-        </div>
-    </div>
 
     <!-- ACTUAL BETS MODAL -->
     <div id="betsModal"
@@ -538,6 +468,7 @@
                 <button onclick="toggleHUDControls()" class="w-6 h-6 flex items-center justify-center rounded bg-white/10 hover:bg-white/20 text-[#30D158] text-xs transition-colors border border-[#30D158]/30">
                     <i class="fas fa-sliders-h"></i>
                 </button>
+                <button onclick="toggleHudHistoryScope()" id="hudScopeBtn" class="w-7 h-6 flex items-center justify-center rounded bg-white/5 text-white/55 border border-white/10 text-[9px] font-black tracking-wide transition-colors" title="Show only last 14 spins">14</button>
                 <button onclick="toggleHudColdMode()" id="hudColdBtn" class="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 text-gray-500 transition-colors" title="Toggle Cold Mode"><i class="fas fa-snowflake text-[10px]"></i></button>
             </div>
 
@@ -545,14 +476,10 @@
             <div id="hudControls" class="px-3 pb-2 shrink-0 hidden transition-all duration-200">
                 <div class="flex flex-col gap-2 bg-white/5 p-2 rounded-lg border border-white/5">
                     <div class="flex justify-between items-center">
-                        <span class="text-[9px] text-gray-400 font-bold uppercase tracking-wider">Window Size</span>
-                        <span id="hudWindowValue" class="text-[10px] font-mono font-bold text-[#30D158]">14 Spins</span>
+                        <span class="text-[9px] text-gray-400 font-bold uppercase tracking-wider">History Scope</span>
+                        <span id="hudWindowValue" class="text-[10px] font-mono font-bold text-[#30D158]">All History</span>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <button onclick="adjustPredictionPerimeterWindow(-1)" class="w-5 h-5 flex items-center justify-center rounded bg-white/10 hover:bg-white/20 text-white text-[10px] transition-colors"><i class="fas fa-minus"></i></button>
-                        <input id="hudWindowSlider" type="range" min="2" max="60" value="14" class="flex-1 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-[#30D158]" oninput="setPerimeterWindow(this.value)">
-                        <button onclick="adjustPredictionPerimeterWindow(1)" class="w-5 h-5 flex items-center justify-center rounded bg-white/10 hover:bg-white/20 text-white text-[10px] transition-colors"><i class="fas fa-plus"></i></button>
-                    </div>
+                    <div class="text-[9px] text-white/45 leading-relaxed">HUD defaults to all history. Use the small <span class="font-black text-white/70">14</span> button for the recent 14-spin view.</div>
                 </div>
             </div>
 
