@@ -373,76 +373,86 @@
             </div>
             <div class="p-3 border-b border-white/5">
                 <div class="segmented-control max-w-md mx-auto">
-                    <button class="tab-btn active" id="tabGod" onclick="switchAnalyticsTab('god')">Strategy (God
-                        View)</button>
-                    <button class="tab-btn" id="tabPlayer" onclick="switchAnalyticsTab('player')">Filtered (Player
-                        View)</button>
+                    <button class="tab-btn active" id="tabStrategy" onclick="switchAnalyticsTab('strategy')">Strategy</button>
+                    <button class="tab-btn" id="tabIntelligence" onclick="switchAnalyticsTab('intelligence')">Intelligence</button>
                 </div>
             </div>
             <div class="flex-1 overflow-y-auto p-6 space-y-5 custom-scroll">
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div class="frosted-plate p-3 text-center">
-                        <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1"><span
-                                id="labelHitRate">Global Hit Rate</span></div>
-                        <div id="kpiHitRate" class="text-2xl font-bold text-white">0%</div>
-                    </div>
-                    <div class="frosted-plate p-3 text-center">
-                        <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1"><span
-                                id="labelNet">Theoretical Net</span></div>
-                        <div id="kpiNet" class="text-2xl font-bold text-white">0</div>
-                    </div>
-                    <div class="frosted-plate p-3 text-center">
-                        <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1">Total Signals
+                <div id="strategyAnalyticsPanel" class="space-y-5">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div class="frosted-plate p-3 text-center">
+                            <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1"><span
+                                    id="labelHitRate">Global Hit Rate</span></div>
+                            <div id="kpiHitRate" class="text-2xl font-bold text-white">0%</div>
                         </div>
-                        <div id="kpiSignals" class="text-2xl font-bold text-white">0</div>
+                        <div class="frosted-plate p-3 text-center">
+                            <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1"><span
+                                    id="labelNet">Theoretical Net</span></div>
+                            <div id="kpiNet" class="text-2xl font-bold text-white">0</div>
+                        </div>
+                        <div class="frosted-plate p-3 text-center">
+                            <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1">Total Signals
+                            </div>
+                            <div id="kpiSignals" class="text-2xl font-bold text-white">0</div>
+                        </div>
+                        <div class="frosted-plate p-3 text-center">
+                            <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1">Form</div>
+                            <div id="kpiForm" class="text-2xl font-bold text-gray-400">-</div>
+                        </div>
                     </div>
-                    <div class="frosted-plate p-3 text-center">
-                        <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1">Form</div>
-                        <div id="kpiForm" class="text-2xl font-bold text-gray-400">-</div>
+                    <div class="frosted-plate border-none p-4 relative z-10">
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="text-white/50 text-[10px] font-bold uppercase tracking-wider" id="graphTitle">
+                                Theoretical Bankroll</div>
+                        </div>
+                        <div class="h-36 w-full relative" id="graphContainer"></div>
+                    </div>
+                    <div class="frosted-plate overflow-hidden">
+                        <div
+                            class="p-3 border-b border-white/5 text-white/50 text-[10px] font-bold uppercase tracking-wider">
+                            Pattern Efficiency</div>
+                        <table class="w-full text-left text-xs">
+                            <thead class="text-white/50 border-b border-white/5">
+                                <tr>
+                                    <th class="p-3 font-semibold">Name</th>
+                                    <th class="p-3 font-semibold text-right">Wins</th>
+                                    <th class="p-3 font-semibold text-right">Losses</th>
+                                    <th class="p-3 font-semibold text-right w-24">Eff %</th>
+                                </tr>
+                            </thead>
+                            <tbody id="heatmapBody" class="divide-y divide-white/5">
+                                <tr>
+                                    <td colspan="4" class="p-6 text-center text-white/40 italic">No data</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <div class="frosted-plate border-none p-4 relative z-10">
-                    <div class="flex justify-between items-center mb-3">
-                        <div class="text-white/50 text-[10px] font-bold uppercase tracking-wider" id="graphTitle">
-                            Theoretical Bankroll</div>
-
-                        <div class="relative">
-                            <button id="simFilterBtn" onclick="toggleSimMenu()"
-                                class="hidden text-[10px] text-white border border-white/30 px-3 py-1 rounded-lg font-bold transition-colors flex items-center gap-2 hover:bg-white/10">
-                                <i class="fas fa-sliders-h"></i> SIMULATE
-                            </button>
-                            <!-- Dropdown -->
-                            <div id="simFilterMenu"
-                                class="hidden absolute right-0 top-full mt-2 w-48 glass-menu z-20 overflow-hidden">
-                                <div class="p-2 space-y-1 max-h-[200px] overflow-y-auto custom-scroll"
-                                    id="simFilterList">
-                                    <!-- JS Fills this -->
-                                </div>
+                <div id="intelligenceAnalyticsPanel" class="hidden space-y-5">
+                    <div class="intel-toolbar">
+                        <div class="intel-toolbar-main">
+                            <div id="intelStateChip" class="intel-state-chip intel-chip-building">BUILDING</div>
+                            <div class="intel-toolbar-copy">
+                                <div id="intelCheckpointSummary" class="intel-toolbar-title">Building initial read</div>
+                                <div id="intelNextCheckpointMeta" class="intel-toolbar-meta">14 spins until first read</div>
                             </div>
                         </div>
+                        <div class="intel-toolbar-side">
+                            <div class="intel-next-box">
+                                <span class="intel-next-label">Next</span>
+                                <span id="intelNextCheckpoint" class="intel-next-value">14</span>
+                            </div>
+                            <label class="intel-select-wrap">
+                                <span class="intel-select-label">View</span>
+                                <select id="intelligenceViewSelect" class="intel-select" onchange="setIntelligenceMode(this.value)">
+                                    <option value="brief">Decision Brief</option>
+                                    <option value="diagnostic">Diagnostic Panel</option>
+                                    <option value="minimal">Minimal Only</option>
+                                </select>
+                            </label>
+                        </div>
                     </div>
-                    <!-- REPLACED: New container ID -->
-                    <div class="h-36 w-full relative" id="graphContainer"></div>
-                </div>
-                <div class="frosted-plate overflow-hidden">
-                    <div
-                        class="p-3 border-b border-white/5 text-white/50 text-[10px] font-bold uppercase tracking-wider">
-                        Pattern Efficiency</div>
-                    <table class="w-full text-left text-xs">
-                        <thead class="text-white/50 border-b border-white/5">
-                            <tr>
-                                <th class="p-3 font-semibold">Name</th>
-                                <th class="p-3 font-semibold text-right">Wins</th>
-                                <th class="p-3 font-semibold text-right">Losses</th>
-                                <th class="p-3 font-semibold text-right w-24">Eff %</th>
-                            </tr>
-                        </thead>
-                        <tbody id="heatmapBody" class="divide-y divide-white/5">
-                            <tr>
-                                <td colspan="4" class="p-6 text-center text-white/40 italic">No data</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div id="intelligenceContent"></div>
                 </div>
                 <div class="text-center pt-2">
                     <button onclick="resetData()"
@@ -482,6 +492,31 @@
                     </thead>
                     <tbody id="patternDetailBody" class="divide-y divide-white/5"></tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONFIRMATION MODAL -->
+    <div id="confirmModal"
+        class="fixed inset-0 z-[70] bg-black/60 backdrop-blur-md hidden flex items-center justify-center p-4"
+        onclick="toggleModal('confirmModal')">
+        <div class="glass-menu w-full max-w-sm flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+            <div class="p-4 glass-header flex justify-between items-center">
+                <h2 class="font-bold text-sm tracking-wide uppercase" style="color: var(--text-primary);">Confirmation</h2>
+                <button onclick="toggleModal('confirmModal')" class="text-gray-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 text-center">
+                <div class="w-12 h-12 rounded-full bg-[#ff1a33]/20 flex items-center justify-center mx-auto mb-4 border border-[#ff1a33]/30">
+                    <i class="fas fa-exclamation-triangle text-[#ff1a33] text-xl"></i>
+                </div>
+                <h3 class="text-white font-bold text-lg mb-2">Reset Session?</h3>
+                <p class="text-gray-400 text-xs leading-relaxed mb-6">
+                    This will wipe all spin history, active bets, and bankroll statistics. This action cannot be undone.
+                </p>
+                <div class="flex gap-3">
+                    <button onclick="toggleModal('confirmModal')" class="flex-1 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 transition-colors">Cancel</button>
+                    <button id="confirmResetBtn" class="flex-1 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider bg-[#ff1a33]/20 hover:bg-[#ff1a33]/30 text-[#ff1a33] border border-[#ff1a33]/30 transition-colors shadow-[0_0_15px_rgba(255,26,51,0.2)]">Reset</button>
+                </div>
             </div>
         </div>
     </div>

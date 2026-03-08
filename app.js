@@ -1,7 +1,12 @@
-﻿﻿﻿﻿﻿﻿// --- CONFIGURATION ---
+﻿﻿﻿﻿﻿﻿﻿﻿// --- CONFIGURATION ---
 const RED_NUMS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
 const PERIMETER_RULE_KEY = 'Perimeter Rule';
 const PREDICTION_PERIMETER_PATTERN = 'Prediction Perimeter';
+const ENGINE_PRIMARY_WINDOW = 14;
+const ENGINE_FOLLOW_UP_STEP = 5;
+const ENGINE_CONFIRMATION_WINDOW = 5;
+const INTELLIGENCE_VIEW_KEY = 'insideTool.intelligenceViewMode';
+const INTELLIGENCE_VIEWS = ['brief', 'diagnostic', 'minimal'];
 
 // --- STATE MANAGEMENT ---
 let currentInputLayout = 'grid'; // 'grid' or 'racetrack'
@@ -21,9 +26,6 @@ let patternConfig = {
     [PERIMETER_RULE_KEY]: perimeterRuleEnabled
 };
 
-// Independent Simulation Configuration for Analytics
-let simulationConfig = {};
-
 let engineStats = {
     totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0,
     bankrollHistory: [0], patternStats: {},
@@ -38,18 +40,105 @@ let userStats = {
 
 let strategies = {};
 
-let currentAnalyticsTab = 'god';
+let currentAnalyticsTab = 'strategy';
+let currentIntelligenceMode = 'brief';
 let isHudColdMode = false;
+let engineSnapshot = null;
+let lastActionableComboLabel = null;
+let lastActionableCheckpointSpin = 0;
 window.currentAlerts = [];
+
+function normalizeIntelligenceMode(mode) {
+    return INTELLIGENCE_VIEWS.includes(mode) ? mode : 'brief';
+}
+
+function hydrateIntelligenceMode() {
+    try {
+        currentIntelligenceMode = normalizeIntelligenceMode(localStorage.getItem(INTELLIGENCE_VIEW_KEY) || 'brief');
+    } catch (error) {
+        currentIntelligenceMode = 'brief';
+    }
+}
+
+function persistIntelligenceMode(mode) {
+    currentIntelligenceMode = normalizeIntelligenceMode(mode);
+    try {
+        localStorage.setItem(INTELLIGENCE_VIEW_KEY, currentIntelligenceMode);
+    } catch (error) {
+        // Keep in-memory mode when storage is unavailable.
+    }
+}
+
+function getCheckpointMeta(spinCount) {
+    if (spinCount < ENGINE_PRIMARY_WINDOW) {
+        return {
+            isCheckpoint: false,
+            nextCheckpointSpin: ENGINE_PRIMARY_WINDOW,
+            lastCheckpointSpin: 0,
+            spinsUntilNext: ENGINE_PRIMARY_WINDOW - spinCount
+        };
+    }
+
+    const offset = spinCount - ENGINE_PRIMARY_WINDOW;
+    const remainder = offset % ENGINE_FOLLOW_UP_STEP;
+    const isCheckpoint = remainder === 0;
+    const lastCheckpointSpin = isCheckpoint ? spinCount : spinCount - remainder;
+    const nextCheckpointSpin = isCheckpoint
+        ? spinCount + ENGINE_FOLLOW_UP_STEP
+        : spinCount + (ENGINE_FOLLOW_UP_STEP - remainder);
+
+    return {
+        isCheckpoint,
+        nextCheckpointSpin,
+        lastCheckpointSpin,
+        spinsUntilNext: Math.max(0, nextCheckpointSpin - spinCount)
+    };
+}
+
+function createEmptyEngineSnapshot(spinCount = history.length) {
+    const checkpoint = getCheckpointMeta(spinCount);
+    return {
+        spinCount,
+        engineState: spinCount < ENGINE_PRIMARY_WINDOW ? 'BUILDING' : 'WAITING',
+        checkpointStatus: spinCount < ENGINE_PRIMARY_WINDOW ? 'Building initial read' : 'Awaiting next checkpoint',
+        spinsUntilNextCheckpoint: checkpoint.spinsUntilNext,
+        nextCheckpointSpin: checkpoint.nextCheckpointSpin,
+        lastEvaluatedSpin: checkpoint.lastCheckpointSpin,
+        checkpointSpin: checkpoint.isCheckpoint ? spinCount : null,
+        isCheckpoint: checkpoint.isCheckpoint,
+        dominantCombo: null,
+        runnerUpCombo: null,
+        triggerFace: null,
+        predictedFace: null,
+        gateResults: [],
+        passedGates: [],
+        failedGates: [],
+        stats14: null,
+        stats5: null,
+        currentPrediction: null,
+        signalKind: null,
+        comboCoverage: [],
+        leadMessage: spinCount < ENGINE_PRIMARY_WINDOW
+            ? `${ENGINE_PRIMARY_WINDOW - spinCount} spins until first read`
+            : `Next read in ${checkpoint.spinsUntilNext} spins`,
+        watchlistMessage: '',
+        topMargin: 0,
+        confirmationHits: 0,
+        confirmationPassed: false
+    };
+}
 
 function resetSession() {
     const modal = document.getElementById('confirmModal');
     if (modal) {
         modal.classList.remove('hidden');
-        document.getElementById('confirmResetBtn').onclick = () => {
-            performReset();
-            modal.classList.add('hidden');
-        };
+        const btn = document.getElementById('confirmResetBtn');
+        if (btn) {
+            btn.onclick = () => {
+                performReset();
+                modal.classList.add('hidden');
+            };
+        }
     }
 }
 
@@ -58,6 +147,9 @@ function performReset() {
     activeBets = [];
     faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
     window.currentAlerts = [];
+    engineSnapshot = createEmptyEngineSnapshot(0);
+    lastActionableComboLabel = null;
+    lastActionableCheckpointSpin = 0;
 
     engineStats = {
         totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0,
@@ -92,12 +184,14 @@ window.onload = () => {
     renderFilterMenu();
     renderGapStats();
     syncPerimeterRuleState();
+    hydrateIntelligenceMode();
     updatePredictionSettingsUI();
-    // Init sim config
-    simulationConfig = JSON.parse(JSON.stringify(patternConfig));
+    engineSnapshot = createEmptyEngineSnapshot(0);
     
     updatePerimeterAnalytics();
     updateAnalyticsHUD();
+    applyAnalyticsTabUI();
+    renderDashboard([]);
 
     document.getElementById('spinInput').focus();
     document.getElementById('spinInput').addEventListener("keypress", (e) => {
@@ -113,13 +207,6 @@ window.onload = () => {
 
     // Global Click listener for menus
     document.addEventListener('click', (e) => {
-        // Sim Menu
-        const simMenu = document.getElementById('simFilterMenu');
-        const simBtn = document.getElementById('simFilterBtn');
-        if (simMenu && !simMenu.classList.contains('hidden') && !simMenu.contains(e.target) && !simBtn.contains(e.target)) {
-            simMenu.classList.add('hidden');
-        }
-
         // Hamburger Menu
         const burgerMenu = document.getElementById('hamburgerMenu');
         const burgerBtn = burgerMenu ? burgerMenu.previousElementSibling : null;
@@ -412,6 +499,403 @@ function renderColdTracker(stats) {
             </div>
         `;
     }).join('');
+}
+
+function sortEngineReadCombos(comboStats) {
+    return (comboStats || []).slice().sort((a, b) =>
+        (b.hits - a.hits) ||
+        ((b.lastSeenIndex ?? -1) - (a.lastSeenIndex ?? -1)) ||
+        (a.label > b.label ? 1 : -1)
+    );
+}
+
+function getComboStatByLabel(stats, label) {
+    return (stats && Array.isArray(stats.comboStats))
+        ? stats.comboStats.find(combo => combo.label === label) || null
+        : null;
+}
+
+function buildGateResult(key, label, passed, detail) {
+    return { key, label, passed, detail };
+}
+
+function evaluatePredictionEngine() {
+    const spinCount = history.length;
+    const checkpoint = getCheckpointMeta(spinCount);
+    const snapshot = createEmptyEngineSnapshot(spinCount);
+    const stats14 = calculatePerimeterStats(history, ENGINE_PRIMARY_WINDOW);
+    const stats5 = calculatePerimeterStats(history, ENGINE_CONFIRMATION_WINDOW);
+    const comboStats = sortEngineReadCombos(getComboCoverageStats(stats14));
+
+    snapshot.stats14 = stats14;
+    snapshot.stats5 = stats5;
+    snapshot.comboCoverage = comboStats;
+    snapshot.dominantCombo = comboStats[0] || null;
+    snapshot.runnerUpCombo = comboStats[1] || null;
+    snapshot.topMargin = snapshot.dominantCombo
+        ? snapshot.dominantCombo.hits - (snapshot.runnerUpCombo ? snapshot.runnerUpCombo.hits : 0)
+        : 0;
+    snapshot.checkpointStatus = spinCount < ENGINE_PRIMARY_WINDOW
+        ? `Building toward spin ${ENGINE_PRIMARY_WINDOW}`
+        : `Next checkpoint on spin ${checkpoint.nextCheckpointSpin}`;
+
+    if (spinCount < ENGINE_PRIMARY_WINDOW) {
+        snapshot.leadMessage = `${snapshot.spinsUntilNextCheckpoint} spins until the first engine read.`;
+        return snapshot;
+    }
+
+    if (!checkpoint.isCheckpoint) {
+        snapshot.engineState = 'WAITING';
+        snapshot.lastEvaluatedSpin = engineSnapshot && engineSnapshot.lastEvaluatedSpin
+            ? engineSnapshot.lastEvaluatedSpin
+            : checkpoint.lastCheckpointSpin;
+        snapshot.leadMessage = `Waiting for checkpoint ${checkpoint.nextCheckpointSpin}.`;
+        return snapshot;
+    }
+
+    snapshot.checkpointSpin = spinCount;
+    snapshot.lastEvaluatedSpin = spinCount;
+    snapshot.checkpointStatus = `Checkpoint spin ${spinCount}`;
+
+    if (!snapshot.dominantCombo || snapshot.dominantCombo.hits <= 0) {
+        snapshot.engineState = 'NO_SIGNAL';
+        snapshot.leadMessage = 'No dominant combo in the rolling 14-spin read.';
+        return snapshot;
+    }
+
+    const latestSpin = history[history.length - 1];
+    const latestFaces = latestSpin && Array.isArray(latestSpin.faces) ? latestSpin.faces : [];
+    const latestHasA = latestFaces.includes(snapshot.dominantCombo.a);
+    const latestHasB = latestFaces.includes(snapshot.dominantCombo.b);
+    const minimumHitsPassed = snapshot.dominantCombo.hits >= 3;
+    const dominancePassed = snapshot.topMargin >= 1;
+
+    let triggerPassed = false;
+    let triggerDetail = 'Latest spin did not trigger either side of the dominant combo.';
+    if (latestHasA !== latestHasB) {
+        triggerPassed = true;
+        snapshot.triggerFace = latestHasA ? snapshot.dominantCombo.a : snapshot.dominantCombo.b;
+        snapshot.predictedFace = latestHasA ? snapshot.dominantCombo.b : snapshot.dominantCombo.a;
+        triggerDetail = `Latest spin triggered F${snapshot.triggerFace}; follow face is F${snapshot.predictedFace}.`;
+    } else if (latestHasA && latestHasB) {
+        triggerDetail = 'Latest spin touched both combo sides, so the trigger is ambiguous.';
+    }
+
+    const confirmationCombo = getComboStatByLabel(stats5, snapshot.dominantCombo.label);
+    snapshot.confirmationHits = confirmationCombo ? confirmationCombo.hits : 0;
+    snapshot.confirmationPassed = snapshot.confirmationHits >= 1;
+
+    snapshot.gateResults = [
+        buildGateResult('dominance', 'Dominance', dominancePassed,
+            dominancePassed
+                ? `${snapshot.dominantCombo.label} leads by ${snapshot.topMargin} hit${snapshot.topMargin === 1 ? '' : 's'}.`
+                : `${snapshot.dominantCombo.label} is tied or too close to ${snapshot.runnerUpCombo ? snapshot.runnerUpCombo.label : 'the field'}.`
+        ),
+        buildGateResult('minimumHits', 'Minimum Hits', minimumHitsPassed,
+            minimumHitsPassed
+                ? `${snapshot.dominantCombo.label} has ${snapshot.dominantCombo.hits} hits in the rolling 14-spin window.`
+                : `${snapshot.dominantCombo.label} only has ${snapshot.dominantCombo.hits} hit${snapshot.dominantCombo.hits === 1 ? '' : 's'} in the rolling 14-spin window.`
+        ),
+        buildGateResult('trigger', 'Trigger', triggerPassed, triggerDetail),
+        buildGateResult('confirmation', '5-Spin Confirmation', snapshot.confirmationPassed,
+            snapshot.confirmationPassed
+                ? `${snapshot.dominantCombo.label} hit ${snapshot.confirmationHits} time${snapshot.confirmationHits === 1 ? '' : 's'} in the last ${Math.min(ENGINE_CONFIRMATION_WINDOW, spinCount)} spins.`
+                : `${snapshot.dominantCombo.label} did not confirm in the last ${Math.min(ENGINE_CONFIRMATION_WINDOW, spinCount)} spins.`
+        )
+    ];
+
+    snapshot.passedGates = snapshot.gateResults.filter(gate => gate.passed);
+    snapshot.failedGates = snapshot.gateResults.filter(gate => !gate.passed);
+
+    if (snapshot.failedGates.length > 0) {
+        snapshot.engineState = 'WATCHLIST';
+        snapshot.watchlistMessage = snapshot.failedGates[0].detail;
+        snapshot.leadMessage = `${snapshot.dominantCombo.label} leads, but the signal is still on watchlist.`;
+        return snapshot;
+    }
+
+    snapshot.signalKind = lastActionableComboLabel === snapshot.dominantCombo.label ? 'follow-up' : 'fresh';
+    snapshot.engineState = snapshot.signalKind === 'follow-up' ? 'FOLLOW_UP' : 'READY';
+    snapshot.currentPrediction = {
+        targetFace: snapshot.predictedFace,
+        triggerFace: snapshot.triggerFace,
+        comboLabel: snapshot.dominantCombo.label,
+        accentColor: snapshot.dominantCombo.color
+    };
+    snapshot.leadMessage = snapshot.signalKind === 'follow-up'
+        ? `${snapshot.dominantCombo.label} remains valid as a follow-up read.`
+        : `${snapshot.dominantCombo.label} cleared every gate and is ready for the next spin.`;
+
+    return snapshot;
+}
+
+function syncPredictionEngine() {
+    const snapshot = evaluatePredictionEngine();
+    engineSnapshot = snapshot;
+
+    if (!perimeterRuleEnabled || !snapshot.currentPrediction || !['READY', 'FOLLOW_UP'].includes(snapshot.engineState)) {
+        activeBets = [];
+        window.currentAlerts = [];
+        return [];
+    }
+
+    const signalKindLabel = snapshot.signalKind === 'follow-up' ? 'Follow-up' : 'Fresh';
+    activeBets = [{
+        patternName: PREDICTION_PERIMETER_PATTERN,
+        filterKey: PERIMETER_RULE_KEY,
+        strategy: PREDICTION_PERIMETER_PATTERN,
+        targetFace: snapshot.currentPrediction.targetFace,
+        triggerFace: snapshot.currentPrediction.triggerFace,
+        comboLabel: snapshot.currentPrediction.comboLabel,
+        accentColor: snapshot.currentPrediction.accentColor,
+        confirmed: false,
+        signalKind: snapshot.signalKind,
+        subtitle: `${signalKindLabel} ${snapshot.currentPrediction.comboLabel}`
+    }];
+
+    window.currentAlerts = [{
+        type: 'ACTIVE',
+        patternName: PREDICTION_PERIMETER_PATTERN,
+        targetFace: snapshot.currentPrediction.targetFace,
+        comboLabel: snapshot.currentPrediction.comboLabel,
+        accentColor: snapshot.currentPrediction.accentColor,
+        signalKind: snapshot.signalKind
+    }];
+
+    lastActionableComboLabel = snapshot.dominantCombo.label;
+    lastActionableCheckpointSpin = snapshot.checkpointSpin || snapshot.spinCount;
+    return window.currentAlerts;
+}
+
+function getEngineStateTone(state) {
+    const tones = {
+        BUILDING: 'intel-chip-building',
+        WAITING: 'intel-chip-waiting',
+        READY: 'intel-chip-ready',
+        FOLLOW_UP: 'intel-chip-followup',
+        WATCHLIST: 'intel-chip-watchlist',
+        NO_SIGNAL: 'intel-chip-nosignal'
+    };
+    return tones[state] || 'intel-chip-waiting';
+}
+
+function getMetricToneClass(metric, value) {
+    switch (metric) {
+        case 'hits':
+            if (value >= 3) return 'intel-tone-hot';
+            if (value === 2) return 'intel-tone-watch';
+            if (value === 1) return 'intel-tone-cold';
+            return 'intel-tone-muted';
+        case 'hotPercent':
+            if (value >= 25) return 'intel-tone-hot';
+            if (value >= 15) return 'intel-tone-watch';
+            if (value > 0) return 'intel-tone-cold';
+            return 'intel-tone-muted';
+        case 'coldPercent':
+            if (value >= 85) return 'intel-tone-cold';
+            if (value >= 65) return 'intel-tone-watch';
+            if (value > 0) return 'intel-tone-hot';
+            return 'intel-tone-muted';
+        case 'margin':
+            if (value >= 2) return 'intel-tone-hot';
+            if (value === 1) return 'intel-tone-watch';
+            if (value === 0) return 'intel-tone-alert';
+            return 'intel-tone-muted';
+        case 'confirmation':
+            return value >= 1 ? 'intel-tone-hot' : 'intel-tone-alert';
+        case 'lastSeen':
+            if (value === null || value === undefined || value === '-') return 'intel-tone-muted';
+            if (value <= 1) return 'intel-tone-hot';
+            if (value <= 3) return 'intel-tone-watch';
+            return 'intel-tone-cold';
+        case 'checkpoint':
+            if (value <= 1) return 'intel-tone-watch';
+            if (value <= 3) return 'intel-tone-cold';
+            return 'intel-tone-muted';
+        default:
+            return 'intel-tone-muted';
+    }
+}
+
+function getPredictionToneClass(snapshot) {
+    if (!snapshot) return 'intel-tone-muted';
+    if (snapshot.currentPrediction) return 'intel-tone-hot';
+    if (snapshot.engineState === 'WATCHLIST') return 'intel-tone-watch';
+    if (snapshot.engineState === 'NO_SIGNAL') return 'intel-tone-alert';
+    return 'intel-tone-muted';
+}
+
+function formatEnginePrediction(snapshot) {
+    if (!snapshot) return 'No engine state available.';
+    if (snapshot.currentPrediction) {
+        return `BET F${snapshot.currentPrediction.targetFace} from ${snapshot.currentPrediction.comboLabel} (${snapshot.signalKind === 'follow-up' ? 'follow-up' : 'fresh'}).`;
+    }
+    if (snapshot.engineState === 'WATCHLIST') return snapshot.watchlistMessage || 'Top combo is on watchlist.';
+    if (snapshot.engineState === 'BUILDING') return snapshot.leadMessage;
+    if (snapshot.engineState === 'WAITING') return snapshot.leadMessage;
+    if (snapshot.engineState === 'NO_SIGNAL') return snapshot.leadMessage;
+    return 'No actionable signal.';
+}
+
+function renderIntelligencePanel() {
+    const content = document.getElementById('intelligenceContent');
+    const stateChip = document.getElementById('intelStateChip');
+    const checkpointSummary = document.getElementById('intelCheckpointSummary');
+    const nextCheckpoint = document.getElementById('intelNextCheckpoint');
+    const nextCheckpointMeta = document.getElementById('intelNextCheckpointMeta');
+    if (!content) return;
+
+    const snapshot = engineSnapshot || createEmptyEngineSnapshot(history.length);
+    const rankedCombos = sortEngineReadCombos(snapshot.comboCoverage || []);
+    const leadCombo = snapshot.dominantCombo;
+    const runnerUp = snapshot.runnerUpCombo;
+
+    if (stateChip) {
+        stateChip.innerText = snapshot.engineState;
+        stateChip.className = `intel-state-chip ${getEngineStateTone(snapshot.engineState)}`;
+    }
+
+    if (checkpointSummary) {
+        checkpointSummary.innerText = snapshot.checkpointStatus;
+        checkpointSummary.className = `intel-toolbar-title ${getPredictionToneClass(snapshot)}`;
+    }
+
+    if (nextCheckpoint) {
+        nextCheckpoint.innerText = snapshot.nextCheckpointSpin || ENGINE_PRIMARY_WINDOW;
+        nextCheckpoint.className = `intel-next-value ${getMetricToneClass('checkpoint', snapshot.spinsUntilNextCheckpoint)}`;
+    }
+
+    if (nextCheckpointMeta) {
+        nextCheckpointMeta.innerText = snapshot.spinCount < ENGINE_PRIMARY_WINDOW
+            ? `${snapshot.spinsUntilNextCheckpoint} spins until first read`
+            : `${snapshot.spinsUntilNextCheckpoint} spins until next read`;
+        nextCheckpointMeta.className = `intel-toolbar-meta ${getMetricToneClass('checkpoint', snapshot.spinsUntilNextCheckpoint)}`;
+    }
+
+    const comboRows = rankedCombos.map((combo, index) => `
+        <tr>
+            <td class="intel-table-label" style="color:${combo.color}">${index + 1}. ${combo.label}</td>
+            <td class="intel-table-metric ${getMetricToneClass('hits', combo.hits)}">${combo.hits}</td>
+            <td class="intel-table-metric ${getMetricToneClass('hotPercent', combo.hotPercent)}">${combo.hotPercent}%</td>
+            <td class="intel-table-metric ${getMetricToneClass('coldPercent', combo.coldPercent)}">${combo.coldPercent}%</td>
+            <td class="intel-table-metric ${getMetricToneClass('lastSeen', combo.lastSeenDistance ?? '-')}">${combo.lastSeenDistance ?? '-'}</td>
+        </tr>
+    `).join('');
+
+    const diagnosticRows = rankedCombos.map((combo, index) => {
+        const recentCombo = getComboStatByLabel(snapshot.stats5, combo.label);
+        const recentHits = recentCombo ? recentCombo.hits : 0;
+        return `
+            <tr>
+                <td class="intel-table-label" style="color:${combo.color}">${index + 1}. ${combo.label}</td>
+                <td class="intel-table-metric ${getMetricToneClass('hits', combo.hits)}">${combo.hits}</td>
+                <td class="intel-table-metric ${getMetricToneClass('hotPercent', combo.hotPercent)}">${combo.hotPercent}%</td>
+                <td class="intel-table-metric ${getMetricToneClass('coldPercent', combo.coldPercent)}">${combo.coldPercent}%</td>
+                <td class="intel-table-metric ${getMetricToneClass('confirmation', recentHits)}">${recentHits}</td>
+                <td class="intel-table-metric ${getMetricToneClass('lastSeen', combo.lastSeenDistance ?? '-')}">${combo.lastSeenDistance ?? '-'}</td>
+            </tr>
+        `;
+    }).join('');
+
+    const gateRows = snapshot.gateResults.map(gate => `
+        <div class="intel-gate-row ${gate.passed ? 'intel-gate-pass' : 'intel-gate-fail'}">
+            <div class="intel-gate-head">
+                <span>${gate.label}</span>
+                <span>${gate.passed ? 'PASS' : 'FAIL'}</span>
+            </div>
+            <div class="intel-gate-copy">${gate.detail}</div>
+        </div>
+    `).join('');
+
+    if (currentIntelligenceMode === 'minimal') {
+        content.innerHTML = `
+            <div class="intel-grid-minimal">
+                <div class="intel-card">
+                    <div class="intel-card-kicker">Dominant Combo</div>
+                    <div class="intel-card-title" style="color:${leadCombo ? leadCombo.color : '#f0f0f0'}">${leadCombo ? leadCombo.label : 'None'}</div>
+                </div>
+                <div class="intel-card">
+                    <div class="intel-card-kicker">Prediction</div>
+                    <div class="intel-card-title intel-metric-copy ${getPredictionToneClass(snapshot)}">${formatEnginePrediction(snapshot)}</div>
+                </div>
+                <div class="intel-card">
+                    <div class="intel-card-kicker">Next Checkpoint</div>
+                    <div class="intel-card-title ${getMetricToneClass('checkpoint', snapshot.spinsUntilNextCheckpoint)}">${snapshot.nextCheckpointSpin || ENGINE_PRIMARY_WINDOW}</div>
+                    <div class="intel-card-copy ${getMetricToneClass('checkpoint', snapshot.spinsUntilNextCheckpoint)}">${snapshot.spinsUntilNextCheckpoint} spins remaining</div>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    const briefBlock = `
+        <div class="intel-grid-brief">
+            <div class="intel-lead-card">
+                <div class="intel-card-kicker">Lead Insight</div>
+                <div class="intel-card-title ${getPredictionToneClass(snapshot)}">${snapshot.leadMessage}</div>
+                <div class="intel-card-copy ${getPredictionToneClass(snapshot)}">${formatEnginePrediction(snapshot)}</div>
+            </div>
+            <div class="intel-card">
+                <div class="intel-card-kicker">Primary Read</div>
+                <div class="intel-card-title" style="color:${leadCombo ? leadCombo.color : '#f0f0f0'}">${leadCombo ? leadCombo.label : 'No combo'}</div>
+                <div class="intel-card-copy">${leadCombo ? `<span class="intel-inline-metric ${getMetricToneClass('hits', leadCombo.hits)}">${leadCombo.hits} hits</span> in rolling 14` : 'Waiting for a valid sample.'}</div>
+            </div>
+            <div class="intel-card">
+                <div class="intel-card-kicker">Runner-Up Margin</div>
+                <div class="intel-card-title ${getMetricToneClass('margin', snapshot.topMargin)}">${leadCombo ? `${snapshot.topMargin >= 0 ? '+' : ''}${snapshot.topMargin}` : '-'}</div>
+                <div class="intel-card-copy">${runnerUp ? `Runner-up is ${runnerUp.label} with ${runnerUp.hits} hits` : 'No runner-up yet.'}</div>
+            </div>
+            <div class="intel-card">
+                <div class="intel-card-kicker">Trigger / Follow Face</div>
+                <div class="intel-card-title ${snapshot.triggerFace ? getPredictionToneClass(snapshot) : 'intel-tone-muted'}">${snapshot.triggerFace ? `F${snapshot.triggerFace} -> F${snapshot.predictedFace}` : 'No action'}</div>
+                <div class="intel-card-copy ${snapshot.triggerFace ? getPredictionToneClass(snapshot) : 'intel-tone-muted'}">${snapshot.currentPrediction ? 'Latest spin produced a clean trigger.' : 'Waiting for a clean one-sided trigger.'}</div>
+            </div>
+            <div class="intel-card">
+                <div class="intel-card-kicker">5-Spin Confirmation</div>
+                <div class="intel-card-title ${getMetricToneClass('confirmation', snapshot.confirmationHits)}">${snapshot.confirmationPassed ? 'PASS' : 'FAIL'}</div>
+                <div class="intel-card-copy">${leadCombo ? `${leadCombo.label} hit <span class="intel-inline-metric ${getMetricToneClass('confirmation', snapshot.confirmationHits)}">${snapshot.confirmationHits}</span> time${snapshot.confirmationHits === 1 ? '' : 's'} in the last ${Math.min(ENGINE_CONFIRMATION_WINDOW, snapshot.spinCount)} spins.` : 'No combo under review.'}</div>
+            </div>
+        </div>
+        <div class="intel-card intel-table-card">
+            <div class="intel-card-kicker">14-Spin Combo Ranking</div>
+            <table class="intel-table">
+                <thead>
+                    <tr><th>Combo</th><th>Hits</th><th>Hot</th><th>Cold</th><th>Last Seen</th></tr>
+                </thead>
+                <tbody>${comboRows || '<tr><td colspan="5" class="intel-table-empty">Awaiting data...</td></tr>'}</tbody>
+            </table>
+        </div>
+    `;
+
+    if (currentIntelligenceMode === 'brief') {
+        content.innerHTML = briefBlock;
+        return;
+    }
+
+    content.innerHTML = `
+        ${briefBlock}
+        <div class="intel-grid-diagnostic">
+            <div class="intel-card">
+                <div class="intel-card-kicker">Checkpoint Flow</div>
+                <div class="intel-card-copy">Last evaluated spin: <span class="intel-inline-metric ${snapshot.lastEvaluatedSpin ? 'intel-tone-watch' : 'intel-tone-muted'}">${snapshot.lastEvaluatedSpin || 'None yet'}</span></div>
+                <div class="intel-card-copy">Next checkpoint: <span class="intel-inline-metric ${getMetricToneClass('checkpoint', snapshot.spinsUntilNextCheckpoint)}">${snapshot.nextCheckpointSpin || ENGINE_PRIMARY_WINDOW}</span></div>
+                <div class="intel-card-copy">Signal kind: <span class="intel-inline-metric ${getPredictionToneClass(snapshot)}">${snapshot.signalKind ? snapshot.signalKind.toUpperCase() : 'NONE'}</span></div>
+            </div>
+            <div class="intel-card">
+                <div class="intel-card-kicker">Gate Breakdown</div>
+                <div class="intel-gates">${gateRows || '<div class="intel-table-empty">No gate data yet.</div>'}</div>
+            </div>
+        </div>
+        <div class="intel-card intel-table-card">
+            <div class="intel-card-kicker">Diagnostic Combo Table</div>
+            <table class="intel-table">
+                <thead>
+                    <tr><th>Combo</th><th>14 Hits</th><th>Hot</th><th>Cold</th><th>5 Hits</th><th>Last Seen</th></tr>
+                </thead>
+                <tbody>${diagnosticRows || '<tr><td colspan="6" class="intel-table-empty">Awaiting data...</td></tr>'}</tbody>
+            </table>
+        </div>
+    `;
 }
 
 function updateAnalyticsHUD() {
@@ -821,7 +1305,7 @@ function updateVisibility() {
     reRenderHistory();
 
     // 3. Update Analytics if visible
-    if (!document.getElementById('analyticsModal').classList.contains('hidden') && currentAnalyticsTab === 'player') {
+    if (!document.getElementById('analyticsModal').classList.contains('hidden')) {
         renderAnalytics();
     }
 }
@@ -1037,53 +1521,33 @@ function updateUserStats(isWin, bet, spinIndex, unitChange) {
     });
 }
 
-function renderAnalytics() {
-    let displayStats = {
-        wins: 0, losses: 0, net: 0, streak: 0,
-        history: [0], patterns: {}
+function applyAnalyticsTabUI() {
+    const strategyPanel = document.getElementById('strategyAnalyticsPanel');
+    const intelligencePanel = document.getElementById('intelligenceAnalyticsPanel');
+    const tabStrategy = document.getElementById('tabStrategy');
+    const tabIntelligence = document.getElementById('tabIntelligence');
+    const modeSelect = document.getElementById('intelligenceViewSelect');
+
+    if (strategyPanel) strategyPanel.classList.toggle('hidden', currentAnalyticsTab !== 'strategy');
+    if (intelligencePanel) intelligencePanel.classList.toggle('hidden', currentAnalyticsTab !== 'intelligence');
+    if (tabStrategy) tabStrategy.classList.toggle('active', currentAnalyticsTab === 'strategy');
+    if (tabIntelligence) tabIntelligence.classList.toggle('active', currentAnalyticsTab === 'intelligence');
+    if (modeSelect) modeSelect.value = currentIntelligenceMode;
+}
+
+function renderStrategyAnalytics() {
+    const displayStats = {
+        wins: engineStats.totalWins,
+        losses: engineStats.totalLosses,
+        net: engineStats.netUnits,
+        streak: engineStats.currentStreak,
+        history: engineStats.bankrollHistory,
+        patterns: engineStats.patternStats
     };
 
-    if (currentAnalyticsTab === 'god') {
-        displayStats.wins = engineStats.totalWins;
-        displayStats.losses = engineStats.totalLosses;
-        displayStats.net = engineStats.netUnits;
-        displayStats.streak = engineStats.currentStreak;
-        displayStats.history = engineStats.bankrollHistory;
-        displayStats.patterns = engineStats.patternStats;
-
-        document.getElementById('graphTitle').innerText = 'Theoretical Bankroll (All Strategies)';
-        document.getElementById('labelHitRate').innerText = 'Global Hit Rate';
-        document.getElementById('labelNet').innerText = 'Theoretical Net';
-        document.getElementById('simFilterBtn').classList.add('hidden'); // Hide Sim button
-
-    } else {
-        document.getElementById('graphTitle').innerText = 'Filtered Bankroll (Active Filters Only)';
-        document.getElementById('labelHitRate').innerText = 'Filtered Hit Rate';
-        document.getElementById('labelNet').innerText = 'Filtered Net';
-        document.getElementById('simFilterBtn').classList.remove('hidden'); // Show Sim button
-
-        engineStats.signalLog.forEach(log => {
-            let isEnabled = true;
-
-            if (isEnabled) {
-                if (log.result === 'WIN') {
-                    displayStats.wins++;
-                    displayStats.streak = displayStats.streak >= 0 ? displayStats.streak + 1 : 1;
-                } else {
-                    displayStats.losses++;
-                    displayStats.streak = displayStats.streak <= 0 ? displayStats.streak - 1 : -1;
-                }
-                displayStats.net += log.units;
-                displayStats.history.push(displayStats.net);
-
-                if (!displayStats.patterns[log.patternName]) {
-                    displayStats.patterns[log.patternName] = { wins: 0, losses: 0 };
-                }
-                if (log.result === 'WIN') displayStats.patterns[log.patternName].wins++;
-                else displayStats.patterns[log.patternName].losses++;
-            }
-        });
-    }
+    document.getElementById('graphTitle').innerText = 'Theoretical Bankroll (All Strategies)';
+    document.getElementById('labelHitRate').innerText = 'Global Hit Rate';
+    document.getElementById('labelNet').innerText = 'Theoretical Net';
 
     const totalSignals = displayStats.wins + displayStats.losses;
     const hitRate = totalSignals === 0 ? 0 : Math.round((displayStats.wins / totalSignals) * 100);
@@ -1107,58 +1571,27 @@ function renderAnalytics() {
     updatePatternHeatmap(displayStats.patterns);
 }
 
+function renderAnalytics() {
+    applyAnalyticsTabUI();
+    if (currentAnalyticsTab === 'intelligence') {
+        renderIntelligencePanel();
+        return;
+    }
+
+    renderStrategyAnalytics();
+}
+
 function switchAnalyticsTab(tab) {
-    currentAnalyticsTab = tab;
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(tab === 'god' ? 'tabGod' : 'tabPlayer').classList.add('active');
-
-    if (tab === 'player') {
-        // Sync simulation config with global pattern config when switching to player view
-        simulationConfig = JSON.parse(JSON.stringify(patternConfig));
-        renderSimFilterMenu();
-    }
-
-    // Hide menu if open
-    document.getElementById('simFilterMenu').classList.add('hidden');
-
+    currentAnalyticsTab = tab === 'intelligence' ? 'intelligence' : 'strategy';
     renderAnalytics();
 }
 
-function toggleSimMenu() {
-    document.getElementById('simFilterMenu').classList.toggle('hidden');
-}
-
-function renderSimFilterMenu() {
-    const container = document.getElementById('simFilterList');
-    container.innerHTML = '';
-
-    const labels = {};
-
-    for (let key in simulationConfig) {
-        let isChecked = simulationConfig[key];
-        let label = labels[key] || key;
-
-        let item = document.createElement('div');
-        item.className = "flex items-center justify-between px-3 py-2 hover:bg-white/10 rounded-lg cursor-pointer transition-colors";
-        item.onclick = (e) => {
-            e.stopPropagation();
-            toggleSimFilter(key);
-        };
-
-        item.innerHTML = `
-                <span class="text-xs text-gray-300 font-medium">${label}</span>
-                <div class="w-4 h-4 rounded flex items-center justify-center border ${isChecked ? 'bg-[#30D158] border-[#30D158]' : 'border-gray-600 bg-black/20'}">
-                    ${isChecked ? '<i class="fas fa-check text-[10px] text-black"></i>' : ''}
-                </div>
-            `;
-        container.appendChild(item);
+function setIntelligenceMode(mode) {
+    persistIntelligenceMode(mode);
+    applyAnalyticsTabUI();
+    if (currentAnalyticsTab === 'intelligence') {
+        renderIntelligencePanel();
     }
-}
-
-function toggleSimFilter(key) {
-    simulationConfig[key] = !simulationConfig[key];
-    renderSimFilterMenu();
-    renderAnalytics();
 }
 
 function renderGapStats() {
@@ -1427,44 +1860,7 @@ function calculateDominantPerimeterCombo() {
 }
 
 function scanAllStrategies() {
-    let allNotifications = [];
-    let allNextBets = [];
-
-    if (perimeterRuleEnabled) {
-        const dominantCombo = calculateDominantPerimeterCombo();
-        if (dominantCombo && dominantCombo.latestPrimaryFace) {
-            let triggerFace = null;
-            if (dominantCombo.latestPrimaryFace === dominantCombo.a) triggerFace = dominantCombo.a;
-            else if (dominantCombo.latestPrimaryFace === dominantCombo.b) triggerFace = dominantCombo.b;
-
-            if (triggerFace !== null) {
-                const partnerFace = triggerFace === dominantCombo.a ? dominantCombo.b : dominantCombo.a;
-
-                allNextBets.push({
-                    patternName: PREDICTION_PERIMETER_PATTERN,
-                    filterKey: PERIMETER_RULE_KEY,
-                    strategy: PREDICTION_PERIMETER_PATTERN,
-                    targetFace: partnerFace,
-                    triggerFace: triggerFace,
-                    comboLabel: dominantCombo.label,
-                    accentColor: dominantCombo.color,
-                    confirmed: false
-                });
-
-                allNotifications.push({
-                    type: 'ACTIVE',
-                    patternName: PREDICTION_PERIMETER_PATTERN,
-                    targetFace: partnerFace,
-                    comboLabel: dominantCombo.label,
-                    accentColor: dominantCombo.color
-                });
-            }
-        }
-    }
-
-    activeBets = allNextBets;
-    window.currentAlerts = allNotifications;
-    return allNotifications;
+    return syncPredictionEngine();
 }
 
 function renderRow(spin) {
@@ -1751,7 +2147,7 @@ function renderDashboard(alerts) {
         const filterKey = bet.filterKey || bet.patternName;
         if (patternConfig[filterKey] === false) return;
 
-        const subtitle = bet.comboLabel ? `${bet.comboLabel} combo` : bet.patternName;
+        const subtitle = bet.subtitle || (bet.comboLabel ? `${bet.comboLabel} combo` : bet.patternName);
         const accent = bet.accentColor || '#FF3B30';
         cards.push(`
             <div class="min-w-[250px] h-[64px] px-3 py-2 rounded-lg border bg-[#0f0f12] flex items-center justify-between cursor-pointer select-none"
@@ -1767,7 +2163,20 @@ function renderDashboard(alerts) {
     });
 
     if (cards.length === 0) {
-        dash.innerHTML = `<div class="dashboard-empty w-full text-center text-[10px] font-medium text-[#8E8E93]/60 border border-dashed border-white/5 rounded-xl p-2 select-none tracking-wide flex items-center justify-center h-[60px]"><span>SCANNING...</span></div>`;
+        const snapshot = engineSnapshot || createEmptyEngineSnapshot(history.length);
+        let emptyLabel = 'SCANNING...';
+
+        if (snapshot.engineState === 'BUILDING') {
+            emptyLabel = `BUILDING ENGINE • ${snapshot.spinsUntilNextCheckpoint} SPINS UNTIL FIRST READ`;
+        } else if (snapshot.engineState === 'WAITING') {
+            emptyLabel = `NEXT READ IN ${snapshot.spinsUntilNextCheckpoint} SPINS`;
+        } else if (snapshot.engineState === 'WATCHLIST') {
+            emptyLabel = `WATCHLIST • ${snapshot.dominantCombo ? snapshot.dominantCombo.label : 'NO ACTION'}`;
+        } else if (snapshot.engineState === 'NO_SIGNAL') {
+            emptyLabel = 'NO SIGNAL • CHECKPOINT CLEAR';
+        }
+
+        dash.innerHTML = `<div class="dashboard-empty w-full text-center text-[10px] font-medium text-[#8E8E93]/60 border border-dashed border-white/5 rounded-xl p-2 select-none tracking-wide flex items-center justify-center h-[60px]"><span>${emptyLabel}</span></div>`;
         return;
     }
 
@@ -1793,6 +2202,9 @@ function resetData(skipConfirm = false) {
         history = [];
         activeBets = [];
         window.currentAlerts = [];
+        engineSnapshot = createEmptyEngineSnapshot(0);
+        lastActionableComboLabel = null;
+        lastActionableCheckpointSpin = 0;
         strategies = {};
         engineStats = {
             totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0,
