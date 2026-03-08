@@ -449,7 +449,7 @@ body::after {
 }
 
 .pattern-filter-switch-on .pattern-filter-switch-knob {
-    transform: translateX(18px);
+    transform: translateX(16px);
     background: #30d158;
 }
 
