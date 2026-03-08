@@ -186,86 +186,116 @@ function initAnalyticsHUD() {
     const resizer = document.getElementById('hudResizeHandle');
 
     if (!hud || !header || !resizer) return;
+    if (hud.dataset.initialized === 'true') return;
+    hud.dataset.initialized = 'true';
 
-    // DRAG LOGIC
-    let isDragging = false;
-    let startX, startY, initialLeft, initialTop;
+    let interaction = null;
+    let rafId = null;
+    let pendingFrame = null;
 
-    header.addEventListener('mousedown', startDrag);
-    header.addEventListener('touchstart', startDrag, { passive: false });
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
-    function startDrag(e) {
-        if (e.type === 'mousedown') e.preventDefault();
-        isDragging = true;
-        const clientX = e.type === 'mousedown' ? e.clientX : e.touches[0].clientX;
-        const clientY = e.type === 'mousedown' ? e.clientY : e.touches[0].clientY;
-        startX = clientX;
-        startY = clientY;
-        initialLeft = hud.offsetLeft;
-        initialTop = hud.offsetTop;
-        document.addEventListener('mousemove', onDrag);
-        document.addEventListener('mouseup', stopDrag);
-        document.addEventListener('touchmove', onDrag, { passive: false });
-        document.addEventListener('touchend', stopDrag);
+    function scheduleHUDFrame(nextValues) {
+        pendingFrame = { ...(pendingFrame || {}), ...nextValues };
+        if (rafId !== null) return;
+
+        rafId = requestAnimationFrame(() => {
+            if (!pendingFrame) {
+                rafId = null;
+                return;
+            }
+
+            if (typeof pendingFrame.left === 'number') {
+                hud.style.left = `${pendingFrame.left}px`;
+            }
+            if (typeof pendingFrame.top === 'number') {
+                hud.style.top = `${pendingFrame.top}px`;
+            }
+            if (typeof pendingFrame.width === 'number') {
+                hud.style.width = `${pendingFrame.width}px`;
+            }
+            if (typeof pendingFrame.height === 'number') {
+                hud.style.height = `${pendingFrame.height}px`;
+            }
+
+            pendingFrame = null;
+            rafId = null;
+        });
     }
 
-    function onDrag(e) {
-        if (!isDragging) return;
-        const clientX = e.type === 'mousemove' ? e.clientX : e.touches[0].clientX;
-        const clientY = e.type === 'mousemove' ? e.clientY : e.touches[0].clientY;
-        const dx = clientX - startX;
-        const dy = clientY - startY;
-        hud.style.left = `${initialLeft + dx}px`;
-        hud.style.top = `${initialTop + dy}px`;
-        if (e.type === 'touchmove') e.preventDefault(); // Prevent scrolling while dragging
-    }
-
-    function stopDrag() {
-        isDragging = false;
-        document.removeEventListener('mousemove', onDrag);
-        document.removeEventListener('mouseup', stopDrag);
-        document.removeEventListener('touchmove', onDrag);
-        document.removeEventListener('touchend', stopDrag);
-    }
-
-    // RESIZE LOGIC
-    resizer.addEventListener('mousedown', startResize);
-    resizer.addEventListener('touchstart', startResize, { passive: false });
-
-    function startResize(e) {
-        if (e.type === 'mousedown') e.preventDefault();
+    function startInteraction(type, e) {
+        if (e.button !== undefined && e.button !== 0) return;
+        if (type === 'drag' && e.target.closest('button')) return;
+        if (e.cancelable) e.preventDefault();
         e.stopPropagation();
-        isResizing = true;
-        const clientX = e.type === 'mousedown' ? e.clientX : e.touches[0].clientX;
-        const clientY = e.type === 'mousedown' ? e.clientY : e.touches[0].clientY;
-        startX = clientX;
-        startY = clientY;
-        startW = hud.offsetWidth;
-        startH = hud.offsetHeight;
-        document.addEventListener('mousemove', onResize);
-        document.addEventListener('mouseup', stopResize);
-        document.addEventListener('touchmove', onResize, { passive: false });
-        document.addEventListener('touchend', stopResize);
+
+        interaction = {
+            type,
+            pointerId: e.pointerId,
+            startX: e.clientX,
+            startY: e.clientY,
+            startLeft: hud.offsetLeft,
+            startTop: hud.offsetTop,
+            startWidth: hud.offsetWidth,
+            startHeight: hud.offsetHeight
+        };
+
+        hud.classList.add('hud-interacting');
+        document.body.classList.add('hud-no-select');
+
+        if (type === 'drag') {
+            header.setPointerCapture?.(e.pointerId);
+        } else {
+            resizer.setPointerCapture?.(e.pointerId);
+        }
     }
 
-    function onResize(e) {
-        if (!isResizing) return;
-        const clientX = e.type === 'mousemove' ? e.clientX : e.touches[0].clientX;
-        const clientY = e.type === 'mousemove' ? e.clientY : e.touches[0].clientY;
-        const w = startW + (clientX - startX);
-        const h = startH + (clientY - startY);
-        hud.style.width = `${Math.max(200, w)}px`;
-        hud.style.height = `${Math.max(160, h)}px`;
-        if (e.type === 'touchmove') e.preventDefault();
+    function onPointerMove(e) {
+        if (!interaction) return;
+        if (interaction.pointerId !== undefined && e.pointerId !== undefined && interaction.pointerId !== e.pointerId) return;
+        if (e.cancelable) e.preventDefault();
+
+        const dx = e.clientX - interaction.startX;
+        const dy = e.clientY - interaction.startY;
+
+        if (interaction.type === 'drag') {
+            const maxLeft = Math.max(8, window.innerWidth - hud.offsetWidth - 8);
+            const maxTop = Math.max(8, window.innerHeight - hud.offsetHeight - 8);
+            scheduleHUDFrame({
+                left: clamp(interaction.startLeft + dx, 8, maxLeft),
+                top: clamp(interaction.startTop + dy, 8, maxTop)
+            });
+            return;
+        }
+
+        const maxWidth = Math.max(200, window.innerWidth - interaction.startLeft - 8);
+        const maxHeight = Math.max(160, window.innerHeight - interaction.startTop - 8);
+        scheduleHUDFrame({
+            width: clamp(interaction.startWidth + dx, 200, maxWidth),
+            height: clamp(interaction.startHeight + dy, 160, maxHeight)
+        });
     }
 
-    function stopResize() {
-        isResizing = false;
-        document.removeEventListener('mousemove', onResize);
-        document.removeEventListener('mouseup', stopResize);
-        document.removeEventListener('touchmove', onResize);
-        document.removeEventListener('touchend', stopResize);
+    function stopInteraction(e) {
+        if (!interaction) return;
+        if (interaction.pointerId !== undefined && e && e.pointerId !== undefined && interaction.pointerId !== e.pointerId) return;
+
+        if (interaction.type === 'drag') {
+            header.releasePointerCapture?.(interaction.pointerId);
+        } else {
+            resizer.releasePointerCapture?.(interaction.pointerId);
+        }
+
+        interaction = null;
+        hud.classList.remove('hud-interacting');
+        document.body.classList.remove('hud-no-select');
     }
+
+    header.addEventListener('pointerdown', (e) => startInteraction('drag', e));
+    resizer.addEventListener('pointerdown', (e) => startInteraction('resize', e));
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', stopInteraction);
+    window.addEventListener('pointercancel', stopInteraction);
 }
 
 function toggleAnalyticsHUD() {
@@ -304,6 +334,86 @@ function toggleHudColdMode() {
     updateAnalyticsHUD();
 }
 
+function getComboCoverageStats(stats) {
+    if (stats && Array.isArray(stats.comboStats) && stats.comboStats.length > 0) {
+        return stats.comboStats.slice();
+    }
+
+    const sampleSize = Math.max(0, stats && typeof stats.sampleSize === 'number'
+        ? stats.sampleSize
+        : (stats && Array.isArray(stats.recentSpins) ? stats.recentSpins.length : 0));
+
+    return PERIMETER_COMBOS.map(combo => {
+        const hits = stats && stats.counts ? (stats.counts[combo.label] || 0) : 0;
+        const sampleMisses = Math.max(0, sampleSize - hits);
+        const hotPercent = sampleSize > 0 ? Math.round((hits / sampleSize) * 100) : 0;
+        const coldPercent = sampleSize > 0 ? Math.round((sampleMisses / sampleSize) * 100) : 0;
+        let state = 'idle';
+        if (sampleSize > 0) {
+            if (hits === 0) state = 'cold';
+            else if (hotPercent >= 25) state = 'hot';
+            else if (coldPercent >= 75) state = 'cold';
+            else state = 'neutral';
+        }
+
+        return {
+            ...combo,
+            hits,
+            sampleMisses,
+            hotPercent,
+            coldPercent,
+            sampleSize,
+            state
+        };
+    });
+}
+
+function renderColdTracker(stats) {
+    const list = document.getElementById('coldTrackerList');
+    const meta = document.getElementById('coldTrackerMeta');
+    const lead = document.getElementById('coldTrackerLead');
+    if (!list) return;
+
+    const comboStats = getComboCoverageStats(stats)
+        .sort((a, b) => b.coldPercent - a.coldPercent || b.sampleMisses - a.sampleMisses || a.hits - b.hits);
+    const sampleSize = comboStats.length > 0 ? comboStats[0].sampleSize : 0;
+
+    if (meta) {
+        meta.innerText = sampleSize > 0
+            ? `Coverage over the last ${sampleSize} spins`
+            : 'No spins logged yet.';
+    }
+
+    if (lead) {
+        if (sampleSize > 0 && comboStats[0]) {
+            lead.innerText = `${comboStats[0].label} ${comboStats[0].coldPercent}%`;
+            lead.className = 'cold-chip cold-chip-active';
+        } else {
+            lead.innerText = 'IDLE';
+            lead.className = 'cold-chip';
+        }
+    }
+
+    if (sampleSize === 0) {
+        list.innerHTML = '<div class="cold-tracker-empty">Add spins to start measuring combo coldness.</div>';
+        return;
+    }
+
+    list.innerHTML = comboStats.map(combo => {
+        const stateLabel = combo.state.toUpperCase();
+        return `
+            <div class="cold-tracker-row">
+                <div class="cold-row-main">
+                    <div class="cold-row-label" style="color:${combo.color}">${combo.label}</div>
+                    <span class="cold-state cold-state-${combo.state}">${stateLabel}</span>
+                </div>
+                <div class="cold-row-value">${combo.sampleMisses}</div>
+                <div class="cold-row-value cold-row-percent">${combo.coldPercent}%</div>
+            </div>
+        `;
+    }).join('');
+}
+
 function updateAnalyticsHUD() {
     const hud = document.getElementById('analyticsHUD');
     if (!hud || hud.classList.contains('hidden')) return;
@@ -335,20 +445,19 @@ function updateAnalyticsHUD() {
 
     const stats = calculatePerimeterStats(history, predictionPerimeterWindow);
     if (!stats || !stats.counts) return;
-    const transitionCount = Math.max(0, stats.transitionCount || 0);
+    const comboStats = getComboCoverageStats(stats);
+    const sampleSize = comboStats.length > 0 ? comboStats[0].sampleSize : 0;
 
     // Sort Combos based on Mode
-    let displayCombos = [...PERIMETER_COMBOS];
+    let displayCombos = comboStats.slice();
     if (isHudColdMode) {
-        // Cold Mode: Sort by Misses Descending (which is Hits Ascending)
-        displayCombos.sort((a, b) => (stats.counts[a.label] || 0) - (stats.counts[b.label] || 0));
+        displayCombos.sort((a, b) => b.coldPercent - a.coldPercent || b.sampleMisses - a.sampleMisses || a.hits - b.hits);
     } else {
-        // Hot Mode: Sort by Hits Descending
-        displayCombos.sort((a, b) => (stats.counts[b.label] || 0) - (stats.counts[a.label] || 0));
+        displayCombos.sort((a, b) => b.hotPercent - a.hotPercent || b.hits - a.hits || a.sampleMisses - b.sampleMisses);
     }
 
-    const col2Title = isHudColdMode ? 'Miss' : 'Hits';
-    const col3Title = isHudColdMode ? 'Cold %' : '%';
+    const col2Title = isHudColdMode ? 'Span' : 'Hits';
+    const col3Title = isHudColdMode ? 'Cold %' : 'Hot %';
 
     let html = `
         <table class="w-full text-left text-xs">
@@ -358,27 +467,30 @@ function updateAnalyticsHUD() {
             <tbody class="divide-y divide-white/5">
     `;
 
-    displayCombos.forEach(c => {
-        const count = stats.counts[c.label] || 0;
-        let val1 = count;
-        let val2 = transitionCount > 0 ? Math.round((count / transitionCount) * 100) : 0;
-        
-        if (isHudColdMode) {
-            val1 = Math.max(0, transitionCount - count); // Misses
-            val2 = transitionCount > 0 ? Math.max(0, 100 - val2) : 0; // Cold % across real transitions
-        }
-
-        const opacity = (isHudColdMode ? val2 > 80 : val2 > 20) ? '1' : '0.5';
-        const valColor = (isHudColdMode ? val2 > 80 : val2 > 20) ? themeColor : '#8E8E93';
-
+    if (sampleSize === 0) {
         html += `
             <tr>
-                <td class="py-2 font-bold" style="color:${c.color}; opacity:${opacity}">${c.label}</td>
-                <td class="py-2 text-right font-mono text-gray-300" style="opacity:${opacity}">${val1}</td>
-                <td class="py-2 text-right font-mono font-bold" style="color:${valColor}; opacity:${opacity}">${val2}%</td>
+                <td colspan="3" class="py-4 text-center text-white/35 italic">Awaiting spins...</td>
             </tr>
         `;
-    });
+    }
+
+    if (sampleSize > 0) {
+        displayCombos.forEach(c => {
+            const val1 = isHudColdMode ? c.sampleMisses : c.hits;
+            const val2 = isHudColdMode ? c.coldPercent : c.hotPercent;
+            const opacity = (isHudColdMode ? val2 > 80 : val2 > 20) ? '1' : '0.5';
+            const valColor = (isHudColdMode ? val2 > 80 : val2 > 20) ? themeColor : '#8E8E93';
+
+            html += `
+                <tr>
+                    <td class="py-2 font-bold" style="color:${c.color}; opacity:${opacity}">${c.label}</td>
+                    <td class="py-2 text-right font-mono text-gray-300" style="opacity:${opacity}">${val1}</td>
+                    <td class="py-2 text-right font-mono font-bold" style="color:${valColor}; opacity:${opacity}">${val2}%</td>
+                </tr>
+            `;
+        });
+    }
 
     html += `</tbody></table>`;
     content.innerHTML = html;
@@ -537,6 +649,7 @@ function updatePredictionSettingsUI() {
 
 function updatePerimeterAnalytics() {
     const stats = calculatePerimeterStats(history, predictionPerimeterWindow);
+    renderColdTracker(stats);
 
     const titleEl = document.getElementById('fonTrackerWindowLabel');
     if (titleEl) {
@@ -569,6 +682,7 @@ function calculatePerimeterStats(history, windowSize = 14) {
 
     const safeWindow = Math.max(2, Math.min(60, windowSize));
     const recentSpins = history.slice(-safeWindow);
+    const sampleSize = recentSpins.length;
     const transitionCount = Math.max(0, recentSpins.length - 1);
 
     let counts = { '5-2': 0, '5-3': 0, '1-3': 0, '2-4': 0 };
@@ -597,12 +711,39 @@ function calculatePerimeterStats(history, windowSize = 14) {
 
     if (highestCount <= 0) dominantCombo = null;
 
+    const comboStats = PERIMETER_COMBOS.map(combo => {
+        const hits = counts[combo.label] || 0;
+        const sampleMisses = Math.max(0, sampleSize - hits);
+        const hotPercent = sampleSize > 0 ? Math.round((hits / sampleSize) * 100) : 0;
+        const coldPercent = sampleSize > 0 ? Math.round((sampleMisses / sampleSize) * 100) : 0;
+        let state = 'idle';
+        if (sampleSize > 0) {
+            if (hits === 0) state = 'cold';
+            else if (hotPercent >= 25) state = 'hot';
+            else if (coldPercent >= 75) state = 'cold';
+            else state = 'neutral';
+        }
+
+        return {
+            ...combo,
+            hits,
+            sampleMisses,
+            hotPercent,
+            coldPercent,
+            sampleSize,
+            state
+        };
+    });
+
     return {
         windowSize: safeWindow,
+        recentSpins: recentSpins,
+        sampleSize: sampleSize,
         transitionCount: transitionCount,
         sequence: recentSpins.map(s => (s.faces && s.faces.length > 0 ? s.faces[0] : '?')),
         counts: counts,
-        dominantCombo: dominantCombo
+        dominantCombo: dominantCombo,
+        comboStats: comboStats
     };
 }
 

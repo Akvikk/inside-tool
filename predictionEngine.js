@@ -24,6 +24,7 @@ const PredictionEngine = {
         const parsedWindow = parseInt(windowSize, 10);
         const safeWindow = Number.isNaN(parsedWindow) ? 14 : Math.max(2, Math.min(60, parsedWindow));
         const recentSpins = Array.isArray(history) ? history.slice(-safeWindow) : [];
+        const sampleSize = recentSpins.length;
         const transitionCount = Math.max(0, recentSpins.length - 1);
 
         let counts = { '5-2': 0, '5-3': 0, '1-3': 0, '2-4': 0 };
@@ -63,11 +64,21 @@ const PredictionEngine = {
             const misses = Math.max(0, transitionCount - hits);
             const hitRate = transitionCount > 0 ? Math.round((hits / transitionCount) * 100) : 0;
             const missRate = transitionCount > 0 ? Math.round((misses / transitionCount) * 100) : 0;
+            const sampleMisses = Math.max(0, sampleSize - hits);
+            const hotPercent = sampleSize > 0 ? Math.round((hits / sampleSize) * 100) : 0;
+            const coldPercent = sampleSize > 0 ? Math.round((sampleMisses / sampleSize) * 100) : 0;
             const recencyWeight = transitionCount > 0 ? drought / transitionCount : 0;
             const scarcityWeight = transitionCount > 0 ? misses / transitionCount : 0;
             const coldScore = transitionCount > 0
                 ? Math.round(((recencyWeight * 0.72) + (scarcityWeight * 0.28)) * 100)
                 : 0;
+            let state = 'idle';
+            if (sampleSize > 0) {
+                if (hits === 0) state = 'cold';
+                else if (hotPercent >= 25) state = 'hot';
+                else if (coldPercent >= 75) state = 'cold';
+                else state = 'neutral';
+            }
 
             return {
                 ...combo,
@@ -75,10 +86,15 @@ const PredictionEngine = {
                 misses,
                 hitRate,
                 missRate,
+                sampleMisses,
+                hotPercent,
+                coldPercent,
                 drought,
                 lastSeenIndex,
                 lastSeenDistance: drought,
                 coldScore,
+                sampleSize,
+                state,
                 transitionCount
             };
         });
@@ -99,11 +115,15 @@ const PredictionEngine = {
 
         const coldLeader = comboStats
             .slice()
-            .sort((a, b) => b.coldScore - a.coldScore || b.drought - a.drought || a.hits - b.hits)[0] || null;
+            .sort((a, b) => b.coldPercent - a.coldPercent || b.sampleMisses - a.sampleMisses || a.hits - b.hits)[0] || null;
+        const hotLeader = comboStats
+            .slice()
+            .sort((a, b) => b.hotPercent - a.hotPercent || b.hits - a.hits || a.sampleMisses - b.sampleMisses)[0] || null;
 
         return {
             windowSize: safeWindow,
             recentSpins: recentSpins,
+            sampleSize: sampleSize,
             transitionCount: transitionCount,
             // Use the first face for simple sequence display, but stats used all faces
             latestPrimaryFace: recentSpins.length > 0 && recentSpins[recentSpins.length - 1].faces ? recentSpins[recentSpins.length - 1].faces[0] : null,
@@ -112,7 +132,8 @@ const PredictionEngine = {
             dominantCombo: dominantCombo,
             lastSeen: lastSeen,
             comboStats: comboStats,
-            coldLeader: coldLeader
+            coldLeader: coldLeader,
+            hotLeader: hotLeader
         };
     },
 
