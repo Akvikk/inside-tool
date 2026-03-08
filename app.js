@@ -3,7 +3,6 @@ const RED_NUMS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34,
 const PERIMETER_RULE_KEY = 'Perimeter Rule';
 const PREDICTION_PERIMETER_PATTERN = 'Prediction Perimeter';
 const ENGINE_PRIMARY_WINDOW = 14;
-const ENGINE_FOLLOW_UP_STEP = 5;
 const ENGINE_CONFIRMATION_WINDOW = 5;
 const HUD_RECENT_WINDOW = 14;
 const INTELLIGENCE_VIEW_KEY = 'insideTool.intelligenceViewMode';
@@ -126,6 +125,7 @@ let isHudColdMode = false;
 let hudHistoryScope = 'all';
 let engineSnapshot = null;
 let lastActionableComboLabel = null;
+let lastActionableTargetFace = null;
 let lastActionableCheckpointSpin = 0;
 window.currentAlerts = [];
 
@@ -160,19 +160,11 @@ function getCheckpointMeta(spinCount) {
         };
     }
 
-    const offset = spinCount - ENGINE_PRIMARY_WINDOW;
-    const remainder = offset % ENGINE_FOLLOW_UP_STEP;
-    const isCheckpoint = remainder === 0;
-    const lastCheckpointSpin = isCheckpoint ? spinCount : spinCount - remainder;
-    const nextCheckpointSpin = isCheckpoint
-        ? spinCount + ENGINE_FOLLOW_UP_STEP
-        : spinCount + (ENGINE_FOLLOW_UP_STEP - remainder);
-
     return {
-        isCheckpoint,
-        nextCheckpointSpin,
-        lastCheckpointSpin,
-        spinsUntilNext: Math.max(0, nextCheckpointSpin - spinCount)
+        isCheckpoint: true,
+        nextCheckpointSpin: spinCount + 1,
+        lastCheckpointSpin: spinCount,
+        spinsUntilNext: 1
     };
 }
 
@@ -181,7 +173,7 @@ function createEmptyEngineSnapshot(spinCount = history.length) {
     return {
         spinCount,
         engineState: spinCount < ENGINE_PRIMARY_WINDOW ? 'BUILDING' : 'WAITING',
-        checkpointStatus: spinCount < ENGINE_PRIMARY_WINDOW ? 'Building initial read' : 'Awaiting next checkpoint',
+        checkpointStatus: spinCount < ENGINE_PRIMARY_WINDOW ? 'Building initial read' : 'Continuous scan active',
         spinsUntilNextCheckpoint: checkpoint.spinsUntilNext,
         nextCheckpointSpin: checkpoint.nextCheckpointSpin,
         lastEvaluatedSpin: checkpoint.lastCheckpointSpin,
@@ -201,7 +193,7 @@ function createEmptyEngineSnapshot(spinCount = history.length) {
         comboCoverage: [],
         leadMessage: spinCount < ENGINE_PRIMARY_WINDOW
             ? `${ENGINE_PRIMARY_WINDOW - spinCount} spins until first read`
-            : `Next read in ${checkpoint.spinsUntilNext} spins`,
+            : 'Scanning every spin',
         watchlistMessage: '',
         topMargin: 0,
         confirmationHits: 0,
@@ -230,6 +222,7 @@ function performReset() {
     window.currentAlerts = [];
     engineSnapshot = createEmptyEngineSnapshot(0);
     lastActionableComboLabel = null;
+    lastActionableTargetFace = null;
     lastActionableCheckpointSpin = 0;
 
     engineStats = {
@@ -699,15 +692,23 @@ function evaluatePredictionEngine() {
     const spinCount = history.length;
     const checkpoint = getCheckpointMeta(spinCount);
     const snapshot = createEmptyEngineSnapshot(spinCount);
-    const stats14 = calculatePerimeterStats(history, ENGINE_PRIMARY_WINDOW);
-    const stats5 = calculatePerimeterStats(history, ENGINE_CONFIRMATION_WINDOW);
+    const statsCalculator = typeof PredictionEngine !== 'undefined' && PredictionEngine && typeof PredictionEngine.calculatePerimeterStats === 'function'
+        ? PredictionEngine.calculatePerimeterStats.bind(PredictionEngine)
+        : calculatePerimeterStats;
+    const stats14 = statsCalculator(history, ENGINE_PRIMARY_WINDOW);
+    const stats5 = statsCalculator(history, ENGINE_CONFIRMATION_WINDOW);
     const comboStats = sortEngineReadCombos(getComboCoverageStats(stats14));
+    const dominantComboLabel = stats14 && stats14.dominantCombo ? stats14.dominantCombo.label : null;
 
     snapshot.stats14 = stats14;
     snapshot.stats5 = stats5;
     snapshot.comboCoverage = comboStats;
-    snapshot.dominantCombo = comboStats[0] || null;
-    snapshot.runnerUpCombo = comboStats[1] || null;
+    snapshot.dominantCombo = dominantComboLabel
+        ? comboStats.find(combo => combo.label === dominantComboLabel) || stats14.dominantCombo
+        : null;
+    snapshot.runnerUpCombo = dominantComboLabel
+        ? comboStats.find(combo => combo.label !== dominantComboLabel) || null
+        : null;
     snapshot.topMargin = snapshot.dominantCombo
         ? snapshot.dominantCombo.hits - (snapshot.runnerUpCombo ? snapshot.runnerUpCombo.hits : 0)
         : 0;
@@ -720,22 +721,18 @@ function evaluatePredictionEngine() {
         return snapshot;
     }
 
-    if (!checkpoint.isCheckpoint) {
-        snapshot.engineState = 'WAITING';
-        snapshot.lastEvaluatedSpin = engineSnapshot && engineSnapshot.lastEvaluatedSpin
-            ? engineSnapshot.lastEvaluatedSpin
-            : checkpoint.lastCheckpointSpin;
-        snapshot.leadMessage = `Waiting for checkpoint ${checkpoint.nextCheckpointSpin}.`;
-        return snapshot;
-    }
-
     snapshot.checkpointSpin = spinCount;
     snapshot.lastEvaluatedSpin = spinCount;
     snapshot.checkpointStatus = `Checkpoint spin ${spinCount}`;
 
     if (!snapshot.dominantCombo || snapshot.dominantCombo.hits <= 0) {
         snapshot.engineState = 'NO_SIGNAL';
-        snapshot.leadMessage = 'No dominant combo in the rolling 14-spin read.';
+        snapshot.gateResults = [
+            buildGateResult('hotLeader', 'Hot Leader', false, 'No combo has produced a live lead in the rolling 14-spin window.')
+        ];
+        snapshot.passedGates = [];
+        snapshot.failedGates = snapshot.gateResults.slice();
+        snapshot.leadMessage = 'No hot leader in the rolling 14-spin read.';
         return snapshot;
     }
 
@@ -743,18 +740,15 @@ function evaluatePredictionEngine() {
     const latestFaces = latestSpin && Array.isArray(latestSpin.faces) ? latestSpin.faces : [];
     const latestHasA = latestFaces.includes(snapshot.dominantCombo.a);
     const latestHasB = latestFaces.includes(snapshot.dominantCombo.b);
-    const minimumHitsPassed = snapshot.dominantCombo.hits >= 3;
-    const dominancePassed = snapshot.topMargin >= 1;
+    const triggerPassed = latestHasA !== latestHasB;
 
-    let triggerPassed = false;
-    let triggerDetail = 'Latest spin did not trigger either side of the dominant combo.';
-    if (latestHasA !== latestHasB) {
-        triggerPassed = true;
+    let triggerDetail = 'Waiting for trigger face.';
+    if (triggerPassed) {
         snapshot.triggerFace = latestHasA ? snapshot.dominantCombo.a : snapshot.dominantCombo.b;
         snapshot.predictedFace = latestHasA ? snapshot.dominantCombo.b : snapshot.dominantCombo.a;
         triggerDetail = `Latest spin triggered F${snapshot.triggerFace}; follow face is F${snapshot.predictedFace}.`;
     } else if (latestHasA && latestHasB) {
-        triggerDetail = 'Latest spin touched both combo sides, so the trigger is ambiguous.';
+        triggerDetail = 'Latest spin touched both sides of the hot combo, so there is no clean trigger.';
     }
 
     const confirmationCombo = getComboStatByLabel(stats5, snapshot.dominantCombo.label);
@@ -762,35 +756,26 @@ function evaluatePredictionEngine() {
     snapshot.confirmationPassed = snapshot.confirmationHits >= 1;
 
     snapshot.gateResults = [
-        buildGateResult('dominance', 'Dominance', dominancePassed,
-            dominancePassed
-                ? `${snapshot.dominantCombo.label} leads by ${snapshot.topMargin} hit${snapshot.topMargin === 1 ? '' : 's'}.`
-                : `${snapshot.dominantCombo.label} is tied or too close to ${snapshot.runnerUpCombo ? snapshot.runnerUpCombo.label : 'the field'}.`
+        buildGateResult('hotLeader', 'Hot Leader', true,
+            `${snapshot.dominantCombo.label} leads the rolling 14-spin window with ${snapshot.dominantCombo.hits} hit${snapshot.dominantCombo.hits === 1 ? '' : 's'}.`
         ),
-        buildGateResult('minimumHits', 'Minimum Hits', minimumHitsPassed,
-            minimumHitsPassed
-                ? `${snapshot.dominantCombo.label} has ${snapshot.dominantCombo.hits} hits in the rolling 14-spin window.`
-                : `${snapshot.dominantCombo.label} only has ${snapshot.dominantCombo.hits} hit${snapshot.dominantCombo.hits === 1 ? '' : 's'} in the rolling 14-spin window.`
-        ),
-        buildGateResult('trigger', 'Trigger', triggerPassed, triggerDetail),
-        buildGateResult('confirmation', '5-Spin Confirmation', snapshot.confirmationPassed,
-            snapshot.confirmationPassed
-                ? `${snapshot.dominantCombo.label} hit ${snapshot.confirmationHits} time${snapshot.confirmationHits === 1 ? '' : 's'} in the last ${Math.min(ENGINE_CONFIRMATION_WINDOW, spinCount)} spins.`
-                : `${snapshot.dominantCombo.label} did not confirm in the last ${Math.min(ENGINE_CONFIRMATION_WINDOW, spinCount)} spins.`
-        )
+        buildGateResult('trigger', 'Trigger', triggerPassed, triggerDetail)
     ];
 
     snapshot.passedGates = snapshot.gateResults.filter(gate => gate.passed);
     snapshot.failedGates = snapshot.gateResults.filter(gate => !gate.passed);
 
-    if (snapshot.failedGates.length > 0) {
+    if (!triggerPassed) {
         snapshot.engineState = 'WATCHLIST';
-        snapshot.watchlistMessage = snapshot.failedGates[0].detail;
-        snapshot.leadMessage = `${snapshot.dominantCombo.label} leads, but the signal is still on watchlist.`;
+        snapshot.watchlistMessage = 'Waiting for trigger face.';
+        snapshot.leadMessage = 'Waiting for trigger face.';
         return snapshot;
     }
 
-    snapshot.signalKind = lastActionableComboLabel === snapshot.dominantCombo.label ? 'follow-up' : 'fresh';
+    snapshot.signalKind = lastActionableComboLabel === snapshot.dominantCombo.label
+        && lastActionableTargetFace === snapshot.predictedFace
+        ? 'follow-up'
+        : 'fresh';
     snapshot.engineState = snapshot.signalKind === 'follow-up' ? 'FOLLOW_UP' : 'READY';
     snapshot.currentPrediction = {
         targetFace: snapshot.predictedFace,
@@ -799,8 +784,8 @@ function evaluatePredictionEngine() {
         accentColor: snapshot.dominantCombo.color
     };
     snapshot.leadMessage = snapshot.signalKind === 'follow-up'
-        ? `${snapshot.dominantCombo.label} remains valid as a follow-up read.`
-        : `${snapshot.dominantCombo.label} cleared every gate and is ready for the next spin.`;
+        ? `${snapshot.dominantCombo.label} repeated the same target and stays in follow-up mode.`
+        : `${snapshot.dominantCombo.label} is ready for the next spin.`;
 
     return snapshot;
 }
@@ -839,6 +824,7 @@ function syncPredictionEngine() {
     }];
 
     lastActionableComboLabel = snapshot.dominantCombo.label;
+    lastActionableTargetFace = snapshot.currentPrediction.targetFace;
     lastActionableCheckpointSpin = snapshot.checkpointSpin || snapshot.spinCount;
     return window.currentAlerts;
 }
@@ -2384,6 +2370,7 @@ function resetData(skipConfirm = false) {
         window.currentAlerts = [];
         engineSnapshot = createEmptyEngineSnapshot(0);
         lastActionableComboLabel = null;
+        lastActionableTargetFace = null;
         lastActionableCheckpointSpin = 0;
         strategies = {};
         engineStats = {
