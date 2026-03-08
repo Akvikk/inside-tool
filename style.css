@@ -421,13 +421,22 @@ body::after {
 }
 
 .pattern-filter-switch {
-    width: 36px;
-    height: 20px;
+    appearance: none;
+    -webkit-appearance: none;
+    width: 30px;
+    min-width: 30px;
+    height: 18px;
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
     border-radius: 999px;
+    cursor: pointer;
     flex-shrink: 0;
     border: 1px solid rgba(255, 255, 255, 0.08);
     position: relative;
-    flex-shrink: 0;
     transition: all 0.18s ease;
 }
 
@@ -435,8 +444,8 @@ body::after {
     position: absolute;
     top: 2px;
     left: 2px;
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     border-radius: 999px;
     background: #f5f5f7;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
@@ -449,7 +458,7 @@ body::after {
 }
 
 .pattern-filter-switch-on .pattern-filter-switch-knob {
-    transform: translateX(16px);
+    transform: translateX(12px);
     background: #30d158;
 }
 
