@@ -801,6 +801,20 @@ function syncPredictionEngine() {
     }
 
     const signalKindLabel = snapshot.signalKind === 'follow-up' ? 'Follow-up' : 'Fresh';
+    const dominanceHits = snapshot.dominantCombo && Number.isFinite(snapshot.dominantCombo.hits)
+        ? snapshot.dominantCombo.hits
+        : null;
+    const dominanceWindow = snapshot.stats14 && Number.isFinite(snapshot.stats14.windowSize)
+        ? snapshot.stats14.windowSize
+        : null;
+    const dominanceHitRate = snapshot.dominantCombo && Number.isFinite(snapshot.dominantCombo.hitRate)
+        ? snapshot.dominantCombo.hitRate
+        : (snapshot.stats14 && Number.isFinite(snapshot.stats14.transitionCount) && snapshot.stats14.transitionCount > 0 && dominanceHits !== null
+            ? Math.round((dominanceHits / snapshot.stats14.transitionCount) * 100)
+            : null);
+    const dominanceSubtitle = dominanceHits !== null && dominanceWindow !== null && dominanceHitRate !== null
+        ? `${dominanceHits}/${dominanceWindow} Hits (${dominanceHitRate}% Hit Rate)`
+        : null;
     activeBets = [{
         patternName: PREDICTION_PERIMETER_PATTERN,
         filterKey: PERIMETER_RULE_KEY,
@@ -811,7 +825,7 @@ function syncPredictionEngine() {
         accentColor: snapshot.currentPrediction.accentColor,
         confirmed: false,
         signalKind: snapshot.signalKind,
-        subtitle: `${signalKindLabel} ${snapshot.currentPrediction.comboLabel}`
+        subtitle: dominanceSubtitle || `${signalKindLabel} ${snapshot.currentPrediction.comboLabel}`
     }];
 
     window.currentAlerts = [{
@@ -1075,16 +1089,19 @@ function updateAnalyticsHUD() {
     }
 
     if (hudScopeBtn) {
-        hudScopeBtn.innerText = hudHistoryScope === 'all' ? '14' : 'ALL';
-        hudScopeBtn.title = hudHistoryScope === 'all' ? 'Show only last 14 spins' : 'Show all history';
-        hudScopeBtn.className = 'w-7 h-6 flex items-center justify-center rounded text-[9px] font-black tracking-wide border transition-colors';
-        hudScopeBtn.style.color = hudHistoryScope === 'recent' ? themeColor : 'rgba(255,255,255,0.65)';
-        hudScopeBtn.style.borderColor = hudHistoryScope === 'recent'
+        const isRecentScope = hudHistoryScope === 'recent';
+        hudScopeBtn.innerText = isRecentScope ? String(HUD_RECENT_WINDOW) : 'ALL';
+        hudScopeBtn.title = isRecentScope
+            ? `Viewing last ${HUD_RECENT_WINDOW} spins. Click to show all history.`
+            : `Viewing all history. Click to show only the last ${HUD_RECENT_WINDOW} spins.`;
+        hudScopeBtn.className = 'min-w-[2.4rem] h-6 px-1.5 flex items-center justify-center rounded text-[9px] font-black tracking-wide border transition-colors';
+        hudScopeBtn.style.color = isRecentScope ? themeColor : 'rgba(255,255,255,0.88)';
+        hudScopeBtn.style.borderColor = isRecentScope
             ? `${themeColor}55`
-            : 'rgba(255,255,255,0.10)';
-        hudScopeBtn.style.background = hudHistoryScope === 'recent'
+            : 'rgba(255,255,255,0.22)';
+        hudScopeBtn.style.background = isRecentScope
             ? `${themeColor}22`
-            : 'rgba(255,255,255,0.05)';
+            : 'rgba(255,255,255,0.10)';
     }
     
     // Update Header Title based on mode
