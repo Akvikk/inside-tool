@@ -312,6 +312,7 @@ window.onload = () => {
 
     window.addEventListener('resize', () => {
         requestAnimationFrame(layoutAllComboBridges);
+        fitAnalyticsHUD();
     });
 
     // Init HUD
@@ -367,6 +368,19 @@ function toggleInputLayout() {
 }
 
 // --- FLOATING HUD LOGIC ---
+function fitAnalyticsHUD() {
+    const hud = document.getElementById('analyticsHUD');
+    const header = document.getElementById('hudHeader');
+    const body = hud ? hud.querySelector('.flex-1.flex.flex-col.overflow-hidden.relative') : null;
+    if (!hud || !header || !body || hud.classList.contains('hidden')) return;
+
+    requestAnimationFrame(() => {
+        const maxHeight = Math.max(180, window.innerHeight - hud.offsetTop - 8);
+        const desiredHeight = Math.ceil(header.offsetHeight + body.scrollHeight);
+        hud.style.height = `${Math.min(desiredHeight, maxHeight)}px`;
+    });
+}
+
 function initAnalyticsHUD() {
     const hud = document.getElementById('analyticsHUD');
     const header = document.getElementById('hudHeader');
@@ -455,11 +469,9 @@ function initAnalyticsHUD() {
             return;
         }
 
-        const maxWidth = Math.max(200, window.innerWidth - interaction.startLeft - 8);
-        const maxHeight = Math.max(160, window.innerHeight - interaction.startTop - 8);
+        const maxWidth = Math.max(220, window.innerWidth - interaction.startLeft - 8);
         scheduleHUDFrame({
-            width: clamp(interaction.startWidth + dx, 200, maxWidth),
-            height: clamp(interaction.startHeight + dy, 160, maxHeight)
+            width: clamp(interaction.startWidth + dx, 220, maxWidth)
         });
     }
 
@@ -476,6 +488,7 @@ function initAnalyticsHUD() {
         interaction = null;
         hud.classList.remove('hud-interacting');
         document.body.classList.remove('hud-no-select');
+        fitAnalyticsHUD();
     }
 
     header.addEventListener('pointerdown', (e) => startInteraction('drag', e));
@@ -494,6 +507,7 @@ function toggleAnalyticsHUD() {
         hud.classList.add('flex');
         btn.classList.add('bg-white/10');
         updateAnalyticsHUD();
+        fitAnalyticsHUD();
     } else {
         hud.classList.add('hidden');
         hud.classList.remove('flex');
@@ -508,6 +522,7 @@ function toggleHUDControls() {
     } else {
         controls.classList.add('hidden');
     }
+    fitAnalyticsHUD();
 }
 
 function toggleHudColdMode() {
@@ -1090,11 +1105,10 @@ function updateAnalyticsHUD() {
 
     if (hudScopeBtn) {
         const isRecentScope = hudHistoryScope === 'recent';
-        hudScopeBtn.innerText = isRecentScope ? String(HUD_RECENT_WINDOW) : 'ALL';
-        hudScopeBtn.title = isRecentScope
-            ? `Viewing last ${HUD_RECENT_WINDOW} spins. Click to show all history.`
-            : `Viewing all history. Click to show only the last ${HUD_RECENT_WINDOW} spins.`;
-        hudScopeBtn.className = 'min-w-[2.4rem] h-6 px-1.5 flex items-center justify-center rounded text-[9px] font-black tracking-wide border transition-colors';
+        const scopeLabel = hudHistoryScope === 'all' ? 'ALL' : HUD_RECENT_WINDOW;
+        hudScopeBtn.innerText = `${history.length} / ${scopeLabel}`;
+        hudScopeBtn.title = hudHistoryScope === 'all' ? 'Switch to 14-spin rolling window' : 'Switch to all history';
+        hudScopeBtn.className = 'px-2 min-w-[32px] h-6 flex items-center justify-center rounded text-[9px] font-black tracking-wide border transition-colors';
         hudScopeBtn.style.color = isRecentScope ? themeColor : 'rgba(255,255,255,0.88)';
         hudScopeBtn.style.borderColor = isRecentScope
             ? `${themeColor}55`
@@ -1130,44 +1144,47 @@ function updateAnalyticsHUD() {
         displayCombos.sort((a, b) => b.hotPercent - a.hotPercent || b.hits - a.hits || a.sampleMisses - b.sampleMisses);
     }
 
-    const col2Title = isHudColdMode ? 'Span' : 'Hits';
+    const col2Title = 'Hits / Sample';
     const col3Title = isHudColdMode ? 'Cold %' : 'Hot %';
 
     let html = `
-        <table class="w-full text-left text-xs">
-            <thead class="text-white/30 border-b border-white/10">
-                <tr><th class="pb-1 font-bold">Combo</th><th class="pb-1 text-right font-bold">${col2Title}</th><th class="pb-1 text-right font-bold">${col3Title}</th></tr>
-            </thead>
-            <tbody class="divide-y divide-white/5">
+        <div class="space-y-1.5">
+            <div class="grid grid-cols-[52px_minmax(0,1fr)_48px] items-center gap-2 px-1 pb-1 text-[10px] uppercase tracking-[0.14em] text-white/30 border-b border-white/10">
+                <div class="font-bold">Combo</div>
+                <div class="text-center font-bold">${col2Title}</div>
+                <div class="text-right font-bold">${col3Title}</div>
+            </div>
     `;
 
     if (sampleSize === 0) {
         html += `
-            <tr>
-                <td colspan="3" class="py-4 text-center text-white/35 italic">Awaiting spins...</td>
-            </tr>
+            <div class="py-4 text-center text-white/35 italic">Awaiting spins...</div>
         `;
     }
 
     if (sampleSize > 0) {
         displayCombos.forEach(c => {
-            const val1 = isHudColdMode ? c.sampleMisses : c.hits;
+            const ratioSampleSize = Number.isFinite(c.sampleSize) ? c.sampleSize : sampleSize;
+            const val1 = `${c.hits} / ${ratioSampleSize}`;
             const val2 = isHudColdMode ? c.coldPercent : c.hotPercent;
             const opacity = (isHudColdMode ? val2 > 80 : val2 > 20) ? '1' : '0.5';
             const valColor = (isHudColdMode ? val2 > 80 : val2 > 20) ? themeColor : '#8E8E93';
 
             html += `
-                <tr>
-                    <td class="py-2 font-bold" style="color:${c.color}; opacity:${opacity}">${c.label}</td>
-                    <td class="py-2 text-right font-mono text-gray-300" style="opacity:${opacity}">${val1}</td>
-                    <td class="py-2 text-right font-mono font-bold" style="color:${valColor}; opacity:${opacity}">${val2}%</td>
-                </tr>
+                <div class="grid grid-cols-[52px_minmax(0,1fr)_48px] items-center gap-2 rounded-lg border border-white/5 bg-white/[0.02] px-1 py-2">
+                    <div class="font-black tracking-wide" style="color:${c.color}; opacity:${opacity}">${c.label}</div>
+                    <div class="flex justify-center" style="opacity:${opacity}">
+                        <span class="min-w-[68px] rounded-md border border-white/10 bg-black/20 px-2 py-1 text-center font-mono text-[11px] text-gray-200">${val1}</span>
+                    </div>
+                    <div class="text-right font-mono font-bold" style="color:${valColor}; opacity:${opacity}">${val2}%</div>
+                </div>
             `;
         });
     }
 
-    html += `</tbody></table>`;
+    html += `</div>`;
     content.innerHTML = html;
+    fitAnalyticsHUD();
 }
 
 function buildRacetrackSVG() {
