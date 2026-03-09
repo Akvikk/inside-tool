@@ -469,9 +469,9 @@ function initAnalyticsHUD() {
             return;
         }
 
-        const maxWidth = Math.max(220, window.innerWidth - interaction.startLeft - 8);
+        const maxWidth = Math.max(192, window.innerWidth - interaction.startLeft - 8);
         scheduleHUDFrame({
-            width: clamp(interaction.startWidth + dx, 220, maxWidth)
+            width: clamp(interaction.startWidth + dx, 192, maxWidth)
         });
     }
 
@@ -1108,7 +1108,7 @@ function updateAnalyticsHUD() {
         const scopeLabel = hudHistoryScope === 'all' ? 'ALL' : HUD_RECENT_WINDOW;
         hudScopeBtn.innerText = `${history.length} / ${scopeLabel}`;
         hudScopeBtn.title = hudHistoryScope === 'all' ? 'Switch to 14-spin rolling window' : 'Switch to all history';
-        hudScopeBtn.className = 'px-2 min-w-[32px] h-6 flex items-center justify-center rounded text-[9px] font-black tracking-wide border transition-colors';
+        hudScopeBtn.className = 'px-1.5 min-w-[28px] h-5 flex items-center justify-center rounded-md text-[8px] font-black tracking-[0.12em] border transition-colors';
         hudScopeBtn.style.color = isRecentScope ? themeColor : 'rgba(255,255,255,0.88)';
         hudScopeBtn.style.borderColor = isRecentScope
             ? `${themeColor}55`
@@ -1124,7 +1124,7 @@ function updateAnalyticsHUD() {
         headerTitle.innerHTML = isHudColdMode 
             ? `<i class="fas fa-snowflake mr-1"></i> Cold Tracker`
             : `<i class="fas fa-satellite-dish mr-1"></i> Live Feed`;
-        headerTitle.className = `text-[10px] font-bold tracking-wider uppercase ${isHudColdMode ? 'text-[#06b6d4]' : 'text-[#30D158]'}`;
+        headerTitle.className = `text-[9px] font-bold tracking-[0.18em] uppercase ${isHudColdMode ? 'text-[#06b6d4]' : 'text-[#30D158]'}`;
     }
 
     // Update Stats Table
@@ -1144,12 +1144,12 @@ function updateAnalyticsHUD() {
         displayCombos.sort((a, b) => b.hotPercent - a.hotPercent || b.hits - a.hits || a.sampleMisses - b.sampleMisses);
     }
 
-    const col2Title = 'Hits / Sample';
-    const col3Title = isHudColdMode ? 'Cold %' : 'Hot %';
+    const col2Title = 'H / S';
+    const col3Title = isHudColdMode ? 'C%' : 'H%';
 
     let html = `
-        <div class="space-y-1.5">
-            <div class="grid grid-cols-[52px_minmax(0,1fr)_48px] items-center gap-2 px-1 pb-1 text-[10px] uppercase tracking-[0.14em] text-white/30 border-b border-white/10">
+        <div class="space-y-0.5">
+            <div class="grid grid-cols-[34px_minmax(0,1fr)_32px] items-center gap-1.5 px-0.5 pb-1 text-[8px] uppercase tracking-[0.12em] text-white/28 border-b border-white/10">
                 <div class="font-bold">Combo</div>
                 <div class="text-center font-bold">${col2Title}</div>
                 <div class="text-right font-bold">${col3Title}</div>
@@ -1165,18 +1165,16 @@ function updateAnalyticsHUD() {
     if (sampleSize > 0) {
         displayCombos.forEach(c => {
             const ratioSampleSize = Number.isFinite(c.sampleSize) ? c.sampleSize : sampleSize;
-            const val1 = `${c.hits} / ${ratioSampleSize}`;
+            const val1 = `${c.hits}/${ratioSampleSize}`;
             const val2 = isHudColdMode ? c.coldPercent : c.hotPercent;
             const opacity = (isHudColdMode ? val2 > 80 : val2 > 20) ? '1' : '0.5';
             const valColor = (isHudColdMode ? val2 > 80 : val2 > 20) ? themeColor : '#8E8E93';
 
             html += `
-                <div class="grid grid-cols-[52px_minmax(0,1fr)_48px] items-center gap-2 rounded-lg border border-white/5 bg-white/[0.02] px-1 py-2">
-                    <div class="font-black tracking-wide" style="color:${c.color}; opacity:${opacity}">${c.label}</div>
-                    <div class="flex justify-center" style="opacity:${opacity}">
-                        <span class="min-w-[68px] rounded-md border border-white/10 bg-black/20 px-2 py-1 text-center font-mono text-[11px] text-gray-200">${val1}</span>
-                    </div>
-                    <div class="text-right font-mono font-bold" style="color:${valColor}; opacity:${opacity}">${val2}%</div>
+                <div class="grid grid-cols-[34px_minmax(0,1fr)_32px] items-center gap-1.5 px-0.5 py-1">
+                    <div class="text-[12px] font-black tracking-[0.08em]" style="color:${c.color}; opacity:${opacity}">${c.label}</div>
+                    <div class="text-center font-mono text-[10px] text-gray-200" style="opacity:${opacity}">${val1}</div>
+                    <div class="text-right font-mono text-[10px] font-bold" style="color:${valColor}; opacity:${opacity}">${val2}%</div>
                 </div>
             `;
         });
