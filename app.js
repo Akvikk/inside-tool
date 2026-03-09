@@ -22,6 +22,7 @@ const RACETRACK_ORDER = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11,
 
 let history = [];
 let activeBets = [];
+let spinProcessingQueue = Promise.resolve();
 let faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
 let predictionPerimeterWindow = 14;
 let perimeterRuleEnabled = true;
@@ -218,6 +219,7 @@ function resetSession() {
 function performReset() {
     history = [];
     activeBets = [];
+    spinProcessingQueue = Promise.resolve();
     faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
     window.currentAlerts = [];
     engineSnapshot = createEmptyEngineSnapshot(0);
@@ -255,7 +257,7 @@ function performReset() {
 }
 
 // --- INIT ---
-window.onload = () => {
+window.onload = async () => {
     const hasSession = loadSessionData();
 
     initDesktopGrid();
@@ -267,7 +269,7 @@ window.onload = () => {
     
     if (hasSession) {
         updateStopwatchDisplay();
-        syncPredictionEngine();
+        await syncPredictionEngine();
         reRenderHistory();
         setTimeout(() => {
             const sc = document.querySelector('#scrollContainer > div');
@@ -280,11 +282,14 @@ window.onload = () => {
     updatePerimeterAnalytics();
     updateAnalyticsHUD();
     applyAnalyticsTabUI();
-    renderDashboard([]);
+    renderDashboard(window.currentAlerts || []);
 
     document.getElementById('spinInput').focus();
     document.getElementById('spinInput').addEventListener("keypress", (e) => {
-        if (e.key === "Enter") addSpin();
+        if (e.key === "Enter") {
+            e.preventDefault();
+            void addSpin();
+        }
     });
 
     document.addEventListener('keydown', (e) => {
@@ -703,110 +708,169 @@ function buildGateResult(key, label, passed, detail) {
     return { key, label, passed, detail };
 }
 
-function evaluatePredictionEngine() {
-    const spinCount = history.length;
+async function evaluatePredictionEngine(allSpins = history) {
+    const spins = Array.isArray(allSpins) ? allSpins : [];
+    const engineRunner = typeof PredictionEngine !== 'undefined' && PredictionEngine && typeof PredictionEngine.evaluatePredictionEngine === 'function'
+        ? PredictionEngine.evaluatePredictionEngine.bind(PredictionEngine)
+        : null;
+
+    if (!engineRunner) {
+        return {
+            targetFace: null,
+            action: 'WAIT',
+            confidence: 0,
+            ruleKey: 'engine-unavailable',
+            ruleLabel: 'Engine Unavailable',
+            signalLabel: 'Engine Unavailable',
+            detail: 'PredictionEngine.evaluatePredictionEngine is unavailable.',
+            triggerFace: null,
+            fadedFace: null,
+            focusCombo: null,
+            fatigueComboLabel: null,
+            markovSequenceLabel: null,
+            faceGaps: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+            previousFaces: [],
+            lastFaces: [],
+            previousPrimaryFace: null,
+            lastPrimaryFace: null,
+            processedSpins: 0,
+            dominantCombo: null,
+            runnerUpCombo: null,
+            exhaustedCombos: [],
+            confirmationHits: 0,
+            stats14: null,
+            stats5: null
+        };
+    }
+
+    return engineRunner(spins, {
+        chunkSize: 500,
+        onProgress: (percent, detail) => {
+            const processed = detail && Number.isFinite(detail.processed) ? detail.processed : 0;
+            const total = detail && Number.isFinite(detail.total) ? detail.total : spins.length;
+            const message = total > 0
+                ? `Prediction Engine ${percent}% (${processed}/${total})`
+                : 'Prediction Engine 100%';
+
+            console.log(message);
+
+            const checkpointSummary = document.getElementById('intelCheckpointSummary');
+            if (checkpointSummary) checkpointSummary.innerText = message;
+
+            const checkpointMeta = document.getElementById('intelNextCheckpointMeta');
+            if (checkpointMeta) {
+                checkpointMeta.innerText = total > 0
+                    ? `${processed}/${total} spins processed`
+                    : 'Awaiting spins';
+            }
+        }
+    });
+}
+
+function buildPredictionGateResults(analysis) {
+    const face5Gap = analysis && analysis.faceGaps ? analysis.faceGaps[5] || 0 : 0;
+    const exhaustedCount = analysis && Array.isArray(analysis.exhaustedCombos) ? analysis.exhaustedCombos.length : 0;
+    const fatigueDetail = analysis && analysis.ruleKey === 'fatigue-inversion'
+        ? analysis.detail
+        : exhaustedCount > 0
+            ? `${exhaustedCount} combo${exhaustedCount === 1 ? '' : 's'} reached fatigue, but the last spin did not lean one clean side.`
+            : 'No combo has hit 3 times in the rolling 14-spin window.';
+
+    return [
+        buildGateResult(
+            'markov',
+            'Markov Trigger',
+            analysis && (analysis.ruleKey === 'markov-4-5' || analysis.ruleKey === 'markov-2-2'),
+            analysis && analysis.markovSequenceLabel
+                ? `${analysis.markovSequenceLabel} fired and pointed to F${analysis.targetFace}.`
+                : 'Latest two spins did not match F4 -> F5 or F2 -> F2.'
+        ),
+        buildGateResult(
+            'elasticity',
+            'Elasticity Snapback',
+            analysis && analysis.ruleKey === 'elasticity-snapback',
+            analysis && analysis.ruleKey === 'elasticity-snapback'
+                ? analysis.detail
+                : `Face 5 gap is ${face5Gap}. Snapback starts at 10+.`
+        ),
+        buildGateResult(
+            'fatigue',
+            'Fatigue Inversion',
+            analysis && analysis.ruleKey === 'fatigue-inversion',
+            fatigueDetail
+        )
+    ];
+}
+
+async function buildPredictionEngineSnapshot(allSpins = history) {
+    const spins = Array.isArray(allSpins) ? allSpins : [];
+    const spinCount = spins.length;
     const checkpoint = getCheckpointMeta(spinCount);
     const snapshot = createEmptyEngineSnapshot(spinCount);
-    const statsCalculator = typeof PredictionEngine !== 'undefined' && PredictionEngine && typeof PredictionEngine.calculatePerimeterStats === 'function'
-        ? PredictionEngine.calculatePerimeterStats.bind(PredictionEngine)
-        : calculatePerimeterStats;
-    const stats14 = statsCalculator(history, ENGINE_PRIMARY_WINDOW);
-    const stats5 = statsCalculator(history, ENGINE_CONFIRMATION_WINDOW);
-    const comboStats = sortEngineReadCombos(getComboCoverageStats(stats14));
-    const dominantComboLabel = stats14 && stats14.dominantCombo ? stats14.dominantCombo.label : null;
+    const analysis = await evaluatePredictionEngine(spins);
+    const comboStats = analysis && analysis.stats14
+        ? sortEngineReadCombos(getComboCoverageStats(analysis.stats14))
+        : [];
+    const dominantComboLabel = analysis && analysis.dominantCombo ? analysis.dominantCombo.label : null;
 
-    snapshot.stats14 = stats14;
-    snapshot.stats5 = stats5;
+    snapshot.stats14 = analysis ? analysis.stats14 : null;
+    snapshot.stats5 = analysis ? analysis.stats5 : null;
     snapshot.comboCoverage = comboStats;
-    snapshot.dominantCombo = dominantComboLabel
-        ? comboStats.find(combo => combo.label === dominantComboLabel) || stats14.dominantCombo
-        : null;
-    snapshot.runnerUpCombo = dominantComboLabel
-        ? comboStats.find(combo => combo.label !== dominantComboLabel) || null
-        : null;
+    snapshot.dominantCombo = analysis && analysis.focusCombo
+        ? analysis.focusCombo
+        : (dominantComboLabel
+            ? comboStats.find(combo => combo.label === dominantComboLabel) || analysis.dominantCombo
+            : null);
+    snapshot.runnerUpCombo = analysis && analysis.runnerUpCombo
+        ? analysis.runnerUpCombo
+        : (snapshot.dominantCombo
+            ? comboStats.find(combo => combo.label !== snapshot.dominantCombo.label) || null
+            : comboStats[1] || null);
     snapshot.topMargin = snapshot.dominantCombo
         ? snapshot.dominantCombo.hits - (snapshot.runnerUpCombo ? snapshot.runnerUpCombo.hits : 0)
         : 0;
-    snapshot.checkpointStatus = spinCount < ENGINE_PRIMARY_WINDOW
-        ? `Building toward spin ${ENGINE_PRIMARY_WINDOW}`
-        : `Next checkpoint on spin ${checkpoint.nextCheckpointSpin}`;
-
-    if (spinCount < ENGINE_PRIMARY_WINDOW) {
-        snapshot.leadMessage = `${snapshot.spinsUntilNextCheckpoint} spins until the first engine read.`;
-        return snapshot;
-    }
-
-    snapshot.checkpointSpin = spinCount;
+    snapshot.spinsUntilNextCheckpoint = checkpoint.spinsUntilNext;
+    snapshot.nextCheckpointSpin = checkpoint.nextCheckpointSpin;
+    snapshot.checkpointSpin = spinCount > 0 ? spinCount : null;
     snapshot.lastEvaluatedSpin = spinCount;
-    snapshot.checkpointStatus = `Checkpoint spin ${spinCount}`;
-
-    if (!snapshot.dominantCombo || snapshot.dominantCombo.hits <= 0) {
-        snapshot.engineState = 'NO_SIGNAL';
-        snapshot.gateResults = [
-            buildGateResult('hotLeader', 'Hot Leader', false, 'No combo has produced a live lead in the rolling 14-spin window.')
-        ];
-        snapshot.passedGates = [];
-        snapshot.failedGates = snapshot.gateResults.slice();
-        snapshot.leadMessage = 'No hot leader in the rolling 14-spin read.';
-        return snapshot;
-    }
-
-    const latestSpin = history[history.length - 1];
-    const latestFaces = latestSpin && Array.isArray(latestSpin.faces) ? latestSpin.faces : [];
-    const latestHasA = latestFaces.includes(snapshot.dominantCombo.a);
-    const latestHasB = latestFaces.includes(snapshot.dominantCombo.b);
-    const triggerPassed = latestHasA !== latestHasB;
-
-    let triggerDetail = 'Waiting for trigger face.';
-    if (triggerPassed) {
-        snapshot.triggerFace = latestHasA ? snapshot.dominantCombo.a : snapshot.dominantCombo.b;
-        snapshot.predictedFace = latestHasA ? snapshot.dominantCombo.b : snapshot.dominantCombo.a;
-        triggerDetail = `Latest spin triggered F${snapshot.triggerFace}; follow face is F${snapshot.predictedFace}.`;
-    } else if (latestHasA && latestHasB) {
-        triggerDetail = 'Latest spin touched both sides of the hot combo, so there is no clean trigger.';
-    }
-
-    const confirmationCombo = getComboStatByLabel(stats5, snapshot.dominantCombo.label);
-    snapshot.confirmationHits = confirmationCombo ? confirmationCombo.hits : 0;
+    snapshot.checkpointStatus = analysis && analysis.processedSpins > 0
+        ? `Full scan complete (${analysis.processedSpins} spins)`
+        : 'Awaiting valid spins';
+    snapshot.triggerFace = analysis ? (analysis.triggerFace || analysis.previousPrimaryFace || null) : null;
+    snapshot.predictedFace = analysis ? analysis.targetFace : null;
+    snapshot.signalKind = analysis ? analysis.ruleKey : null;
+    snapshot.confirmationHits = analysis ? analysis.confirmationHits || 0 : 0;
     snapshot.confirmationPassed = snapshot.confirmationHits >= 1;
-
-    snapshot.gateResults = [
-        buildGateResult('hotLeader', 'Hot Leader', true,
-            `${snapshot.dominantCombo.label} leads the rolling 14-spin window with ${snapshot.dominantCombo.hits} hit${snapshot.dominantCombo.hits === 1 ? '' : 's'}.`
-        ),
-        buildGateResult('trigger', 'Trigger', triggerPassed, triggerDetail)
-    ];
-
+    snapshot.gateResults = buildPredictionGateResults(analysis);
     snapshot.passedGates = snapshot.gateResults.filter(gate => gate.passed);
     snapshot.failedGates = snapshot.gateResults.filter(gate => !gate.passed);
+    snapshot.watchlistMessage = analysis && analysis.detail ? analysis.detail : 'No actionable rule triggered.';
 
-    if (!triggerPassed) {
-        snapshot.engineState = 'WATCHLIST';
-        snapshot.watchlistMessage = 'Waiting for trigger face.';
-        snapshot.leadMessage = 'Waiting for trigger face.';
+    if (!analysis || !analysis.targetFace || analysis.action === 'WAIT') {
+        snapshot.engineState = spinCount < 2 ? 'BUILDING' : 'NO_SIGNAL';
+        snapshot.leadMessage = analysis && analysis.detail
+            ? analysis.detail
+            : (spinCount < 2 ? 'Need at least two spins for the first read.' : 'No actionable rule triggered.');
         return snapshot;
     }
 
-    snapshot.signalKind = lastActionableComboLabel === snapshot.dominantCombo.label
-        && lastActionableTargetFace === snapshot.predictedFace
-        ? 'follow-up'
-        : 'fresh';
-    snapshot.engineState = snapshot.signalKind === 'follow-up' ? 'FOLLOW_UP' : 'READY';
+    snapshot.engineState = analysis.action === 'BET_AGAINST' ? 'FOLLOW_UP' : 'READY';
     snapshot.currentPrediction = {
-        targetFace: snapshot.predictedFace,
+        targetFace: analysis.targetFace,
         triggerFace: snapshot.triggerFace,
-        comboLabel: snapshot.dominantCombo.label,
-        accentColor: snapshot.dominantCombo.color
+        comboLabel: analysis.signalLabel || analysis.ruleLabel,
+        accentColor: FACES[analysis.targetFace] ? FACES[analysis.targetFace].color : '#f0f0f0',
+        action: analysis.action,
+        confidence: analysis.confidence,
+        subtitle: analysis.detail
     };
-    snapshot.leadMessage = snapshot.signalKind === 'follow-up'
-        ? `${snapshot.dominantCombo.label} repeated the same target and stays in follow-up mode.`
-        : `${snapshot.dominantCombo.label} is ready for the next spin.`;
+    snapshot.leadMessage = `${analysis.ruleLabel}: F${analysis.targetFace} at ${analysis.confidence}% confidence.`;
 
     return snapshot;
 }
 
-function syncPredictionEngine() {
-    const snapshot = evaluatePredictionEngine();
+async function syncPredictionEngine() {
+    const snapshot = await buildPredictionEngineSnapshot();
     engineSnapshot = snapshot;
 
     if (!perimeterRuleEnabled || !snapshot.currentPrediction || !['READY', 'FOLLOW_UP'].includes(snapshot.engineState)) {
@@ -814,22 +878,6 @@ function syncPredictionEngine() {
         window.currentAlerts = [];
         return [];
     }
-
-    const signalKindLabel = snapshot.signalKind === 'follow-up' ? 'Follow-up' : 'Fresh';
-    const dominanceHits = snapshot.dominantCombo && Number.isFinite(snapshot.dominantCombo.hits)
-        ? snapshot.dominantCombo.hits
-        : null;
-    const dominanceWindow = snapshot.stats14 && Number.isFinite(snapshot.stats14.windowSize)
-        ? snapshot.stats14.windowSize
-        : null;
-    const dominanceHitRate = snapshot.dominantCombo && Number.isFinite(snapshot.dominantCombo.hitRate)
-        ? snapshot.dominantCombo.hitRate
-        : (snapshot.stats14 && Number.isFinite(snapshot.stats14.transitionCount) && snapshot.stats14.transitionCount > 0 && dominanceHits !== null
-            ? Math.round((dominanceHits / snapshot.stats14.transitionCount) * 100)
-            : null);
-    const dominanceSubtitle = dominanceHits !== null && dominanceWindow !== null && dominanceHitRate !== null
-        ? `${dominanceHits}/${dominanceWindow} Hits (${dominanceHitRate}% Hit Rate)`
-        : null;
     activeBets = [{
         patternName: PREDICTION_PERIMETER_PATTERN,
         filterKey: PERIMETER_RULE_KEY,
@@ -840,7 +888,7 @@ function syncPredictionEngine() {
         accentColor: snapshot.currentPrediction.accentColor,
         confirmed: false,
         signalKind: snapshot.signalKind,
-        subtitle: dominanceSubtitle || `${signalKindLabel} ${snapshot.currentPrediction.comboLabel}`
+        subtitle: snapshot.currentPrediction.subtitle || `${snapshot.currentPrediction.action} ${snapshot.currentPrediction.comboLabel}`
     }];
 
     window.currentAlerts = [{
@@ -852,7 +900,7 @@ function syncPredictionEngine() {
         signalKind: snapshot.signalKind
     }];
 
-    lastActionableComboLabel = snapshot.dominantCombo.label;
+    lastActionableComboLabel = snapshot.currentPrediction.comboLabel;
     lastActionableTargetFace = snapshot.currentPrediction.targetFace;
     lastActionableCheckpointSpin = snapshot.checkpointSpin || snapshot.spinCount;
     return window.currentAlerts;
@@ -919,7 +967,11 @@ function getPredictionToneClass(snapshot) {
 function formatEnginePrediction(snapshot) {
     if (!snapshot) return 'No engine state available.';
     if (snapshot.currentPrediction) {
-        return `BET F${snapshot.currentPrediction.targetFace} from ${snapshot.currentPrediction.comboLabel} (${snapshot.signalKind === 'follow-up' ? 'follow-up' : 'fresh'}).`;
+        const action = snapshot.currentPrediction.action || 'BET';
+        const confidence = Number.isFinite(snapshot.currentPrediction.confidence)
+            ? ` ${snapshot.currentPrediction.confidence}%`
+            : '';
+        return `${action} F${snapshot.currentPrediction.targetFace} via ${snapshot.currentPrediction.comboLabel}${confidence}.`;
     }
     if (snapshot.engineState === 'WATCHLIST') return snapshot.watchlistMessage || 'Top combo is on watchlist.';
     if (snapshot.engineState === 'BUILDING') return snapshot.leadMessage;
@@ -1384,11 +1436,14 @@ function calculatePerimeterStats(history, windowSize = 14) {
     for (let i = 1; i < recentSpins.length; i++) {
         const prevSpin = recentSpins[i - 1];
         const currSpin = recentSpins[i];
-        if (!prevSpin || !currSpin || !prevSpin.faces || !currSpin.faces) continue;
+        if (!prevSpin || !currSpin) continue;
+
+        const prevMask = Object.prototype.hasOwnProperty.call(FON_MASK_MAP, prevSpin.num) ? FON_MASK_MAP[prevSpin.num] : 0;
+        const currMask = Object.prototype.hasOwnProperty.call(FON_MASK_MAP, currSpin.num) ? FON_MASK_MAP[currSpin.num] : 0;
 
         PERIMETER_COMBOS.forEach(combo => {
-            const matched = (prevSpin.faces.includes(combo.a) && currSpin.faces.includes(combo.b)) ||
-                (prevSpin.faces.includes(combo.b) && currSpin.faces.includes(combo.a));
+            const matched = (((prevMask & FACE_MASKS[combo.a]) !== 0) && ((currMask & FACE_MASKS[combo.b]) !== 0)) ||
+                (((prevMask & FACE_MASKS[combo.b]) !== 0) && ((currMask & FACE_MASKS[combo.a]) !== 0));
             if (matched) counts[combo.label]++;
         });
     }
@@ -1441,6 +1496,13 @@ function calculatePerimeterStats(history, windowSize = 14) {
     };
 }
 
+async function refreshPredictionEngineUI() {
+    await scanAllStrategies();
+    updateVisibility();
+    updatePerimeterAnalytics();
+    updateAnalyticsHUD();
+}
+
 function adjustPredictionPerimeterWindow(delta) {
     const parsedDelta = parseInt(delta, 10);
     if (Number.isNaN(parsedDelta) || parsedDelta === 0) return;
@@ -1450,10 +1512,7 @@ function adjustPredictionPerimeterWindow(delta) {
 
     predictionPerimeterWindow = nextWindow;
     updatePredictionSettingsUI();
-    scanAllStrategies();
-    updateVisibility();
-    updatePerimeterAnalytics();
-    updateAnalyticsHUD();
+    void refreshPredictionEngineUI();
 }
 
 function setPerimeterWindow(val) {
@@ -1464,10 +1523,7 @@ function setPerimeterWindow(val) {
     predictionPerimeterWindow = nextWindow;
     
     updatePredictionSettingsUI();
-    scanAllStrategies();
-    updateVisibility();
-    updatePerimeterAnalytics();
-    updateAnalyticsHUD();
+    void refreshPredictionEngineUI();
 }
 
 function renderFilterMenu() {
@@ -1506,10 +1562,7 @@ function togglePatternFilter(key, isChecked = null) {
         perimeterRuleEnabled = nextState;
     }
     renderFilterMenu();
-    scanAllStrategies();
-    updateVisibility();
-    updatePerimeterAnalytics();
-    updateAnalyticsHUD();
+    void refreshPredictionEngineUI();
 }
 
 function updateVisibility() {
@@ -1534,14 +1587,30 @@ function reRenderHistory() {
 
 function handleGridClick(n) {
     document.getElementById('spinInput').value = n;
-    addSpin();
+    void addSpin();
+}
+
+function enqueueSpin(spinValue, options = {}) {
+    const val = parseInt(spinValue, 10);
+    if (Number.isNaN(val) || val < 0 || val > 36) return Promise.resolve([]);
+
+    spinProcessingQueue = spinProcessingQueue
+        .catch(error => {
+            console.error('Spin processing failed', error);
+            return [];
+        })
+        .then(() => processSpinValue(val, options));
+
+    return spinProcessingQueue;
 }
 
 function addSpin() {
     const input = document.getElementById('spinInput');
-    const val = parseInt(input.value);
-    if (isNaN(val) || val < 0 || val > 36) return;
+    return enqueueSpin(input ? input.value : NaN);
+}
 
+async function processSpinValue(val, options = {}) {
+    const input = document.getElementById('spinInput');
     // Animate the Plus Icon on Add
     const btn = document.getElementById('addSpinBtn');
     if (btn) {
@@ -1553,11 +1622,12 @@ function addSpin() {
         }
     }
 
-    // NEW: Detect all matching faces
-    let matchedFaces = [];
-    for (let f in FACES) {
-        if (FACES[f].nums.includes(val)) matchedFaces.push(parseInt(f));
-    }
+    const matchedFaces = Object.prototype.hasOwnProperty.call(FON_MAP, val)
+        ? FON_MAP[val].slice()
+        : [];
+    const matchedFaceMask = Object.prototype.hasOwnProperty.call(FON_MASK_MAP, val)
+        ? FON_MASK_MAP[val]
+        : 0;
 
     // Update Gaps for ALL matching faces
     for (let f = 1; f <= 5; f++) faceGaps[f]++;
@@ -1572,8 +1642,7 @@ function addSpin() {
 
     if (activeBets.length > 0) {
         activeBets.forEach(bet => {
-            // Check if the bet target is in the matched faces (Overlapping Support)
-            let isWin = matchedFaces.includes(bet.targetFace);
+            const isWin = (matchedFaceMask & FACE_MASKS[bet.targetFace]) !== 0;
             let label = `BET F${bet.targetFace}`;
 
             let count = 0;
@@ -1617,7 +1686,7 @@ function addSpin() {
     history.push(spinObj);
 
     // 3. SCAN FOR NEW PATTERNS
-    const alerts = scanAllStrategies();
+    const alerts = await scanAllStrategies();
 
     // 4. PREPARE NEW SIGNALS FOR DISPLAY (Next Spin's Bets)
     // These are what show up on the dashboard, but we also want to show them in the table row
@@ -1641,9 +1710,13 @@ function addSpin() {
 
     refreshHighlights();
 
-    input.value = '';
-    input.focus();
+    if (!options.preserveInput && input) {
+        input.value = '';
+        input.focus();
+    }
     saveSessionData();
+
+    return alerts;
 }
 
 function updateEngineStats(isWin, patternName, unitChange, rawStrategy, rawPattern, spinIndex, spinNum) {
@@ -2047,7 +2120,7 @@ function calculateDominantPerimeterCombo() {
     };
 }
 
-function scanAllStrategies() {
+async function scanAllStrategies() {
     return syncPredictionEngine();
 }
 
@@ -2074,27 +2147,31 @@ function renderRow(spin) {
     let comboHTML = `<span class="text-gray-600">-</span>`;
     if (spin.index > 0) {
         const prevSpin = history[spin.index - 1];
-        if (prevSpin && prevSpin.faces && spin.faces) {
+        if (prevSpin) {
             let detectedCombo = null;
             let matchedPrevFace = null;
             let matchedCurrFace = null;
-            const tracked = PERIMETER_COMBOS;
+            const prevMask = Object.prototype.hasOwnProperty.call(FON_MASK_MAP, prevSpin.num) ? FON_MASK_MAP[prevSpin.num] : 0;
+            const currMask = Object.prototype.hasOwnProperty.call(FON_MASK_MAP, spin.num) ? FON_MASK_MAP[spin.num] : 0;
 
-            for (let t of tracked) {
-                let match = false;
-                for (let pf of prevSpin.faces) {
-                    for (let cf of spin.faces) {
-                        if ((pf === t.a && cf === t.b) || (pf === t.b && cf === t.a)) {
-                            match = true;
-                            matchedPrevFace = pf;
-                            matchedCurrFace = cf;
-                            break;
-                        }
-                    }
-                    if (match) break;
+            for (let comboIndex = 0; comboIndex < PERIMETER_COMBOS.length; comboIndex++) {
+                const trackedCombo = PERIMETER_COMBOS[comboIndex];
+                const prevHasA = (prevMask & FACE_MASKS[trackedCombo.a]) !== 0;
+                const prevHasB = (prevMask & FACE_MASKS[trackedCombo.b]) !== 0;
+                const currHasA = (currMask & FACE_MASKS[trackedCombo.a]) !== 0;
+                const currHasB = (currMask & FACE_MASKS[trackedCombo.b]) !== 0;
+
+                if (prevHasA && currHasB) {
+                    detectedCombo = trackedCombo;
+                    matchedPrevFace = trackedCombo.a;
+                    matchedCurrFace = trackedCombo.b;
+                    break;
                 }
-                if (match) {
-                    detectedCombo = t;
+
+                if (prevHasB && currHasA) {
+                    detectedCombo = trackedCombo;
+                    matchedPrevFace = trackedCombo.b;
+                    matchedCurrFace = trackedCombo.a;
                     break;
                 }
             }
@@ -2129,14 +2206,6 @@ function renderRow(spin) {
             let status = win ? 'WIN' : 'LOSS';
             let colorClass = win ? 'text-[#30D158]' : 'text-[#FF453A]';
             predHTMLParts.push(`<div class="flex items-center text-[10px] font-bold ${colorClass}">${icon}${status}: F${bet.targetFace} (${bet.patternName})</div>`);
-        });
-    }
-
-    if (spin.newSignals && spin.newSignals.length > 0) {
-        spin.newSignals.forEach(sig => {
-            if (patternConfig[sig.filterKey]) {
-                predHTMLParts.push(`<div class="text-[10px] font-bold text-[#F5F5F7]/40">Active Signal: ${sig.patternName}</div>`);
-            }
         });
     }
 
@@ -2399,6 +2468,7 @@ function resetData(skipConfirm = false) {
     if (skipConfirm || confirm("Reset all session data?")) {
         history = [];
         activeBets = [];
+        spinProcessingQueue = Promise.resolve();
         window.currentAlerts = [];
         engineSnapshot = createEmptyEngineSnapshot(0);
         lastActionableComboLabel = null;
@@ -2430,16 +2500,15 @@ function resetData(skipConfirm = false) {
     }
 }
 
-function undoSpin() {
+async function undoSpin() {
     if (history.length === 0) return;
     let oldHist = [...history];
     oldHist.pop();
 
     resetData(true);
-    oldHist.forEach(h => {
-        document.getElementById('spinInput').value = h.num;
-        addSpin();
-    });
+    for (let i = 0; i < oldHist.length; i++) {
+        await enqueueSpin(oldHist[i].num, { preserveInput: true });
+    }
 
     updatePerimeterAnalytics();
     updateAnalyticsHUD();
@@ -2473,16 +2542,15 @@ function importSpins(input) {
     const file = input.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = function (e) {
+    reader.onload = async function (e) {
         try {
             const data = JSON.parse(e.target.result);
             if (Array.isArray(data.spins)) {
                 resetData(true);
                 const inputField = document.getElementById('spinInput');
-                data.spins.forEach(num => {
-                    inputField.value = num;
-                    addSpin();
-                });
+                for (let i = 0; i < data.spins.length; i++) {
+                    await enqueueSpin(data.spins[i], { preserveInput: true });
+                }
                 inputField.value = '';
                 inputField.focus();
             } else {

@@ -1,15 +1,77 @@
 /**
  * PREDICTION ENGINE
- * This file houses the logic for the Faces of Numbers (FON) Combo Tracker
- * and other predictive analytics.
+ * Optimized for direct file:/// execution without workers.
  */
 
+const FACE_MASKS = Object.freeze({
+    1: 1,
+    2: 2,
+    3: 4,
+    4: 8,
+    5: 16
+});
+
+const FON_MAP = Object.freeze({
+    0: [5],
+    1: [1],
+    2: [2],
+    3: [3],
+    4: [4],
+    5: [5],
+    6: [1],
+    7: [2],
+    8: [3],
+    9: [4],
+    10: [1, 5],
+    11: [2],
+    12: [3],
+    13: [4],
+    14: [5],
+    15: [1, 5],
+    16: [2],
+    17: [3],
+    18: [4],
+    19: [5],
+    20: [2],
+    21: [3],
+    22: [4],
+    23: [5],
+    24: [1, 2],
+    25: [2],
+    26: [3],
+    27: [4],
+    28: [5],
+    29: [1, 2],
+    30: [3],
+    31: [4],
+    32: [5],
+    33: [1],
+    34: [2],
+    35: [3],
+    36: [4]
+});
+
+const FON_MASK_MAP = Object.freeze(Object.fromEntries(
+    Object.keys(FON_MAP).map(key => {
+        const faces = FON_MAP[key];
+        let mask = 0;
+        for (let i = 0; i < faces.length; i++) {
+            mask |= FACE_MASKS[faces[i]];
+        }
+        return [key, mask];
+    })
+));
+
+const FON_PRIMARY_FACE_MAP = Object.freeze(Object.fromEntries(
+    Object.keys(FON_MAP).map(key => [key, FON_MAP[key][0]])
+));
+
 const FACES = {
-    1: { id: 1, nums: [1, 6, 10, 15, 24, 29, 33], color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)', border: '#0891b2' }, // Cyan
-    2: { id: 2, nums: [2, 7, 11, 16, 20, 24, 25, 29, 34], color: '#f97316', bg: 'rgba(249, 115, 22, 0.15)', border: '#ea580c' }, // Orange
-    3: { id: 3, nums: [3, 8, 12, 17, 21, 26, 30, 35], color: '#a855f7', bg: 'rgba(168, 85, 247, 0.15)', border: '#9333ea' }, // Purple
-    4: { id: 4, nums: [4, 9, 13, 18, 22, 27, 31, 36], color: '#eab308', bg: 'rgba(234, 179, 8, 0.15)', border: '#ca8a04' }, // Yellow
-    5: { id: 5, nums: [0, 5, 10, 14, 15, 19, 23, 28, 32], color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)', border: '#dc2626' } // Red
+    1: { id: 1, nums: [1, 6, 10, 15, 24, 29, 33], color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)', border: '#0891b2' },
+    2: { id: 2, nums: [2, 7, 11, 16, 20, 24, 25, 29, 34], color: '#f97316', bg: 'rgba(249, 115, 22, 0.15)', border: '#ea580c' },
+    3: { id: 3, nums: [3, 8, 12, 17, 21, 26, 30, 35], color: '#a855f7', bg: 'rgba(168, 85, 247, 0.15)', border: '#9333ea' },
+    4: { id: 4, nums: [4, 9, 13, 18, 22, 27, 31, 36], color: '#eab308', bg: 'rgba(234, 179, 8, 0.15)', border: '#ca8a04' },
+    5: { id: 5, nums: [0, 5, 10, 14, 15, 19, 23, 28, 32], color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)', border: '#dc2626' }
 };
 
 const PERIMETER_COMBOS = [
@@ -19,129 +81,389 @@ const PERIMETER_COMBOS = [
     { label: '2-4', a: 2, b: 4, color: '#007AFF' }
 ];
 
-const PredictionEngine = {
-    calculatePerimeterStats: function (history, windowSize = 14) {
-        const historyArray = Array.isArray(history) ? history : [];
-        const parsedWindow = parseInt(windowSize, 10);
-        const useAllHistory = windowSize === 'all' || windowSize === Infinity || windowSize === null;
-        const safeWindow = useAllHistory
-            ? Math.max(2, historyArray.length)
-            : (Number.isNaN(parsedWindow) ? 14 : Math.max(2, Math.min(60, parsedWindow)));
-        const recentSpins = historyArray.slice(-safeWindow);
-        const sampleSize = recentSpins.length;
-        const transitionCount = Math.max(0, recentSpins.length - 1);
+const PERIMETER_COMBO_LOOKUP = Object.freeze(
+    PERIMETER_COMBOS.map(combo => ({
+        ...combo,
+        maskA: FACE_MASKS[combo.a],
+        maskB: FACE_MASKS[combo.b]
+    }))
+);
 
-        let counts = { '5-2': 0, '5-3': 0, '1-3': 0, '2-4': 0 };
-        let lastSeen = { '5-2': -1, '5-3': -1, '1-3': -1, '2-4': -1 };
+const ENGINE_CHUNK_SIZE = 500;
+const RECENT_CONFIRMATION_WINDOW = 5;
+const RECENT_FATIGUE_WINDOW = 14;
+const EMPTY_FACES = Object.freeze([]);
 
-        for (let i = 1; i < recentSpins.length; i++) {
-            const prevSpin = recentSpins[i - 1];
-            const currSpin = recentSpins[i];
-            const transitionIndex = i - 1;
-            
-            if (!prevSpin || !currSpin || !prevSpin.faces || !currSpin.faces) continue;
+function normalizeWindowSize(windowSize, fallback = RECENT_FATIGUE_WINDOW, maxWindow = 60) {
+    if (windowSize === 'all' || windowSize === Infinity || windowSize === null) return 'all';
+    const parsedWindow = parseInt(windowSize, 10);
+    if (Number.isNaN(parsedWindow)) return fallback;
+    return Math.max(2, Math.min(maxWindow, parsedWindow));
+}
 
-            PERIMETER_COMBOS.forEach(combo => {
-                // Check for ANY matching face pair (handling overlapping faces like 10, 15, 24)
-                const prevHasA = prevSpin.faces.includes(combo.a);
-                const prevHasB = prevSpin.faces.includes(combo.b);
-                const currHasA = currSpin.faces.includes(combo.a);
-                const currHasB = currSpin.faces.includes(combo.b);
+function getSpinNumber(spin) {
+    if (Number.isInteger(spin)) return spin;
+    if (spin && Number.isInteger(spin.num)) return spin.num;
 
-                const matched = (prevHasA && currHasB) || (prevHasB && currHasA);
-                
-                if (matched) {
-                    counts[combo.label]++;
-                    lastSeen[combo.label] = transitionIndex;
-                }
-            });
+    const parsed = parseInt(spin, 10);
+    return Number.isNaN(parsed) ? null : parsed;
+}
+
+function getFacesForNumber(number) {
+    return Object.prototype.hasOwnProperty.call(FON_MAP, number) ? FON_MAP[number] : EMPTY_FACES;
+}
+
+function getMaskForNumber(number) {
+    return Object.prototype.hasOwnProperty.call(FON_MASK_MAP, number) ? FON_MASK_MAP[number] : 0;
+}
+
+function hasFace(mask, faceId) {
+    return (mask & FACE_MASKS[faceId]) !== 0;
+}
+
+function isComboHit(prevMask, currMask, combo) {
+    return ((prevMask & combo.maskA) !== 0 && (currMask & combo.maskB) !== 0) ||
+        ((prevMask & combo.maskB) !== 0 && (currMask & combo.maskA) !== 0);
+}
+
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+function emitPredictionProgress(percent, detail = {}) {
+    const processed = Number.isFinite(detail.processed) ? detail.processed : 0;
+    const total = Number.isFinite(detail.total) ? detail.total : 0;
+    const message = total > 0
+        ? `Prediction Engine ${percent}% (${processed}/${total})`
+        : `Prediction Engine ${percent}%`;
+
+    console.log(message);
+
+    if (typeof document === 'undefined') return;
+
+    const checkpointSummary = document.getElementById('intelCheckpointSummary');
+    if (checkpointSummary) checkpointSummary.innerText = message;
+
+    const checkpointMeta = document.getElementById('intelNextCheckpointMeta');
+    if (checkpointMeta) {
+        checkpointMeta.innerText = total > 0
+            ? `${processed}/${total} spins processed`
+            : 'Awaiting spins';
+    }
+}
+
+function buildWindowStats(validSpinCount, primaryFaceHistory, comboHitLists, windowSize) {
+    const normalizedWindow = normalizeWindowSize(windowSize);
+    const sampleSize = normalizedWindow === 'all'
+        ? validSpinCount
+        : Math.min(validSpinCount, normalizedWindow);
+    const safeSampleSize = Math.max(validSpinCount > 0 ? 1 : 0, sampleSize);
+    const transitionCount = Math.max(0, safeSampleSize - 1);
+    const startTransitionIndex = Math.max(0, validSpinCount - safeSampleSize);
+    const counts = Object.fromEntries(PERIMETER_COMBOS.map(combo => [combo.label, 0]));
+    const lastSeen = Object.fromEntries(PERIMETER_COMBOS.map(combo => [combo.label, -1]));
+
+    const comboStats = PERIMETER_COMBO_LOOKUP.map(combo => {
+        const hitList = comboHitLists[combo.label];
+        let hits = 0;
+        let lastSeenIndex = -1;
+
+        for (let i = hitList.length - 1; i >= 0; i--) {
+            const hitIndex = hitList[i];
+            if (hitIndex < startTransitionIndex) break;
+            hits++;
+            if (lastSeenIndex === -1) lastSeenIndex = hitIndex;
         }
 
-        const comboStats = PERIMETER_COMBOS.map(combo => {
-            const hits = counts[combo.label] || 0;
-            const lastSeenIndex = lastSeen[combo.label];
-            const drought = transitionCount === 0
-                ? 0
-                : (lastSeenIndex === -1
-                    ? transitionCount
-                    : Math.max(0, (transitionCount - 1) - lastSeenIndex));
-            const misses = Math.max(0, transitionCount - hits);
-            const hitRate = transitionCount > 0 ? Math.round((hits / transitionCount) * 100) : 0;
-            const missRate = transitionCount > 0 ? Math.round((misses / transitionCount) * 100) : 0;
-            const sampleMisses = Math.max(0, sampleSize - hits);
-            const hotPercent = sampleSize > 0 ? Math.round((hits / sampleSize) * 100) : 0;
-            const coldPercent = sampleSize > 0 ? Math.round((sampleMisses / sampleSize) * 100) : 0;
-            const recencyWeight = transitionCount > 0 ? drought / transitionCount : 0;
-            const scarcityWeight = transitionCount > 0 ? misses / transitionCount : 0;
-            const coldScore = transitionCount > 0
-                ? Math.round(((recencyWeight * 0.72) + (scarcityWeight * 0.28)) * 100)
-                : 0;
-            let state = 'idle';
-            if (sampleSize > 0) {
-                if (hits === 0) state = 'cold';
-                else if (hotPercent >= 25) state = 'hot';
-                else if (coldPercent >= 75) state = 'cold';
-                else state = 'neutral';
-            }
+        counts[combo.label] = hits;
+        lastSeen[combo.label] = lastSeenIndex;
 
-            return {
-                ...combo,
-                hits,
-                misses,
-                hitRate,
-                missRate,
-                sampleMisses,
-                hotPercent,
-                coldPercent,
-                drought,
-                lastSeenIndex,
-                lastSeenDistance: drought,
-                coldScore,
-                sampleSize,
-                state,
-                transitionCount
-            };
-        });
+        const misses = Math.max(0, transitionCount - hits);
+        const hitRate = transitionCount > 0 ? Math.round((hits / transitionCount) * 100) : 0;
+        const missRate = transitionCount > 0 ? Math.round((misses / transitionCount) * 100) : 0;
+        const sampleMisses = Math.max(0, safeSampleSize - hits);
+        const hotPercent = safeSampleSize > 0 ? Math.round((hits / safeSampleSize) * 100) : 0;
+        const coldPercent = safeSampleSize > 0 ? Math.round((sampleMisses / safeSampleSize) * 100) : 0;
+        const drought = transitionCount === 0
+            ? 0
+            : (lastSeenIndex === -1
+                ? transitionCount
+                : Math.max(0, (validSpinCount - 2) - lastSeenIndex));
+        let state = 'idle';
 
-        const highestCount = comboStats.reduce((best, combo) => Math.max(best, combo.hits), 0);
-        let dominantCombo = null;
-        if (highestCount > 0) {
-            const contenders = comboStats.filter(combo => combo.hits === highestCount);
-            dominantCombo = contenders[0] || null;
-            contenders.forEach(combo => {
-                const currentLastSeen = lastSeen[dominantCombo.label] || -1;
-                const nextLastSeen = lastSeen[combo.label] || -1;
-                if (nextLastSeen > currentLastSeen) {
-                    dominantCombo = combo;
-                }
-            });
+        if (safeSampleSize > 0) {
+            if (hits === 0) state = 'cold';
+            else if (hotPercent >= 25) state = 'hot';
+            else if (coldPercent >= 75) state = 'cold';
+            else state = 'neutral';
         }
-
-        const coldLeader = comboStats
-            .slice()
-            .sort((a, b) => b.coldPercent - a.coldPercent || b.sampleMisses - a.sampleMisses || a.hits - b.hits)[0] || null;
-        const hotLeader = comboStats
-            .slice()
-            .sort((a, b) => b.hotPercent - a.hotPercent || b.hits - a.hits || a.sampleMisses - b.sampleMisses)[0] || null;
 
         return {
-            windowSize: safeWindow,
-            recentSpins: recentSpins,
-            sampleSize: sampleSize,
-            transitionCount: transitionCount,
-            // Use the first face for simple sequence display, but stats used all faces
-            latestPrimaryFace: recentSpins.length > 0 && recentSpins[recentSpins.length - 1].faces ? recentSpins[recentSpins.length - 1].faces[0] : null,
-            sequence: recentSpins.map(s => (s.faces && s.faces.length > 0 ? s.faces[0] : '?')),
-            counts: counts,
-            dominantCombo: dominantCombo,
-            lastSeen: lastSeen,
-            comboStats: comboStats,
-            coldLeader: coldLeader,
-            hotLeader: hotLeader
+            ...combo,
+            hits,
+            misses,
+            hitRate,
+            missRate,
+            sampleMisses,
+            hotPercent,
+            coldPercent,
+            drought,
+            lastSeenIndex,
+            lastSeenDistance: drought,
+            coldScore: coldPercent,
+            sampleSize: safeSampleSize,
+            state,
+            transitionCount
+        };
+    });
+
+    const sortedCombos = comboStats
+        .slice()
+        .sort((a, b) => (b.hits - a.hits) || ((b.lastSeenIndex ?? -1) - (a.lastSeenIndex ?? -1)) || (a.label > b.label ? 1 : -1));
+
+    const dominantCombo = sortedCombos.length > 0 && sortedCombos[0].hits > 0 ? sortedCombos[0] : null;
+    const coldLeader = comboStats
+        .slice()
+        .sort((a, b) => b.coldPercent - a.coldPercent || b.sampleMisses - a.sampleMisses || a.hits - b.hits)[0] || null;
+    const hotLeader = comboStats
+        .slice()
+        .sort((a, b) => b.hotPercent - a.hotPercent || b.hits - a.hits || a.sampleMisses - b.sampleMisses)[0] || null;
+
+    return {
+        windowSize: safeSampleSize,
+        recentSpins: [],
+        sampleSize: safeSampleSize,
+        transitionCount,
+        latestPrimaryFace: primaryFaceHistory.length > 0 ? primaryFaceHistory[primaryFaceHistory.length - 1] : null,
+        sequence: safeSampleSize > 0 ? primaryFaceHistory.slice(-safeSampleSize) : [],
+        counts,
+        dominantCombo,
+        lastSeen,
+        comboStats,
+        coldLeader,
+        hotLeader
+    };
+}
+
+const PredictionEngine = {
+    calculatePerimeterStats: function (history, windowSize = RECENT_FATIGUE_WINDOW) {
+        const historyArray = Array.isArray(history) ? history : [];
+        const normalizedWindow = normalizeWindowSize(windowSize);
+        const maxSampleSize = normalizedWindow === 'all'
+            ? historyArray.length
+            : Math.min(historyArray.length, normalizedWindow);
+        const startIndex = Math.max(0, historyArray.length - maxSampleSize);
+        const comboHitLists = Object.fromEntries(PERIMETER_COMBOS.map(combo => [combo.label, []]));
+        const primaryFaceHistory = [];
+        let validSpinCount = 0;
+        let lastMask = 0;
+
+        for (let i = startIndex; i < historyArray.length; i++) {
+            const spinNumber = getSpinNumber(historyArray[i]);
+            if (spinNumber === null || !Object.prototype.hasOwnProperty.call(FON_MAP, spinNumber)) continue;
+
+            const mask = getMaskForNumber(spinNumber);
+            primaryFaceHistory.push(FON_PRIMARY_FACE_MAP[spinNumber]);
+
+            if (validSpinCount > 0) {
+                const transitionIndex = validSpinCount - 1;
+                for (let comboIndex = 0; comboIndex < PERIMETER_COMBO_LOOKUP.length; comboIndex++) {
+                    const combo = PERIMETER_COMBO_LOOKUP[comboIndex];
+                    if (isComboHit(lastMask, mask, combo)) {
+                        comboHitLists[combo.label].push(transitionIndex);
+                    }
+                }
+            }
+
+            lastMask = mask;
+            validSpinCount++;
+        }
+
+        return buildWindowStats(validSpinCount, primaryFaceHistory, comboHitLists, normalizedWindow);
+    },
+
+    evaluatePredictionEngine: async function (allSpins, options = {}) {
+        const source = Array.isArray(allSpins) ? allSpins : [];
+        const chunkSize = Number.isFinite(options.chunkSize) && options.chunkSize > 0
+            ? Math.max(1, Math.floor(options.chunkSize))
+            : ENGINE_CHUNK_SIZE;
+        const onProgress = typeof options.onProgress === 'function'
+            ? options.onProgress
+            : emitPredictionProgress;
+        const faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        const comboHitLists = Object.fromEntries(PERIMETER_COMBOS.map(combo => [combo.label, []]));
+        const primaryFaceHistory = [];
+        let validSpinCount = 0;
+        let previousMask = 0;
+        let previousFaces = EMPTY_FACES;
+        let previousPrimaryFace = null;
+        let lastMask = 0;
+        let lastFaces = EMPTY_FACES;
+        let lastPrimaryFace = null;
+
+        for (let chunkStart = 0; chunkStart < source.length; chunkStart += chunkSize) {
+            const chunkEnd = Math.min(source.length, chunkStart + chunkSize);
+
+            for (let i = chunkStart; i < chunkEnd; i++) {
+                const spinNumber = getSpinNumber(source[i]);
+                if (spinNumber === null || !Object.prototype.hasOwnProperty.call(FON_MAP, spinNumber)) continue;
+
+                const faces = getFacesForNumber(spinNumber);
+                const mask = getMaskForNumber(spinNumber);
+                const primaryFace = FON_PRIMARY_FACE_MAP[spinNumber];
+                const priorMask = lastMask;
+                const priorFaces = lastFaces;
+                const priorPrimaryFace = lastPrimaryFace;
+
+                for (let faceId = 1; faceId <= 5; faceId++) {
+                    faceGaps[faceId]++;
+                }
+                for (let faceIndex = 0; faceIndex < faces.length; faceIndex++) {
+                    faceGaps[faces[faceIndex]] = 0;
+                }
+
+                if (validSpinCount > 0) {
+                    const transitionIndex = validSpinCount - 1;
+                    for (let comboIndex = 0; comboIndex < PERIMETER_COMBO_LOOKUP.length; comboIndex++) {
+                        const combo = PERIMETER_COMBO_LOOKUP[comboIndex];
+                        if (isComboHit(priorMask, mask, combo)) {
+                            comboHitLists[combo.label].push(transitionIndex);
+                        }
+                    }
+                    previousMask = priorMask;
+                    previousFaces = priorFaces;
+                    previousPrimaryFace = priorPrimaryFace;
+                }
+
+                lastMask = mask;
+                lastFaces = faces;
+                lastPrimaryFace = primaryFace;
+                primaryFaceHistory.push(primaryFace);
+                validSpinCount++;
+            }
+
+            const percent = source.length === 0 ? 100 : Math.round((chunkEnd / source.length) * 100);
+            onProgress(percent, {
+                processed: chunkEnd,
+                total: source.length
+            });
+
+            if (chunkEnd < source.length) {
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
+        }
+
+        const stats14 = buildWindowStats(validSpinCount, primaryFaceHistory, comboHitLists, RECENT_FATIGUE_WINDOW);
+        const stats5 = buildWindowStats(validSpinCount, primaryFaceHistory, comboHitLists, RECENT_CONFIRMATION_WINDOW);
+        const rankedCombos = stats14.comboStats
+            .slice()
+            .sort((a, b) => (b.hits - a.hits) || ((b.lastSeenIndex ?? -1) - (a.lastSeenIndex ?? -1)) || (a.label > b.label ? 1 : -1));
+        const dominantCombo = stats14.dominantCombo || null;
+        const runnerUpCombo = rankedCombos.find(combo => !dominantCombo || combo.label !== dominantCombo.label) || null;
+        const exhaustedCombos = stats14.comboStats
+            .filter(combo => combo.hits >= 3)
+            .sort((a, b) => (b.hits - a.hits) || ((b.lastSeenIndex ?? -1) - (a.lastSeenIndex ?? -1)) || (a.label > b.label ? 1 : -1));
+
+        let targetFace = null;
+        let action = 'WAIT';
+        let confidence = 0;
+        let ruleKey = 'no-signal';
+        let ruleLabel = 'No Signal';
+        let signalLabel = 'No Signal';
+        let detail = validSpinCount < 2
+            ? 'Need at least two valid spins for a full read.'
+            : 'No terminal rule triggered on the latest state.';
+        let triggerFace = null;
+        let fadedFace = null;
+        let focusCombo = dominantCombo;
+        let markovSequenceLabel = null;
+        let fatigueComboLabel = null;
+
+        if (validSpinCount >= 2 && hasFace(previousMask, 4) && hasFace(lastMask, 5)) {
+            targetFace = 4;
+            action = 'BET';
+            confidence = 92;
+            ruleKey = 'markov-4-5';
+            ruleLabel = 'Markov Trigger';
+            signalLabel = 'F4 -> F5';
+            detail = 'Latest two spins formed F4 -> F5, so the engine snaps back to Face 4.';
+            triggerFace = 5;
+            markovSequenceLabel = 'F4 -> F5';
+        } else if (validSpinCount >= 2 && hasFace(previousMask, 2) && hasFace(lastMask, 2)) {
+            targetFace = 5;
+            action = 'BET';
+            confidence = 88;
+            ruleKey = 'markov-2-2';
+            ruleLabel = 'Markov Trigger';
+            signalLabel = 'F2 -> F2';
+            detail = 'Latest two spins held on Face 2, so the engine rotates to Face 5.';
+            triggerFace = 2;
+            markovSequenceLabel = 'F2 -> F2';
+        } else if (faceGaps[5] >= 10) {
+            targetFace = 5;
+            action = 'BET_PROGRESSION_3';
+            confidence = clamp(74 + ((faceGaps[5] - 10) * 2), 74, 90);
+            ruleKey = 'elasticity-snapback';
+            ruleLabel = 'Elasticity Snapback';
+            signalLabel = 'Face 5 Gap';
+            detail = `Face 5 has slept ${faceGaps[5]} spins, so progression step 3 points back to Face 5.`;
+            triggerFace = 5;
+        } else {
+            for (let comboIndex = 0; comboIndex < exhaustedCombos.length; comboIndex++) {
+                const combo = exhaustedCombos[comboIndex];
+                const latestHasA = hasFace(lastMask, combo.a);
+                const latestHasB = hasFace(lastMask, combo.b);
+
+                if (latestHasA === latestHasB) continue;
+
+                targetFace = latestHasA ? combo.a : combo.b;
+                fadedFace = latestHasA ? combo.b : combo.a;
+                action = 'BET_AGAINST';
+                confidence = clamp(62 + ((combo.hits - 3) * 6), 62, 82);
+                ruleKey = 'fatigue-inversion';
+                ruleLabel = 'Fatigue Inversion';
+                signalLabel = combo.label;
+                detail = `${combo.label} hit ${combo.hits} times in the last ${stats14.windowSize} spins. Latest spin leaned Face ${targetFace}, so the engine fades Face ${fadedFace}.`;
+                triggerFace = targetFace;
+                focusCombo = combo;
+                fatigueComboLabel = combo.label;
+                break;
+            }
+        }
+
+        const confirmationCombo = focusCombo && stats5 && stats5.counts
+            ? stats5.counts[focusCombo.label] || 0
+            : 0;
+
+        return {
+            targetFace,
+            action,
+            confidence,
+            ruleKey,
+            ruleLabel,
+            signalLabel,
+            detail,
+            triggerFace,
+            fadedFace,
+            focusCombo,
+            fatigueComboLabel,
+            markovSequenceLabel,
+            faceGaps,
+            previousFaces: previousFaces === EMPTY_FACES ? [] : previousFaces.slice(),
+            lastFaces: lastFaces === EMPTY_FACES ? [] : lastFaces.slice(),
+            previousPrimaryFace,
+            lastPrimaryFace,
+            processedSpins: validSpinCount,
+            dominantCombo,
+            runnerUpCombo,
+            exhaustedCombos,
+            confirmationHits: confirmationCombo,
+            stats14,
+            stats5
         };
     },
 
-    updateFONTracker: function (history, windowSize = 14) {
+    updateFONTracker: function (history, windowSize = RECENT_FATIGUE_WINDOW) {
         const stats = this.calculatePerimeterStats(history, windowSize);
 
         const titleEl = document.getElementById('fonTrackerWindowLabel');
@@ -169,4 +491,4 @@ const PredictionEngine = {
     }
 };
 
-console.log("Prediction Engine Loaded");
+console.log('Prediction Engine Loaded');
