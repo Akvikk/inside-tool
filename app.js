@@ -26,6 +26,10 @@ let spinProcessingQueue = Promise.resolve();
 let faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
 let predictionPerimeterWindow = 14;
 let perimeterRuleEnabled = true;
+let aiEnabled = false;
+let aiProvider = 'gemini';
+let aiApiKey = '';
+let chatMessageHistory = [];
 
 // Constants PERIMETER_COMBOS and FACES are already defined in predictionEngine.js
 // Removing duplicate declarations to prevent SyntaxError
@@ -65,7 +69,10 @@ function saveSessionData() {
         stopwatchSeconds,
         currentInputLayout,
         isHudColdMode,
-        hudHistoryScope
+        hudHistoryScope,
+        aiEnabled,
+        aiProvider,
+        aiApiKey
     };
     try {
         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(data));
@@ -113,6 +120,10 @@ function loadSessionData() {
         if (data.currentInputLayout) currentInputLayout = data.currentInputLayout;
         if (data.isHudColdMode !== undefined) isHudColdMode = data.isHudColdMode;
         if (data.hudHistoryScope) hudHistoryScope = data.hudHistoryScope;
+        if (data.aiEnabled !== undefined) aiEnabled = data.aiEnabled;
+        if (typeof data.aiProvider === 'string' && data.aiProvider) aiProvider = data.aiProvider;
+        if (typeof data.aiApiKey === 'string') aiApiKey = data.aiApiKey;
+        updateAiUiState();
         return true;
     } catch (e) {
         console.error("Session load failed", e);
@@ -220,6 +231,7 @@ function performReset() {
     history = [];
     activeBets = [];
     spinProcessingQueue = Promise.resolve();
+    chatMessageHistory = [];
     faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
     window.currentAlerts = [];
     engineSnapshot = createEmptyEngineSnapshot(0);
@@ -253,6 +265,7 @@ function performReset() {
     const body = document.getElementById('historyBody');
     if (body) body.innerHTML = '';
 
+    resetAiChatUi();
     saveSessionData();
 }
 
@@ -266,6 +279,7 @@ window.onload = async () => {
     syncPerimeterRuleState();
     hydrateIntelligenceMode();
     updatePredictionSettingsUI();
+    updateAiUiState();
     
     if (hasSession) {
         updateStopwatchDisplay();
@@ -2469,6 +2483,7 @@ function resetData(skipConfirm = false) {
         history = [];
         activeBets = [];
         spinProcessingQueue = Promise.resolve();
+        chatMessageHistory = [];
         window.currentAlerts = [];
         engineSnapshot = createEmptyEngineSnapshot(0);
         lastActionableComboLabel = null;
@@ -2487,6 +2502,7 @@ function resetData(skipConfirm = false) {
         renderAnalytics();
         renderUserAnalytics();
         renderGapStats();
+        resetAiChatUi();
 
         updatePredictionSettingsUI();
         updatePerimeterAnalytics();
@@ -2513,6 +2529,373 @@ async function undoSpin() {
     updatePerimeterAnalytics();
     updateAnalyticsHUD();
     saveSessionData();
+}
+
+function updateAiUiState() {
+    const switchBtn = document.getElementById('aiMasterSwitch');
+    const switchKnob = document.getElementById('aiSwitchKnob');
+    const vaultSection = document.getElementById('aiVaultSection');
+    const badge = document.getElementById('aiStatusBadge');
+
+    if (switchBtn && switchKnob && vaultSection && badge) {
+        if (aiEnabled) {
+            switchBtn.classList.replace('bg-white/10', 'bg-[#30D158]/20');
+            switchBtn.classList.replace('border-white/20', 'border-[#30D158]/50');
+            switchKnob.classList.replace('bg-gray-400', 'bg-[#30D158]');
+            switchKnob.style.transform = 'translateX(24px)';
+            vaultSection.classList.remove('hidden');
+            badge.innerText = 'ON';
+            badge.className = 'text-[9px] font-black bg-[#30D158]/20 px-2.5 py-1 rounded-md text-[#30D158] shadow-inner';
+        } else {
+            switchBtn.classList.replace('bg-[#30D158]/20', 'bg-white/10');
+            switchBtn.classList.replace('border-[#30D158]/50', 'border-white/20');
+            switchKnob.classList.replace('bg-[#30D158]', 'bg-gray-400');
+            switchKnob.style.transform = 'translateX(0)';
+            vaultSection.classList.add('hidden');
+            badge.innerText = 'OFF';
+            badge.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner';
+        }
+    }
+
+    const providerSelect = document.getElementById('aiProviderSelect');
+    const keyInput = document.getElementById('aiApiKeyInput');
+    if (providerSelect) providerSelect.value = aiProvider;
+    if (keyInput) keyInput.value = aiApiKey;
+
+    const aiContainer = document.getElementById('aiAnalysisContainer');
+    if (aiContainer) {
+        if (aiEnabled && aiApiKey) {
+            aiContainer.classList.remove('hidden');
+            aiContainer.classList.add('flex');
+        } else {
+            aiContainer.classList.add('hidden');
+            aiContainer.classList.remove('flex');
+        }
+    }
+
+    const headerAiBtn = document.getElementById('headerAiBtn');
+    if (headerAiBtn) {
+        headerAiBtn.classList.remove('hidden');
+        headerAiBtn.classList.add('flex');
+
+        if (aiApiKey) {
+            headerAiBtn.classList.remove('bg-[#bf5af2]/10', 'border-[#bf5af2]/30', 'shadow-[0_0_10px_rgba(191,90,242,0.15)]');
+            headerAiBtn.classList.add('bg-[#bf5af2]/20', 'border-[#bf5af2]/50', 'shadow-[0_0_18px_rgba(191,90,242,0.35)]');
+            headerAiBtn.title = aiEnabled
+                ? 'AI chat is connected and ready.'
+                : 'API connected. Enable AI in the menu to start chat.';
+        } else {
+            headerAiBtn.classList.add('bg-[#bf5af2]/10', 'border-[#bf5af2]/30', 'shadow-[0_0_10px_rgba(191,90,242,0.15)]');
+            headerAiBtn.classList.remove('bg-[#bf5af2]/20', 'border-[#bf5af2]/50', 'shadow-[0_0_18px_rgba(191,90,242,0.35)]');
+            headerAiBtn.title = 'Configure your AI key in the menu to activate chat.';
+        }
+    }
+}
+
+function toggleAiMasterSwitch() {
+    aiEnabled = !aiEnabled;
+    updateAiUiState();
+    saveSessionData();
+}
+
+async function saveAiConfig() {
+    const providerSelect = document.getElementById('aiProviderSelect');
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const btn = document.getElementById('saveAiBtn');
+    if (!providerSelect || !keyInput || !btn) return;
+
+    const testProvider = providerSelect.value;
+    const testKey = keyInput.value.trim();
+
+    if (!testKey) {
+        alert("Please enter an API key first.");
+        return;
+    }
+
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> VERIFYING...';
+    btn.disabled = true;
+    btn.classList.add('opacity-70');
+
+    try {
+        if (testProvider === 'gemini') {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${testKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: 'Respond with the word: connected' }] }] })
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) throw new Error("Invalid Gemini Key");
+        } else if (testProvider === 'openai') {
+            const res = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${testKey}`
+                },
+                body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: 'ping' }] })
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) throw new Error("Invalid OpenAI Key");
+        }
+
+        aiProvider = testProvider;
+        aiApiKey = testKey;
+        updateAiUiState();
+        saveSessionData();
+
+        btn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> CONNECTED!';
+        btn.classList.remove('opacity-70', 'text-[#30D158]');
+        btn.classList.add('text-white', 'bg-[#30D158]', 'shadow-[0_0_20px_rgba(48,209,88,0.4)]');
+
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.remove('text-white', 'bg-[#30D158]', 'shadow-[0_0_20px_rgba(48,209,88,0.4)]');
+            btn.classList.add('text-[#30D158]');
+            btn.disabled = false;
+            toggleModal('aiConfigModal');
+        }, 1200);
+    } catch (error) {
+        btn.innerHTML = '<i class="fas fa-times-circle mr-2"></i> INVALID KEY';
+        btn.classList.remove('opacity-70', 'text-[#30D158]', 'border-[#30D158]/30', 'bg-[#30D158]/20');
+        btn.classList.add('text-[#ff1a33]', 'border-[#ff1a33]/50', 'bg-[#ff1a33]/20');
+
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.add('text-[#30D158]', 'border-[#30D158]/30', 'bg-[#30D158]/20');
+            btn.classList.remove('text-[#ff1a33]', 'border-[#ff1a33]/50', 'bg-[#ff1a33]/20');
+            btn.disabled = false;
+        }, 2000);
+    }
+}
+
+function clearAiConfig() {
+    aiApiKey = '';
+    chatMessageHistory = [];
+    const keyInput = document.getElementById('aiApiKeyInput');
+    if (keyInput) keyInput.value = '';
+    updateAiUiState();
+    resetAiChatUi();
+    saveSessionData();
+    alert('API Key removed from browser storage.');
+}
+
+function escapeAiMarkup(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function resetAiChatUi() {
+    const historyContainer = document.getElementById('aiChatHistory');
+    if (historyContainer) {
+        historyContainer.innerHTML = `
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full bg-[#bf5af2]/20 border border-[#bf5af2]/40 flex items-center justify-center text-[#bf5af2] shrink-0 shadow-[0_0_10px_rgba(191,90,242,0.2)]"><i class="fas fa-brain"></i></div>
+                <div class="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm p-3.5 text-gray-200 leading-relaxed max-w-[85%] shadow-md">
+                    System online. I am monitoring your session data in real-time. Ask me about patterns, variance, or strategy recommendations.
+                </div>
+            </div>
+        `;
+    }
+
+    const input = document.getElementById('aiChatInput');
+    if (input) {
+        input.value = '';
+        input.disabled = false;
+    }
+
+    const sendBtn = document.getElementById('aiSendBtn');
+    if (sendBtn) {
+        sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+    }
+}
+
+function generateAiPrompt() {
+    const recentSpins = history.slice(-50).map(s => s.num).join(', ');
+    const gaps = Object.entries(faceGaps).map(([face, gap]) => `F${face}:${gap}`).join(', ');
+    const stats = `Wins: ${engineStats.totalWins}, Losses: ${engineStats.totalLosses}, Net: ${engineStats.netUnits}`;
+
+    return `You are an expert roulette data scientist. Analyze this session and give me a strict, 3-sentence tactical recommendation. Do NOT give generic advice. Be highly specific about variance, fatigue, or patterns.
+Current Stats: ${stats}
+Face Gaps (Spins since last hit): ${gaps}
+Last 50 Spins (oldest to newest): ${recentSpins}
+What is the exact mathematical play right now, or should I walk away?`;
+}
+
+async function runAiAnalysis() {
+    if (!aiEnabled || !aiApiKey) {
+        alert("Please configure your AI API key in the Hamburger Menu first.");
+        return;
+    }
+
+    const btn = document.getElementById('runAiBtn');
+    const responseBox = document.getElementById('aiResponseBox');
+    if (!btn || !responseBox) return;
+
+    const originalBtnHTML = btn.innerHTML;
+
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin text-[#bf5af2]"></i> Analyzing Variance...';
+    btn.disabled = true;
+    responseBox.classList.remove('hidden');
+    responseBox.innerText = 'Connecting to neural net...';
+
+    const promptText = generateAiPrompt();
+
+    try {
+        let responseText = '';
+
+        if (aiProvider === 'gemini') {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${aiApiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) throw new Error((data.error && data.error.message) || `Gemini request failed (${res.status})`);
+            responseText = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]
+                ? data.candidates[0].content.parts[0].text
+                : 'No response returned by Gemini.';
+        } else if (aiProvider === 'openai') {
+            const res = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${aiApiKey}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4o-mini',
+                    messages: [{ role: 'user', content: promptText }]
+                })
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) throw new Error((data.error && data.error.message) || `OpenAI request failed (${res.status})`);
+            responseText = data && data.choices && data.choices[0] && data.choices[0].message
+                ? data.choices[0].message.content
+                : 'No response returned by OpenAI.';
+        } else {
+            throw new Error("Provider not fully implemented yet.");
+        }
+
+        responseBox.innerHTML = `<span class="text-[#30D158] font-bold tracking-wide uppercase text-[10px] block mb-2">Neural Output:</span>${escapeAiMarkup(responseText)}`;
+    } catch (error) {
+        responseBox.innerHTML = `<span class="text-[#ff1a33] font-bold"><i class="fas fa-exclamation-triangle"></i> Error:</span> ${escapeAiMarkup(error.message)}`;
+    } finally {
+        btn.innerHTML = originalBtnHTML;
+        btn.disabled = false;
+    }
+}
+
+function openAiChat() {
+    if (!aiEnabled || !aiApiKey) {
+        alert("Please enable AI and configure your API key in the Hamburger Menu first.");
+        return;
+    }
+
+    toggleModal('aiChatModal');
+    setTimeout(() => {
+        const input = document.getElementById('aiChatInput');
+        if (input) input.focus();
+    }, 100);
+}
+
+function appendChatMessage(role, text) {
+    const historyContainer = document.getElementById('aiChatHistory');
+    if (!historyContainer) return;
+
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'flex items-start gap-3 ' + (role === 'user' ? 'flex-row-reverse' : '');
+
+    let avatarHTML = '';
+    let bubbleClass = '';
+
+    if (role === 'user') {
+        avatarHTML = '<div class="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-gray-300 shrink-0"><i class="fas fa-user"></i></div>';
+        bubbleClass = 'bg-[#30D158]/10 border border-[#30D158]/20 rounded-2xl rounded-tr-sm p-3.5 text-white leading-relaxed max-w-[85%]';
+    } else if (role === 'ai') {
+        avatarHTML = '<div class="w-8 h-8 rounded-full bg-[#bf5af2]/20 border border-[#bf5af2]/40 flex items-center justify-center text-[#bf5af2] shrink-0 shadow-[0_0_10px_rgba(191,90,242,0.2)]"><i class="fas fa-brain"></i></div>';
+        bubbleClass = 'bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm p-3.5 text-gray-200 leading-relaxed max-w-[85%] shadow-md whitespace-pre-wrap';
+    } else {
+        avatarHTML = '<div class="w-8 h-8 rounded-full bg-[#ff1a33]/20 border border-[#ff1a33]/40 flex items-center justify-center text-[#ff1a33] shrink-0"><i class="fas fa-exclamation-triangle"></i></div>';
+        bubbleClass = 'bg-[#ff1a33]/10 border border-[#ff1a33]/20 rounded-2xl rounded-tl-sm p-3.5 text-[#ff1a33] leading-relaxed max-w-[85%] whitespace-pre-wrap';
+    }
+
+    msgDiv.innerHTML = `${avatarHTML}<div class="${bubbleClass}">${escapeAiMarkup(text)}</div>`;
+    historyContainer.appendChild(msgDiv);
+    historyContainer.scrollTop = historyContainer.scrollHeight;
+}
+
+async function sendAiChatMessage() {
+    const input = document.getElementById('aiChatInput');
+    const btn = document.getElementById('aiSendBtn');
+    if (!input || !btn) return;
+
+    const message = input.value.trim();
+    if (!message) return;
+
+    input.value = '';
+    input.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+    appendChatMessage('user', message);
+    chatMessageHistory.push({ role: 'user', content: message });
+
+    const recentSpins = history.slice(-60).map(s => s.num).join(', ');
+    const gaps = Object.entries(faceGaps).map(([face, gap]) => `F${face}:${gap}`).join(', ');
+    const systemContext = `SYSTEM CONTEXT (DO NOT MENTION THIS UNLESS RELEVANT): The user is playing roulette. Current Net Units: ${engineStats.netUnits}. Spins since last hit (Gaps): ${gaps}. Last 60 spins: ${recentSpins || 'None yet'}. Answer the user's question concisely like a professional data analyst.`;
+    const recentConversation = chatMessageHistory.slice(0, -1).slice(-8).map(entry => `${entry.role.toUpperCase()}: ${entry.content}`).join('\n');
+    const fullPrompt = `${systemContext}${recentConversation ? `\nRecent Conversation:\n${recentConversation}\n` : '\n'}\nUSER QUESTION: ${message}`;
+
+    try {
+        let responseText = '';
+
+        if (aiProvider === 'gemini') {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${aiApiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }] })
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) throw new Error((data.error && data.error.message) || `Gemini request failed (${res.status})`);
+            responseText = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]
+                ? data.candidates[0].content.parts[0].text
+                : 'No response returned by Gemini.';
+        } else if (aiProvider === 'openai') {
+            const res = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${aiApiKey}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4o-mini',
+                    messages: [{ role: 'user', content: fullPrompt }]
+                })
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) throw new Error((data.error && data.error.message) || `OpenAI request failed (${res.status})`);
+            responseText = data && data.choices && data.choices[0] && data.choices[0].message
+                ? data.choices[0].message.content
+                : 'No response returned by OpenAI.';
+        } else {
+            throw new Error("Provider not fully implemented yet.");
+        }
+
+        chatMessageHistory.push({ role: 'assistant', content: responseText });
+        if (chatMessageHistory.length > 12) {
+            chatMessageHistory = chatMessageHistory.slice(-12);
+        }
+        appendChatMessage('ai', responseText);
+    } catch (error) {
+        appendChatMessage('error', `Connection Error: ${error.message}`);
+    } finally {
+        input.disabled = false;
+        input.focus();
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+    }
 }
 
 function toggleModal(id) {

@@ -45,6 +45,10 @@
 
         <div class="flex gap-2 items-center">
 
+            <button onclick="openAiChat()" id="headerAiBtn" class="ios-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-[#bf5af2]/10 hover:bg-[#bf5af2]/20 text-[#bf5af2] font-semibold rounded-lg border border-[#bf5af2]/30 flex items-center justify-center gap-0 sm:gap-2 text-xs shadow-[0_0_10px_rgba(191,90,242,0.15)] transition-all">
+                <i class="fas fa-brain"></i> <span class="hidden sm:inline">AI CHAT</span>
+            </button>
+
             <div id="patternFilterShell" class="relative">
                 <button id="patternsToggleBtn" onclick="togglePatternFilterPopover()"
                     class="ios-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#BF5AF2] font-semibold rounded-lg border border-[#BF5AF2]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs pattern-toggle-btn">
@@ -179,6 +183,13 @@
                             class="w-7 h-7 rounded-md border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white text-sm font-black leading-none">+</button>
                     </div>
                 </div>
+            </div>
+            <div class="px-4 py-3 border-b border-white/5 hover:bg-white/10 transition-colors flex items-center justify-between cursor-pointer group" onclick="toggleModal('aiConfigModal')">
+                <div class="text-xs text-gray-300 group-hover:text-white flex items-center">
+                    <i class="fas fa-robot mr-3 text-[#30D158] w-4 text-center group-hover:scale-110 transition-transform"></i>
+                    AI Engine Configuration
+                </div>
+                <span id="aiStatusBadge" class="text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner">OFF</span>
             </div>
         </div>
 
@@ -382,6 +393,12 @@
                             </label>
                         </div>
                     </div>
+                    <div id="aiAnalysisContainer" class="hidden flex-col gap-3 mb-4">
+                        <button id="runAiBtn" onclick="runAiAnalysis()" class="w-full py-3 rounded-xl font-bold text-xs uppercase tracking-wider bg-gradient-to-r from-[#bf5af2]/20 to-[#0a84ff]/20 hover:from-[#bf5af2]/30 hover:to-[#0a84ff]/30 text-white border border-[#bf5af2]/30 transition-all shadow-[0_0_15px_rgba(191,90,242,0.15)] flex justify-center items-center gap-2">
+                            <i class="fas fa-brain text-[#bf5af2]"></i> Request AI Session Analysis
+                        </button>
+                        <div id="aiResponseBox" class="hidden p-4 rounded-xl border border-white/10 bg-[#0a0a0c]/80 text-gray-300 text-xs leading-relaxed max-h-[250px] overflow-y-auto custom-scroll whitespace-pre-wrap"></div>
+                    </div>
                     <div id="intelligenceContent"></div>
                 </div>
                 <div class="text-center pt-2">
@@ -446,6 +463,72 @@
                 <div class="flex gap-3">
                     <button onclick="toggleModal('confirmModal')" class="flex-1 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 transition-colors">Cancel</button>
                     <button id="confirmResetBtn" class="flex-1 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider bg-[#ff1a33]/20 hover:bg-[#ff1a33]/30 text-[#ff1a33] border border-[#ff1a33]/30 transition-colors shadow-[0_0_15px_rgba(255,26,51,0.2)]">Reset</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="aiConfigModal" class="fixed inset-0 z-[80] bg-black/60 backdrop-blur-md hidden flex items-center justify-center p-4" onclick="toggleModal('aiConfigModal')">
+        <div class="glass-menu w-full max-w-md flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+            <div class="p-4 glass-header flex justify-between items-center">
+                <h2 class="font-bold text-sm tracking-wide uppercase text-white"><i class="fas fa-brain mr-2 text-[#30D158]"></i> AI Prediction Engine</h2>
+                <button onclick="toggleModal('aiConfigModal')" class="text-gray-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-5">
+                <div class="flex items-center justify-between p-4 rounded-xl border border-white/10 bg-white/5">
+                    <div>
+                        <div class="text-sm font-bold text-white tracking-wide">Enable AI Analysis</div>
+                        <div class="text-[10px] text-gray-400 mt-1">Unlock session insights using advanced LLMs.</div>
+                    </div>
+                    <button id="aiMasterSwitch" onclick="toggleAiMasterSwitch()" class="w-12 h-6 rounded-full bg-white/10 border border-white/20 relative transition-colors duration-300">
+                        <div id="aiSwitchKnob" class="absolute left-1 top-1 w-4 h-4 rounded-full bg-gray-400 transition-transform duration-300"></div>
+                    </button>
+                </div>
+
+                <div id="aiVaultSection" class="hidden space-y-4 transition-all duration-300">
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 block">AI Provider</label>
+                        <select id="aiProviderSelect" class="w-full bg-black/50 border border-white/10 rounded-lg text-white text-xs p-3 outline-none focus:border-[#30D158]">
+                            <option value="gemini">Google Gemini (Recommended)</option>
+                            <option value="openai">ChatGPT (OpenAI)</option>
+                            <option value="deepseek">DeepSeek</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 block">Secure API Key (Local Storage Only)</label>
+                        <input type="password" id="aiApiKeyInput" class="w-full bg-black/50 border border-white/10 rounded-lg text-white text-xs p-3 outline-none focus:border-[#30D158]" placeholder="Paste your API key here...">
+                    </div>
+                    <div class="flex gap-3 pt-2">
+                        <button onclick="clearAiConfig()" class="flex-1 py-2.5 rounded-lg font-bold text-[10px] uppercase tracking-wider bg-[#ff1a33]/10 hover:bg-[#ff1a33]/20 text-[#ff1a33] border border-[#ff1a33]/30 transition-colors">Forget Key</button>
+                        <button id="saveAiBtn" onclick="saveAiConfig()" class="flex-[2] py-2.5 rounded-lg font-bold text-[10px] uppercase tracking-wider bg-[#30D158]/20 hover:bg-[#30D158]/30 text-[#30D158] border border-[#30D158]/30 transition-colors shadow-[0_0_15px_rgba(48,209,88,0.15)]">Secure & Connect</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="aiChatModal" class="fixed inset-0 z-[90] bg-black/60 backdrop-blur-md hidden flex items-center justify-center p-2 sm:p-4" onclick="toggleModal('aiChatModal')">
+        <div class="glass-menu w-full max-w-lg h-[85vh] flex flex-col overflow-hidden shadow-[0_0_40px_rgba(191,90,242,0.15)]" onclick="event.stopPropagation()">
+            <div class="p-4 glass-header flex justify-between items-center border-b border-[#bf5af2]/20">
+                <h2 class="font-bold text-sm tracking-wide uppercase text-white flex items-center"><i class="fas fa-robot mr-2 text-[#bf5af2] text-lg"></i> Session Analyst</h2>
+                <button onclick="toggleModal('aiChatModal')" class="text-gray-400 hover:text-white transition-colors w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div id="aiChatHistory" class="flex-1 overflow-y-auto p-4 space-y-5 custom-scroll text-xs bg-gradient-to-b from-transparent to-black/40">
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-full bg-[#bf5af2]/20 border border-[#bf5af2]/40 flex items-center justify-center text-[#bf5af2] shrink-0 shadow-[0_0_10px_rgba(191,90,242,0.2)]"><i class="fas fa-brain"></i></div>
+                    <div class="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm p-3.5 text-gray-200 leading-relaxed max-w-[85%] shadow-md">
+                        System online. I am monitoring your session data in real-time. Ask me about patterns, variance, or strategy recommendations.
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3 sm:p-4 glass-strip border-t border-white/5 bg-[#0a0a0c]/90">
+                <div class="flex gap-2 relative">
+                    <input type="text" id="aiChatInput" class="w-full bg-black/60 border border-white/10 rounded-xl text-white text-xs p-3.5 pr-12 outline-none focus:border-[#bf5af2]/50 focus:bg-black/80 transition-all shadow-inner" placeholder="Ask the AI about your session..." onkeypress="if(event.key === 'Enter') sendAiChatMessage()">
+                    <button id="aiSendBtn" onclick="sendAiChatMessage()" class="absolute right-1.5 top-1.5 bottom-1.5 w-10 rounded-lg bg-[#bf5af2]/20 hover:bg-[#bf5af2]/40 text-[#bf5af2] flex items-center justify-center transition-colors">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
                 </div>
             </div>
         </div>
