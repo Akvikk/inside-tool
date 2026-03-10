@@ -379,59 +379,141 @@ const PredictionEngine = {
         let markovSequenceLabel = null;
         let fatigueComboLabel = null;
 
-        if (validSpinCount >= 2 && hasFace(previousMask, 4) && hasFace(lastMask, 5)) {
-            targetFace = 4;
-            action = 'BET';
-            confidence = 92;
-            ruleKey = 'markov-4-5';
-            ruleLabel = 'Markov Trigger';
-            signalLabel = 'F4 -> F5';
-            detail = 'Latest two spins formed F4 -> F5, so the engine snaps back to Face 4.';
-            triggerFace = 5;
-            markovSequenceLabel = 'F4 -> F5';
-        } else if (validSpinCount >= 2 && hasFace(previousMask, 2) && hasFace(lastMask, 2)) {
-            targetFace = 5;
-            action = 'BET';
-            confidence = 88;
-            ruleKey = 'markov-2-2';
-            ruleLabel = 'Markov Trigger';
-            signalLabel = 'F2 -> F2';
-            detail = 'Latest two spins held on Face 2, so the engine rotates to Face 5.';
-            triggerFace = 2;
-            markovSequenceLabel = 'F2 -> F2';
-        } else if (faceGaps[5] >= 10) {
-            targetFace = 5;
-            action = 'BET_PROGRESSION_3';
-            confidence = clamp(74 + ((faceGaps[5] - 10) * 2), 74, 90);
-            ruleKey = 'elasticity-snapback';
-            ruleLabel = 'Elasticity Snapback';
-            signalLabel = 'Face 5 Gap';
-            detail = `Face 5 has slept ${faceGaps[5]} spins, so progression step 3 points back to Face 5.`;
-            triggerFace = 5;
+        if (typeof currentPredictionStrategy !== 'undefined' && currentPredictionStrategy === 'legacy-face') {
+            // --- LEGACY FACE PREDICTOR ---
+            if (validSpinCount >= 2 && hasFace(previousMask, 4) && hasFace(lastMask, 5)) {
+                targetFace = 4;
+                action = 'BET';
+                confidence = 92;
+                ruleKey = 'markov-4-5';
+                ruleLabel = 'Markov Trigger';
+                signalLabel = 'F4 -> F5';
+                detail = 'Latest two spins formed F4 -> F5, so the engine snaps back to Face 4.';
+                triggerFace = 5;
+                markovSequenceLabel = 'F4 -> F5';
+            } else if (validSpinCount >= 2 && hasFace(previousMask, 2) && hasFace(lastMask, 2)) {
+                targetFace = 5;
+                action = 'BET';
+                confidence = 88;
+                ruleKey = 'markov-2-2';
+                ruleLabel = 'Markov Trigger';
+                signalLabel = 'F2 -> F2';
+                detail = 'Latest two spins held on Face 2, so the engine rotates to Face 5.';
+                triggerFace = 2;
+                markovSequenceLabel = 'F2 -> F2';
+            } else if (faceGaps[5] >= 10) {
+                targetFace = 5;
+                action = 'BET_PROGRESSION_3';
+                confidence = clamp(74 + ((faceGaps[5] - 10) * 2), 74, 90);
+                ruleKey = 'elasticity-snapback';
+                ruleLabel = 'Elasticity Snapback';
+                signalLabel = 'Face 5 Gap';
+                detail = `Face 5 has slept ${faceGaps[5]} spins, so progression step 3 points back to Face 5.`;
+                triggerFace = 5;
+            } else {
+                for (let comboIndex = 0; comboIndex < exhaustedCombos.length; comboIndex++) {
+                    const combo = exhaustedCombos[comboIndex];
+                    const latestHasA = hasFace(lastMask, combo.a);
+                    const latestHasB = hasFace(lastMask, combo.b);
+
+                    if (latestHasA === latestHasB) continue;
+
+                    targetFace = latestHasA ? combo.a : combo.b;
+                    fadedFace = latestHasA ? combo.b : combo.a;
+                    action = 'BET_AGAINST';
+                    confidence = clamp(62 + ((combo.hits - 3) * 6), 62, 82);
+                    ruleKey = 'fatigue-inversion';
+                    ruleLabel = 'Fatigue Inversion';
+                    signalLabel = combo.label;
+                    detail = `${combo.label} hit ${combo.hits} times in the last ${stats14.windowSize} spins. Latest spin leaned Face ${targetFace}, so the engine fades Face ${fadedFace}.`;
+                    triggerFace = targetFace;
+                    focusCombo = combo;
+                    fatigueComboLabel = combo.label;
+                    break;
+                }
+            }
         } else {
-            for (let comboIndex = 0; comboIndex < exhaustedCombos.length; comboIndex++) {
-                const combo = exhaustedCombos[comboIndex];
-                const latestHasA = hasFace(lastMask, combo.a);
-                const latestHasB = hasFace(lastMask, combo.b);
+            // --- MOMENTUM & GAP FILTER STARTEGY ---
 
-                if (latestHasA === latestHasB) continue;
+            // 1. Find the highest momentum combo (must have >= 2 hits in 14 spins to be alive)
+            const aliveCombos = stats14.comboStats.filter(c => c.hits >= 2).sort((a, b) => b.hits - a.hits);
 
-                targetFace = latestHasA ? combo.a : combo.b;
-                fadedFace = latestHasA ? combo.b : combo.a;
-                action = 'BET_AGAINST';
-                confidence = clamp(62 + ((combo.hits - 3) * 6), 62, 82);
-                ruleKey = 'fatigue-inversion';
-                ruleLabel = 'Fatigue Inversion';
-                signalLabel = combo.label;
-                detail = `${combo.label} hit ${combo.hits} times in the last ${stats14.windowSize} spins. Latest spin leaned Face ${targetFace}, so the engine fades Face ${fadedFace}.`;
-                triggerFace = targetFace;
-                focusCombo = combo;
-                fatigueComboLabel = combo.label;
-                break;
+            if (aliveCombos.length > 0) {
+                const targetCombo = aliveCombos[0]; // The combo with the most momentum
+                const faceA = targetCombo.a;
+                const faceB = targetCombo.b;
+
+                const gapA = faceGaps[faceA] || 0;
+                const gapB = faceGaps[faceB] || 0;
+
+                const isASweetSpot = gapA >= 2 && gapA <= 9;
+                const isBSweetSpot = gapB >= 2 && gapB <= 9;
+                const isADeepSleep = gapA >= 10;
+                const isBDeepSleep = gapB >= 10;
+
+                // Evaluate the faces
+                if (isADeepSleep && isBDeepSleep) {
+                    // Both faces are dead. The combo is failing.
+                    action = 'SIT_OUT';
+                    confidence = 0;
+                    ruleKey = 'momentum-gap-fail';
+                    ruleLabel = 'Momentum & Gap (Failing)';
+                    signalLabel = 'SIT OUT';
+                    detail = `Combo ${targetCombo.label} has ${targetCombo.hits} hits, but both Face ${faceA} (Gap ${gapA}) and Face ${faceB} (Gap ${gapB}) are in a Deep Sleep. Combo is actively failing.`;
+                    focusCombo = targetCombo;
+                } else if (isASweetSpot && isBDeepSleep) {
+                    targetFace = faceA;
+                    action = 'BET_MOMENTUM_FACE';
+                    confidence = 88;
+                    ruleKey = 'momentum-gap-target';
+                    ruleLabel = 'Momentum & Gap Filter';
+                    signalLabel = `F${faceA} (on ${targetCombo.label})`;
+                    detail = `Combo ${targetCombo.label} has ${targetCombo.hits} hits. Face ${faceB} is in deep sleep (Gap ${gapB}), so Face ${faceA} (Gap ${gapA}) is the isolated target.`;
+                    focusCombo = targetCombo;
+                } else if (isBSweetSpot && isADeepSleep) {
+                    targetFace = faceB;
+                    action = 'BET_MOMENTUM_FACE';
+                    confidence = 88;
+                    ruleKey = 'momentum-gap-target';
+                    ruleLabel = 'Momentum & Gap Filter';
+                    signalLabel = `F${faceB} (on ${targetCombo.label})`;
+                    detail = `Combo ${targetCombo.label} has ${targetCombo.hits} hits. Face ${faceA} is in deep sleep (Gap ${gapA}), so Face ${faceB} (Gap ${gapB}) is the isolated target.`;
+                    focusCombo = targetCombo;
+                } else if (isASweetSpot && isBSweetSpot) {
+                    // Both are good. Pick the one that has slept slightly longer (more "due")
+                    targetFace = gapA >= gapB ? faceA : faceB;
+                    action = 'BET_MOMENTUM_FACE';
+                    confidence = 82;
+                    ruleKey = 'momentum-gap-target-dual';
+                    ruleLabel = 'Momentum & Gap Filter';
+                    signalLabel = `F${targetFace} (on ${targetCombo.label})`;
+                    detail = `Combo ${targetCombo.label} has ${targetCombo.hits} hits. Both faces are in the sweet spot. Face ${targetFace} has the higher gap (${gapA >= gapB ? gapA : gapB}), making it the optimal mathematical entry.`;
+                    focusCombo = targetCombo;
+                } else {
+                    // Messy state (e.g. gaps are 0 or 1, meaning they literally just hit and are repeating)
+                    // We don't bet on immediate repeaters unless forced.
+                    action = 'WAIT';
+                    confidence = 0;
+                    ruleKey = 'momentum-gap-wait';
+                    ruleLabel = 'Momentum & Gap Filter';
+                    signalLabel = 'WAIT';
+                    detail = `Combo ${targetCombo.label} has ${targetCombo.hits} hits, but faces are neither in sweet spots nor deep sleep. Waiting for clearer gap alignment.`;
+                    focusCombo = targetCombo;
+                }
+
+            } else {
+                // No combos are alive
+                action = 'SIT_OUT';
+                confidence = 0;
+                ruleKey = 'momentum-gap-dead';
+                ruleLabel = 'Momentum & Gap (Dead Table)';
+                signalLabel = 'SIT OUT';
+                detail = 'No Perimeter Combos have enough momentum (2+ hits in 14 spins). The table is chaotic or hitting pure dozen/column variants.';
             }
         }
 
         const confirmationCombo = focusCombo && stats5 && stats5.counts
+
             ? stats5.counts[focusCombo.label] || 0
             : 0;
 

@@ -167,6 +167,20 @@
                 id="predictionSubMenuIcon"></i>
         </div>
         <div id="predictionSubMenu" class="hidden bg-black/40 overflow-hidden transition-all duration-200">
+            <!-- Strategies Dropdown -->
+            <div class="px-4 py-3 border-b border-white/5 hover:bg-white/10 transition-colors">
+                <div class="flex flex-col gap-2">
+                    <label for="strategySelect" class="text-xs text-gray-300 flex items-center">
+                        <i class="fas fa-chess-knight mr-2 text-[#0A84FF]"></i>
+                        Active Strategy
+                    </label>
+                    <select id="strategySelect" onchange="changePredictionStrategy(this.value)" class="w-full bg-white/5 border border-white/10 text-white text-xs rounded p-2 outline-none appearance-none cursor-pointer focus:border-[#0A84FF]/50 transition-colors">
+                        <option value="momentum-gap" class="bg-gray-900">Momentum & Gap Filter</option>
+                        <option value="legacy-face" class="bg-gray-900">Legacy Face Predictor</option>
+                    </select>
+                </div>
+            </div>
+
             <div class="px-4 py-3 border-b border-white/5 hover:bg-white/10 transition-colors">
                 <div class="flex items-center justify-between">
                     <div class="text-xs text-gray-300 flex items-center">

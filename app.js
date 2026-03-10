@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿// --- CONFIGURATION ---
+﻿﻿// --- CONFIGURATION ---
 const RED_NUMS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
 const PERIMETER_RULE_KEY = 'Perimeter Rule';
 const PREDICTION_PERIMETER_PATTERN = 'Prediction Perimeter';
@@ -72,6 +72,7 @@ let userStats = {
     betLog: []
 };
 
+let currentPredictionStrategy = 'momentum-gap';
 let strategies = {};
 
 // --- PERSISTENCE ---
@@ -97,7 +98,8 @@ function saveSessionData() {
         advancementLog,
         neuralPredictionEnabled,
         aiSignalLedger,
-        aiRuntimeState
+        aiRuntimeState,
+        currentPredictionStrategy
     };
     try {
         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(data));
@@ -329,7 +331,7 @@ window.onload = async () => {
     hydrateIntelligenceMode();
     updatePredictionSettingsUI();
     updateAiUiState();
-    
+
     if (hasSession) {
         updateStopwatchDisplay();
         await syncPredictionEngine();
@@ -1216,9 +1218,9 @@ function updateAnalyticsHUD() {
 
     const hudLabel = document.getElementById('hudWindowValue');
     const hudScopeBtn = document.getElementById('hudScopeBtn');
-    
+
     const themeColor = isHudColdMode ? '#06b6d4' : '#30D158';
-    
+
     if (hudLabel) {
         hudLabel.innerText = getHudScopeSummary();
         hudLabel.style.color = themeColor;
@@ -1238,11 +1240,11 @@ function updateAnalyticsHUD() {
             ? `${themeColor}22`
             : 'rgba(255,255,255,0.10)';
     }
-    
+
     // Update Header Title based on mode
     const headerTitle = hud.querySelector('#hudHeader span');
     if (headerTitle) {
-        headerTitle.innerHTML = isHudColdMode 
+        headerTitle.innerHTML = isHudColdMode
             ? `<i class="fas fa-snowflake mr-1"></i> Cold Tracker`
             : `<i class="fas fa-satellite-dish mr-1"></i> Live Feed`;
         headerTitle.className = `text-[9px] font-bold tracking-[0.18em] uppercase ${isHudColdMode ? 'text-[#06b6d4]' : 'text-[#30D158]'}`;
@@ -1610,30 +1612,33 @@ function summarizeComboWindow(windowSize) {
 
 function buildAiTakeoverPrompt() {
     const recentSpins = history.slice(-80).map(s => s.num).join(', ') || 'None yet';
+    const recentHits = history.slice(-10).map(s => `F${FON_PRIMARY_FACE_MAP[s.num] || '?'}`).join(' -> ') || 'None yet';
     const gaps = Object.entries(faceGaps).map(([face, gap]) => `F${face}:${gap}`).join(', ');
     const mathSignal = engineSnapshot && engineSnapshot.currentPrediction
         ? `${engineSnapshot.currentPrediction.comboLabel} -> F${engineSnapshot.currentPrediction.targetFace} (${engineSnapshot.currentPrediction.confidence}%)`
         : 'No active math signal';
+    const currentStreak = engineStats.currentStreak > 0 ? `Winning ${engineStats.currentStreak}` : (engineStats.currentStreak < 0 ? `Losing ${Math.abs(engineStats.currentStreak)}` : 'Flat');
 
-    return `ROLE: You are the AI takeover engine for the roulette prediction cards.
-Task: Rank the four Perimeter Combos (5-2, 5-3, 1-3, 2-4), choose the single best next play, and return only strict JSON.
+    return `ROLE: You are an expert Roulette "Table Boss" standing over the player's shoulder. 
+Task: Read the live telemetry, the wheel rhythm, and the math engine's current signal. Decide if the math is correct or if it's walking into a trap because the table is acting weird (e.g., choppy, leaking, ghost patterns). Return strict JSON.
 
 Rules:
-- Use ONLY Faces (F1-F5), combo rhythm, combo rest, combo dominance, and recent wheel behavior.
-- If there is no clean edge, return SIT_OUT.
-- Keep the reason tactical and short.
+1. GRADE THE MATH: Provide a mathAssessment (AGREE, DISAGREE, IGNORE). If the math looks wrong based on the table, DISAGREE and SIT_OUT or provide a better target.
+2. GRADE THE TABLE: Provide a tableState (TRENDING, CHOPPY, FATIGUED). 
+3. PLAY OR PASS: If the math is right or you see a clean edge, return GO. If the table is chaotic and the math is walking into a trap, return SIT_OUT.
+4. Keep the reason tactical, explicitly mentioning the exact rhythm or why the math is right/wrong.
 
 Live Telemetry:
-- Net Units: ${engineStats.netUnits}
+- Net Units: ${engineStats.netUnits} (Streak: ${currentStreak})
 - Face Gaps: ${gaps}
 - 5-spin combos: ${summarizeComboWindow(5)}
 - 14-spin combos: ${summarizeComboWindow(14)}
-- 28-spin combos: ${summarizeComboWindow(28)}
 - Math engine read: ${mathSignal}
+- Last 10 hit rhythm: ${recentHits}
 - Last 80 spins: ${recentSpins}
 
 Return JSON only:
-{"status":"GO|WATCH|SIT_OUT","combo":"5-2|5-3|1-3|2-4|NONE","targetFace":1,"confidence":0,"mode":"TREND|INVERSION|WAIT","reason":"short tactical reason"}`;
+{"status":"GO|WATCH|SIT_OUT","combo":"5-2|5-3|1-3|2-4|NONE","targetFace":1,"confidence":0,"mode":"TREND|INVERSION|WAIT","mathAssessment":"AGREE|DISAGREE|IGNORE","tableState":"TRENDING|CHOPPY|FATIGUED","reason":"tactical table analysis"}`;
 }
 
 function getAiTakeoverSchema() {
@@ -1658,11 +1663,19 @@ function getAiTakeoverSchema() {
                 type: 'STRING',
                 enum: ['TREND', 'INVERSION', 'WAIT']
             },
+            mathAssessment: {
+                type: 'STRING',
+                enum: ['AGREE', 'DISAGREE', 'IGNORE']
+            },
+            tableState: {
+                type: 'STRING',
+                enum: ['TRENDING', 'CHOPPY', 'FATIGUED']
+            },
             reason: {
                 type: 'STRING'
             }
         },
-        required: ['status', 'combo', 'confidence', 'mode', 'reason']
+        required: ['status', 'combo', 'confidence', 'mode', 'mathAssessment', 'tableState', 'reason']
     };
 }
 
@@ -1681,6 +1694,8 @@ function salvageAiTakeoverPayload(rawText) {
     const statusMatch = text.match(/\b(GO|WATCH|SIT[\s_]?OUT)\b/i);
     const comboMatch = text.match(/\b(5-2|5-3|1-3|2-4|NONE)\b/i);
     const modeMatch = text.match(/\b(TREND|INVERSION|WAIT)\b/i);
+    const assessmentMatch = text.match(/\b(AGREE|DISAGREE|IGNORE)\b/i);
+    const tableStateMatch = text.match(/\b(TRENDING|CHOPPY|FATIGUED)\b/i);
     const faceMatch = text.match(/(?:targetFace|face)\s*[:=]?\s*["']?F?([1-5])["']?/i) || text.match(/\bF([1-5])\b/);
     const confidenceMatch = text.match(/(?:confidence)\s*[:=]?\s*["']?(\d{1,3})["']?/i) || text.match(/\b(\d{1,3})\s*%/);
     const reasonMatch = text.match(/(?:reason)\s*[:=]\s*["']([^"']+)["']/i);
@@ -1691,6 +1706,8 @@ function salvageAiTakeoverPayload(rawText) {
         targetFace: faceMatch ? Number(faceMatch[1]) : null,
         confidence: confidenceMatch ? Number(confidenceMatch[1]) : 0,
         mode: modeMatch ? modeMatch[1].toUpperCase() : 'WAIT',
+        mathAssessment: assessmentMatch ? assessmentMatch[1].toUpperCase() : 'IGNORE',
+        tableState: tableStateMatch ? tableStateMatch[1].toUpperCase() : 'CHOPPY',
         reason: reasonMatch ? reasonMatch[1].trim() : text.slice(0, 180) || 'No structured reason returned.'
     };
 
@@ -1796,32 +1813,40 @@ function updateAiFusionSnapshot(aiSignal = currentNeuralSignal) {
     const mathSignal = engineSnapshot && engineSnapshot.currentPrediction ? engineSnapshot.currentPrediction : null;
     let stance = 'NO_EDGE';
     let summary = 'No active AI or math edge.';
+    let mathAssessment = aiSignal && aiSignal.mathAssessment ? aiSignal.mathAssessment : 'IGNORE';
+    let tableState = aiSignal && aiSignal.tableState ? aiSignal.tableState : 'UNKNOWN';
 
     if (aiSignal && aiSignal.targetFace && mathSignal) {
-        stance = aiSignal.targetFace === mathSignal.targetFace ? 'AGREE' : 'CONFLICT';
-        summary = stance === 'AGREE'
-            ? `AI and math both point to F${aiSignal.targetFace}.`
-            : `AI points to F${aiSignal.targetFace} while math points to F${mathSignal.targetFace}.`;
+        if (mathAssessment === 'AGREE') {
+            stance = 'SYNCED';
+            summary = 'AI confirms engine logic.';
+        } else if (mathAssessment === 'DISAGREE') {
+            stance = 'DIVERGENT';
+            summary = `AI overriding math. (Table: ${tableState})`;
+        } else {
+            stance = 'NEUTRAL';
+            summary = `AI forming independent read. (Table: ${tableState})`;
+        }
     } else if (aiSignal && aiSignal.targetFace) {
         stance = 'AI_ONLY';
-        summary = `AI is active on ${aiSignal.comboLabel || 'its combo read'} while math is quiet.`;
+        summary = `AI acting without hard math trigger. (Table: ${tableState})`;
+    } else if (aiSignal && aiSignal.status === 'SIT_OUT') {
+        if (mathSignal) {
+            stance = 'AI_VETO';
+            summary = `AI vetoed math logic. (Table: ${tableState})`;
+        } else {
+            stance = 'MUTUAL_WAIT';
+            summary = `AI & Math both see noise. (Table: ${tableState})`;
+        }
     } else if (mathSignal) {
         stance = 'MATH_ONLY';
-        summary = `Math holds F${mathSignal.targetFace}; AI is standing down.`;
+        summary = 'Engine waiting for AI confirmation...';
     }
 
-    lastAiFusionSnapshot = {
-        stance,
-        summary,
-        aiCombo: aiSignal && aiSignal.comboLabel ? aiSignal.comboLabel : 'NONE',
-        aiFace: aiSignal && aiSignal.targetFace ? aiSignal.targetFace : null,
-        aiMode: aiSignal && aiSignal.mode ? aiSignal.mode : 'WAIT',
-        aiConfidence: aiSignal && Number.isFinite(aiSignal.confidence) ? aiSignal.confidence : 0,
-        mathCombo: mathSignal ? mathSignal.comboLabel : 'NONE',
-        mathFace: mathSignal ? mathSignal.targetFace : null,
-        mathConfidence: mathSignal && Number.isFinite(mathSignal.confidence) ? mathSignal.confidence : 0
-    };
+    lastAiFusionSnapshot = { stance, summary, mathSignal, aiSignal, mathAssessment, tableState };
+    renderAiFusionPanel();
 }
+
 
 function recordAiSignalInLedger(signal) {
     if (!signal || signal.signalSource !== 'ai' || !signal.targetFace) return;
@@ -2030,6 +2055,8 @@ async function requestNeuralPrediction(options = {}) {
             const mode = String(jsonResponse.mode || 'WAIT').trim().toUpperCase().replace(/\s+/g, '_');
             const confidence = Math.max(0, Math.min(100, Math.round(Number(jsonResponse.confidence) || 0)));
             const reason = String(jsonResponse.reason || 'No tactical reason returned.').trim();
+            const mathAssessment = String(jsonResponse.mathAssessment || 'IGNORE').trim().toUpperCase().replace(/\s+/g, '_');
+            const tableState = String(jsonResponse.tableState || 'CHOPPY').trim().toUpperCase().replace(/\s+/g, '_');
             const normalizedTargetFace = Number.isInteger(targetFace) && targetFace >= 1 && targetFace <= 5 ? targetFace : null;
 
             if (requestId !== neuralPredictionRequestId || !neuralPredictionEnabled) return currentNeuralSignal;
@@ -2041,12 +2068,14 @@ async function requestNeuralPrediction(options = {}) {
                 strategy: AI_TAKEOVER_PATTERN,
                 targetFace: status === 'SIT_OUT' ? null : normalizedTargetFace,
                 accentColor: '#bf5af2',
-                subtitle: `${mode}${confidence ? ` • ${confidence}%` : ''}`,
+                subtitle: `${mode} | MATH: ${mathAssessment}${confidence ? ` • ${confidence}%` : ''}`,
                 reason,
                 confidence,
                 confirmed: false,
                 comboLabel,
                 mode,
+                mathAssessment,
+                tableState,
                 status
             };
 
@@ -2069,6 +2098,8 @@ async function requestNeuralPrediction(options = {}) {
                 confirmed: false,
                 comboLabel: 'NONE',
                 mode: 'WAIT',
+                mathAssessment: 'IGNORE',
+                tableState: 'CHOPPY',
                 status: 'SIT_OUT'
             };
             return applyAiSignal({ ...aiPredictionCacheSignal });
@@ -2105,7 +2136,7 @@ function setPerimeterWindow(val) {
     if (nextWindow === predictionPerimeterWindow) return;
 
     predictionPerimeterWindow = nextWindow;
-    
+
     updatePredictionSettingsUI();
     void refreshPredictionEngineUI();
 }
@@ -2509,10 +2540,21 @@ function renderAiFusionPanel() {
         return;
     }
 
+    const aiConfidence = fusion.aiSignal && fusion.aiSignal.confidence ? fusion.aiSignal.confidence : 0;
+    const mathConfidence = fusion.mathSignal && fusion.mathSignal.confidence ? fusion.mathSignal.confidence : 0;
+    const aiCombo = fusion.aiSignal && fusion.aiSignal.comboLabel ? fusion.aiSignal.comboLabel : 'NONE';
+    const mathCombo = fusion.mathSignal && fusion.mathSignal.comboLabel ? fusion.mathSignal.comboLabel : 'NONE';
+    const aiFace = fusion.aiSignal && fusion.aiSignal.targetFace ? fusion.aiSignal.targetFace : null;
+    const mathFace = fusion.mathSignal && fusion.mathSignal.targetFace ? fusion.mathSignal.targetFace : null;
+
+
     const tone = {
-        AGREE: { color: '#30D158', border: 'rgba(48,209,88,0.25)', bg: 'rgba(48,209,88,0.08)' },
-        CONFLICT: { color: '#FF9F0A', border: 'rgba(255,159,10,0.25)', bg: 'rgba(255,159,10,0.08)' },
+        SYNCED: { color: '#30D158', border: 'rgba(48,209,88,0.25)', bg: 'rgba(48,209,88,0.08)' },
+        DIVERGENT: { color: '#FF9F0A', border: 'rgba(255,159,10,0.25)', bg: 'rgba(255,159,10,0.08)' },
+        NEUTRAL: { color: '#FFD60A', border: 'rgba(255,214,10,0.25)', bg: 'rgba(255,214,10,0.08)' },
         AI_ONLY: { color: '#bf5af2', border: 'rgba(191,90,242,0.25)', bg: 'rgba(191,90,242,0.08)' },
+        AI_VETO: { color: '#ff1a33', border: 'rgba(255,26,51,0.25)', bg: 'rgba(255,26,51,0.08)' },
+        MUTUAL_WAIT: { color: 'rgba(255,255,255,0.7)', border: 'rgba(255,255,255,0.15)', bg: 'rgba(255,255,255,0.08)' },
         MATH_ONLY: { color: '#64D2FF', border: 'rgba(100,210,255,0.25)', bg: 'rgba(100,210,255,0.08)' },
         NO_EDGE: { color: 'rgba(255,255,255,0.55)', border: 'rgba(255,255,255,0.1)', bg: 'rgba(255,255,255,0.05)' }
     }[fusion.stance] || { color: 'rgba(255,255,255,0.55)', border: 'rgba(255,255,255,0.1)', bg: 'rgba(255,255,255,0.05)' };
@@ -2521,17 +2563,17 @@ function renderAiFusionPanel() {
         <div class="rounded-xl border p-3" style="color:${tone.color}; border-color:${tone.border}; background:${tone.bg};">
             <div class="flex items-center justify-between gap-3">
                 <div class="text-[10px] font-black uppercase tracking-[0.16em]">${escapeAiMarkup(fusion.stance)}</div>
-                <div class="text-[9px] text-white/45 font-mono">AI ${fusion.aiConfidence}% / Math ${fusion.mathConfidence}%</div>
+                <div class="text-[9px] text-white/45 font-mono">AI ${aiConfidence}% / Math ${mathConfidence}%</div>
             </div>
             <div class="mt-2 text-[11px] leading-relaxed text-white/75">${escapeAiMarkup(fusion.summary)}</div>
             <div class="mt-3 grid grid-cols-2 gap-3 text-[10px]">
                 <div class="rounded-lg border border-white/10 bg-black/20 p-2">
                     <div class="text-white/35 uppercase tracking-[0.14em] text-[8px] font-black">AI Read</div>
-                    <div class="mt-1 font-bold text-[#bf5af2]">${escapeAiMarkup(fusion.aiCombo)}${fusion.aiFace ? ` -> F${fusion.aiFace}` : ''}</div>
+                    <div class="mt-1 font-bold text-[#bf5af2]">${escapeAiMarkup(aiCombo)}${aiFace ? ` -> F${aiFace}` : ''}</div>
                 </div>
                 <div class="rounded-lg border border-white/10 bg-black/20 p-2">
                     <div class="text-white/35 uppercase tracking-[0.14em] text-[8px] font-black">Math Read</div>
-                    <div class="mt-1 font-bold text-[#64D2FF]">${escapeAiMarkup(fusion.mathCombo)}${fusion.mathFace ? ` -> F${fusion.mathFace}` : ''}</div>
+                    <div class="mt-1 font-bold text-[#64D2FF]">${escapeAiMarkup(mathCombo)}${mathFace ? ` -> F${mathFace}` : ''}</div>
                 </div>
             </div>
         </div>
@@ -3581,15 +3623,28 @@ function resetAiChatUi() {
 }
 
 function generateAiPrompt() {
-    const recentSpins = history.slice(-50).map(s => s.num).join(', ');
+    const recentSpins = history.slice(-60).map(s => s.num).join(', ');
+    const recentHits = history.slice(-10).map(s => `F${FON_PRIMARY_FACE_MAP[s.num] || '?'}`).join(' -> ') || 'None yet';
     const gaps = Object.entries(faceGaps).map(([face, gap]) => `F${face}:${gap}`).join(', ');
     const stats = `Wins: ${engineStats.totalWins}, Losses: ${engineStats.totalLosses}, Net: ${engineStats.netUnits}`;
+    const totalSignals = engineStats.totalWins + engineStats.totalLosses;
+    const hitRate = totalSignals === 0 ? 0 : Math.round((engineStats.totalWins / totalSignals) * 100);
+    const combos = PERIMETER_COMBOS.map(c => c.label).join(', ');
 
-    return `You are an expert roulette data scientist. Analyze this session and give me a strict, 3-sentence tactical recommendation. Do NOT give generic advice. Be highly specific about variance, fatigue, or patterns.
-Current Stats: ${stats}
-Face Gaps (Spins since last hit): ${gaps}
-Last 50 Spins (oldest to newest): ${recentSpins}
-What is the exact mathematical play right now, or should I walk away?`;
+    return `ROLE: You are an expert Roulette "Table Boss" and data forensic analyst.
+Perform a deep, forensic analysis on the physical variance and math engine's hit rate.
+
+LIVE TELEMETRY:
+- Session Stats: ${stats} (Global Hit Rate: ${hitRate}%)
+- Current Wheel Gaps: ${gaps}
+- Last 10 hitting Rhythm: ${recentHits}
+- Last 60 spins (Oldest -> Newest): ${recentSpins}
+
+TASK:
+Provide a strict, 3-sentence tactical breakdown of the table. 
+1. Is the wheel "Chopping" or "Trending" on specific combo zones (${combos})?
+2. Is the math engine getting chopped up by variance (look at the Hit Rate and Net Units)?
+3. What is the explicit physical play right now, or should the player walk away? Do NOT give generic advice.`;
 }
 
 async function runAiAnalysis() {
@@ -3681,21 +3736,20 @@ async function sendAiChatMessage() {
     chatMessageHistory.push({ role: 'user', content: message });
 
     const systemInstruction = `
-ROLE: You are the "FON Combo Strategist." Your goal is to maximize the efficiency of the Perimeter Combo game (5-2, 5-3, 1-3, 2-4).
+ROLE: You are an expert Roulette "Table Boss" standing right over the player's shoulder. Your goal is to keep them grounded and read the wheel rhythms.
 
 SMART PLAY PROTOCOL:
-1. COMBO VELOCITY: Do not just bet because a combo hit 3 times in 14 spins. Analyze the "Rest" between hits. If a combo hits 3 times in 5 spins, it is "Leaking" (Trending). STAND DOWN.
-2. THE SNAPBACK WINDOW: The "Smart" entry is when a fatigued combo has NOT hit for the last 4-6 spins, suggesting the "Sticky" phase has ended and the "Inversion" is imminent.
-3. DOMINANCE FILTER: Identify the "Dominant Combo" (highest hit rate) versus the "Runner Up." If the Dominant Combo is currently "Hot," do not bet against it until you see a "Rhythm Break" (two consecutive misses).
+1. THE RHYTHM: You don't just care about the Math; you care about the Table. If a Combo hits 3 times in 8 spins, it is "Trending." If a Combo hasn't hit in 20 spins, don't blindly bet it—it might be dead. Wait for a "Snapback" (a miss after a hit).
+2. GHOST PATTERNS: Look for patterns that aren't in the rules but are repeating on the physical wheel right now (e.g., F1 -> F3 -> F1 -> F3).
 
 ADVERSARIAL TASKS:
-- Check the current Net Units: ${engineStats.netUnits}. If losing, identify which Combo is currently "Breaking the Math."
-- Look at the last 60 spins: ${history.slice(-60).map(s => s.num).join(', ')}. Find the "Ghost Combo"—a pattern that isn't in the rules but is repeating on the wheel right now.
-- Provide ONE "Smart Entry" for the next 5 spins. If none exist, strictly command the user to "SIT OUT."
+- Check the current Net Units: ${engineStats.netUnits}. If losing, the table is choppy. Tell the user to tighten up.
+- Look at the last 10 hits: ${history.slice(-10).map(s => `F${FON_PRIMARY_FACE_MAP[s.num] || '?'}`).join(' -> ') || 'None'}. Provide a "Smart Entry" based on this physical rhythm.
+- If the table is pure chaos, strictly command the user to "SIT OUT."
 
 STRICT DATA LIMIT:
-- Use ONLY Faces (F1-F5) and the 4 Perimeter Combos.
-- NO generic advice. NO Dozens/Columns.
+- Use ONLY Faces (F1-F5) and the 4 Perimeter Combos (5-2, 5-3, 1-3, 2-4).
+- TALK LIKE A TABLE BOSS. Short, punchy sentences.
 `;
     const recentConversation = chatMessageHistory.slice(0, -1).slice(-6).map(entry => `${entry.role.toUpperCase()}: ${entry.content}`).join('\n');
     const fullPrompt = `${systemInstruction}\n\nRECENT CONVERSATION:\n${recentConversation}\n\nUSER INPUT: ${message}`;
