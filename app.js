@@ -2,9 +2,11 @@
 const RED_NUMS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
 const PERIMETER_RULE_KEY = 'Perimeter Rule';
 const PREDICTION_PERIMETER_PATTERN = 'Prediction Perimeter';
+const AI_TAKEOVER_PATTERN = 'AI Takeover';
 const ENGINE_PRIMARY_WINDOW = 14;
 const ENGINE_CONFIRMATION_WINDOW = 5;
 const HUD_RECENT_WINDOW = 14;
+const GEMINI_MODEL = 'gemini-2.5-flash';
 const INTELLIGENCE_VIEW_KEY = 'insideTool.intelligenceViewMode';
 const INTELLIGENCE_VIEWS = ['brief', 'diagnostic', 'minimal'];
 const PATTERN_FILTER_META = Object.fromEntries(
@@ -30,6 +32,25 @@ let aiEnabled = false;
 let aiProvider = 'gemini';
 let aiApiKey = '';
 let chatMessageHistory = [];
+let advancementLog = [];
+let neuralPredictionEnabled = false;
+let currentNeuralSignal = null;
+let neuralPredictionRequestId = 0;
+let aiSignalLedger = [];
+let lastAiFusionSnapshot = null;
+let aiPredictionCacheKey = '';
+let aiPredictionCacheSignal = null;
+let aiPredictionInFlight = null;
+let aiRuntimeState = {
+    status: 'IDLE',
+    provider: 'gemini',
+    lastError: '',
+    lastRequestMode: '',
+    lastLatencyMs: 0,
+    lastPromptPreview: '',
+    lastResponsePreview: '',
+    lastUpdatedLabel: 'Never'
+};
 
 // Constants PERIMETER_COMBOS and FACES are already defined in predictionEngine.js
 // Removing duplicate declarations to prevent SyntaxError
@@ -72,7 +93,11 @@ function saveSessionData() {
         hudHistoryScope,
         aiEnabled,
         aiProvider,
-        aiApiKey
+        aiApiKey,
+        advancementLog,
+        neuralPredictionEnabled,
+        aiSignalLedger,
+        aiRuntimeState
     };
     try {
         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(data));
@@ -123,6 +148,10 @@ function loadSessionData() {
         if (data.aiEnabled !== undefined) aiEnabled = data.aiEnabled;
         if (typeof data.aiProvider === 'string' && data.aiProvider) aiProvider = data.aiProvider;
         if (typeof data.aiApiKey === 'string') aiApiKey = data.aiApiKey;
+        if (Array.isArray(data.advancementLog)) advancementLog = data.advancementLog;
+        if (data.neuralPredictionEnabled !== undefined) neuralPredictionEnabled = data.neuralPredictionEnabled === true;
+        if (Array.isArray(data.aiSignalLedger)) aiSignalLedger = data.aiSignalLedger;
+        if (data.aiRuntimeState && typeof data.aiRuntimeState === 'object') aiRuntimeState = { ...aiRuntimeState, ...data.aiRuntimeState };
         updateAiUiState();
         return true;
     } catch (e) {
@@ -232,6 +261,25 @@ function performReset() {
     activeBets = [];
     spinProcessingQueue = Promise.resolve();
     chatMessageHistory = [];
+    advancementLog = [];
+    neuralPredictionEnabled = false;
+    currentNeuralSignal = null;
+    neuralPredictionRequestId++;
+    aiSignalLedger = [];
+    lastAiFusionSnapshot = null;
+    aiPredictionCacheKey = '';
+    aiPredictionCacheSignal = null;
+    aiPredictionInFlight = null;
+    aiRuntimeState = {
+        status: 'IDLE',
+        provider: aiProvider,
+        lastError: '',
+        lastRequestMode: '',
+        lastLatencyMs: 0,
+        lastPromptPreview: '',
+        lastResponsePreview: '',
+        lastUpdatedLabel: 'Never'
+    };
     faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
     window.currentAlerts = [];
     engineSnapshot = createEmptyEngineSnapshot(0);
@@ -266,6 +314,7 @@ function performReset() {
     if (body) body.innerHTML = '';
 
     resetAiChatUi();
+    updateNeuralPredictionUi();
     saveSessionData();
 }
 
@@ -292,11 +341,17 @@ window.onload = async () => {
     } else {
         engineSnapshot = createEmptyEngineSnapshot(0);
     }
-    
+
+    settleAiSignalLedger();
+    refreshAdvancementStates();
+    updateAiFusionSnapshot(currentNeuralSignal);
     updatePerimeterAnalytics();
     updateAnalyticsHUD();
     applyAnalyticsTabUI();
     renderDashboard(window.currentAlerts || []);
+    if (neuralPredictionEnabled && aiEnabled && aiApiKey) {
+        void requestNeuralPrediction();
+    }
 
     document.getElementById('spinInput').focus();
     document.getElementById('spinInput').addEventListener("keypress", (e) => {
@@ -1400,6 +1455,7 @@ function updatePredictionSettingsUI() {
     if (windowLabel) {
         windowLabel.innerText = `${predictionPerimeterWindow} Spins`;
     }
+    updateNeuralPredictionUi();
 }
 
 function updatePerimeterAnalytics() {
@@ -1512,9 +1568,523 @@ function calculatePerimeterStats(history, windowSize = 14) {
 
 async function refreshPredictionEngineUI() {
     await scanAllStrategies();
+    if (neuralPredictionEnabled && aiEnabled && aiApiKey) {
+        await requestNeuralPrediction({ renderDashboardNow: false, force: true });
+    }
     updateVisibility();
     updatePerimeterAnalytics();
     updateAnalyticsHUD();
+}
+
+function stampAiRuntimeState(nextState = {}) {
+    aiRuntimeState = {
+        ...aiRuntimeState,
+        provider: aiProvider,
+        lastUpdatedLabel: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        ...nextState
+    };
+
+    const analyticsModal = document.getElementById('analyticsModal');
+    if (analyticsModal && !analyticsModal.classList.contains('hidden') && currentAnalyticsTab === 'advancements') {
+        renderAdvancementLog();
+    }
+}
+
+function classifyAiRuntimeStatus(message) {
+    const text = String(message || '').toLowerCase();
+    if (!text) return 'ERROR';
+    if (text.includes('quota') || text.includes('billing')) return 'QUOTA';
+    if (text.includes('rate limit') || text.includes('resource_exhausted') || text.includes('too many requests')) return 'RATE_LIMIT';
+    if (text.includes('invalid') || text.includes('api key') || text.includes('unauthorized') || text.includes('permission')) return 'INVALID_KEY';
+    if (text.includes('model') && text.includes('not found')) return 'MODEL_ERROR';
+    if (text.includes('network') || text.includes('failed to fetch')) return 'NETWORK';
+    return 'ERROR';
+}
+
+function summarizeComboWindow(windowSize) {
+    const stats = calculatePerimeterStats(history, windowSize);
+    return sortEngineReadCombos(getComboCoverageStats(stats)).map(combo =>
+        `${combo.label}: ${combo.hits} hits, hot ${combo.hotPercent}%, cold ${combo.coldPercent}%, rest ${combo.lastSeenDistance ?? '-'}`
+    ).join(' | ');
+}
+
+function buildAiTakeoverPrompt() {
+    const recentSpins = history.slice(-80).map(s => s.num).join(', ') || 'None yet';
+    const gaps = Object.entries(faceGaps).map(([face, gap]) => `F${face}:${gap}`).join(', ');
+    const mathSignal = engineSnapshot && engineSnapshot.currentPrediction
+        ? `${engineSnapshot.currentPrediction.comboLabel} -> F${engineSnapshot.currentPrediction.targetFace} (${engineSnapshot.currentPrediction.confidence}%)`
+        : 'No active math signal';
+
+    return `ROLE: You are the AI takeover engine for the roulette prediction cards.
+Task: Rank the four Perimeter Combos (5-2, 5-3, 1-3, 2-4), choose the single best next play, and return only strict JSON.
+
+Rules:
+- Use ONLY Faces (F1-F5), combo rhythm, combo rest, combo dominance, and recent wheel behavior.
+- If there is no clean edge, return SIT_OUT.
+- Keep the reason tactical and short.
+
+Live Telemetry:
+- Net Units: ${engineStats.netUnits}
+- Face Gaps: ${gaps}
+- 5-spin combos: ${summarizeComboWindow(5)}
+- 14-spin combos: ${summarizeComboWindow(14)}
+- 28-spin combos: ${summarizeComboWindow(28)}
+- Math engine read: ${mathSignal}
+- Last 80 spins: ${recentSpins}
+
+Return JSON only:
+{"status":"GO|WATCH|SIT_OUT","combo":"5-2|5-3|1-3|2-4|NONE","targetFace":1,"confidence":0,"mode":"TREND|INVERSION|WAIT","reason":"short tactical reason"}`;
+}
+
+function getAiTakeoverSchema() {
+    return {
+        type: 'OBJECT',
+        properties: {
+            status: {
+                type: 'STRING',
+                enum: ['GO', 'WATCH', 'SIT_OUT']
+            },
+            combo: {
+                type: 'STRING',
+                enum: ['5-2', '5-3', '1-3', '2-4', 'NONE']
+            },
+            targetFace: {
+                type: 'NUMBER'
+            },
+            confidence: {
+                type: 'NUMBER'
+            },
+            mode: {
+                type: 'STRING',
+                enum: ['TREND', 'INVERSION', 'WAIT']
+            },
+            reason: {
+                type: 'STRING'
+            }
+        },
+        required: ['status', 'combo', 'confidence', 'mode', 'reason']
+    };
+}
+
+function extractAiJsonPayload(rawText) {
+    const normalizedText = String(rawText || '')
+        .trim()
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/\s*```$/i, '');
+    const jsonMatch = normalizedText.match(/\{[\s\S]*\}/);
+    return JSON.parse(jsonMatch ? jsonMatch[0] : normalizedText);
+}
+
+function salvageAiTakeoverPayload(rawText) {
+    const text = String(rawText || '').trim();
+    const statusMatch = text.match(/\b(GO|WATCH|SIT[\s_]?OUT)\b/i);
+    const comboMatch = text.match(/\b(5-2|5-3|1-3|2-4|NONE)\b/i);
+    const modeMatch = text.match(/\b(TREND|INVERSION|WAIT)\b/i);
+    const faceMatch = text.match(/(?:targetFace|face)\s*[:=]?\s*["']?F?([1-5])["']?/i) || text.match(/\bF([1-5])\b/);
+    const confidenceMatch = text.match(/(?:confidence)\s*[:=]?\s*["']?(\d{1,3})["']?/i) || text.match(/\b(\d{1,3})\s*%/);
+    const reasonMatch = text.match(/(?:reason)\s*[:=]\s*["']([^"']+)["']/i);
+
+    const payload = {
+        status: statusMatch ? statusMatch[1].toUpperCase().replace(/\s+/g, '_') : 'SIT_OUT',
+        combo: comboMatch ? comboMatch[1].toUpperCase() : 'NONE',
+        targetFace: faceMatch ? Number(faceMatch[1]) : null,
+        confidence: confidenceMatch ? Number(confidenceMatch[1]) : 0,
+        mode: modeMatch ? modeMatch[1].toUpperCase() : 'WAIT',
+        reason: reasonMatch ? reasonMatch[1].trim() : text.slice(0, 180) || 'No structured reason returned.'
+    };
+
+    if (payload.status === 'SIT_OUT') {
+        payload.targetFace = null;
+    }
+
+    return payload;
+}
+
+async function requestAiText(promptText, options = {}) {
+    if (!aiApiKey) {
+        throw new Error('AI key is not configured.');
+    }
+
+    const temperature = typeof options.temperature === 'number' ? options.temperature : 0.2;
+    const maxOutputTokens = Number.isFinite(options.maxOutputTokens) ? options.maxOutputTokens : 700;
+    const requestMode = options.requestMode || 'generic';
+    const responseMimeType = options.responseMimeType || null;
+    const responseSchema = options.responseSchema || null;
+    const startedAt = Date.now();
+
+    stampAiRuntimeState({
+        status: 'WORKING',
+        lastError: '',
+        lastRequestMode: requestMode,
+        lastPromptPreview: String(promptText || '').slice(0, 260)
+    });
+
+    try {
+        let responseText = '';
+
+        if (aiProvider === 'gemini') {
+            const generationConfig = {
+                temperature,
+                topP: 0.8,
+                maxOutputTokens
+            };
+            if (responseMimeType) generationConfig.responseMimeType = responseMimeType;
+            if (responseSchema) generationConfig.responseSchema = responseSchema;
+
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-goog-api-key': aiApiKey
+                },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: promptText }] }],
+                    generationConfig
+                })
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) throw new Error((data.error && data.error.message) || `Gemini request failed (${res.status})`);
+            responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        } else if (aiProvider === 'openai') {
+            const res = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${aiApiKey}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4o-mini',
+                    temperature,
+                    max_tokens: maxOutputTokens,
+                    messages: [{ role: 'user', content: promptText }],
+                    ...(responseMimeType === 'application/json'
+                        ? { response_format: { type: 'json_object' } }
+                        : {})
+                })
+            });
+            const data = await res.json();
+            if (!res.ok || data.error) throw new Error((data.error && data.error.message) || `OpenAI request failed (${res.status})`);
+            responseText = data?.choices?.[0]?.message?.content || '';
+        } else {
+            throw new Error("Provider not fully implemented yet.");
+        }
+
+        stampAiRuntimeState({
+            status: 'CONNECTED',
+            lastLatencyMs: Date.now() - startedAt,
+            lastResponsePreview: String(responseText || '').slice(0, 260)
+        });
+        return responseText || 'No response returned by provider.';
+    } catch (error) {
+        stampAiRuntimeState({
+            status: classifyAiRuntimeStatus(error && error.message),
+            lastError: error && error.message ? error.message : 'Unknown AI error',
+            lastLatencyMs: Date.now() - startedAt
+        });
+        throw error;
+    }
+}
+
+function spinContainsFace(spin, faceId) {
+    if (!spin || !Number.isInteger(faceId)) return false;
+    const mask = Object.prototype.hasOwnProperty.call(FON_MASK_MAP, spin.num) ? FON_MASK_MAP[spin.num] : 0;
+    return (mask & FACE_MASKS[faceId]) !== 0;
+}
+
+function updateAiFusionSnapshot(aiSignal = currentNeuralSignal) {
+    const mathSignal = engineSnapshot && engineSnapshot.currentPrediction ? engineSnapshot.currentPrediction : null;
+    let stance = 'NO_EDGE';
+    let summary = 'No active AI or math edge.';
+
+    if (aiSignal && aiSignal.targetFace && mathSignal) {
+        stance = aiSignal.targetFace === mathSignal.targetFace ? 'AGREE' : 'CONFLICT';
+        summary = stance === 'AGREE'
+            ? `AI and math both point to F${aiSignal.targetFace}.`
+            : `AI points to F${aiSignal.targetFace} while math points to F${mathSignal.targetFace}.`;
+    } else if (aiSignal && aiSignal.targetFace) {
+        stance = 'AI_ONLY';
+        summary = `AI is active on ${aiSignal.comboLabel || 'its combo read'} while math is quiet.`;
+    } else if (mathSignal) {
+        stance = 'MATH_ONLY';
+        summary = `Math holds F${mathSignal.targetFace}; AI is standing down.`;
+    }
+
+    lastAiFusionSnapshot = {
+        stance,
+        summary,
+        aiCombo: aiSignal && aiSignal.comboLabel ? aiSignal.comboLabel : 'NONE',
+        aiFace: aiSignal && aiSignal.targetFace ? aiSignal.targetFace : null,
+        aiMode: aiSignal && aiSignal.mode ? aiSignal.mode : 'WAIT',
+        aiConfidence: aiSignal && Number.isFinite(aiSignal.confidence) ? aiSignal.confidence : 0,
+        mathCombo: mathSignal ? mathSignal.comboLabel : 'NONE',
+        mathFace: mathSignal ? mathSignal.targetFace : null,
+        mathConfidence: mathSignal && Number.isFinite(mathSignal.confidence) ? mathSignal.confidence : 0
+    };
+}
+
+function recordAiSignalInLedger(signal) {
+    if (!signal || signal.signalSource !== 'ai' || !signal.targetFace) return;
+
+    const existing = aiSignalLedger[0];
+    if (existing &&
+        existing.issuedAfterSpin === history.length &&
+        existing.comboLabel === signal.comboLabel &&
+        existing.targetFace === signal.targetFace) {
+        return;
+    }
+
+    aiSignalLedger.unshift({
+        id: Date.now() + Math.random(),
+        issuedAfterSpin: history.length,
+        comboLabel: signal.comboLabel || 'NONE',
+        targetFace: signal.targetFace,
+        mode: signal.mode || 'WAIT',
+        confidence: Number.isFinite(signal.confidence) ? signal.confidence : 0,
+        reason: signal.reason || signal.subtitle || '',
+        stance: lastAiFusionSnapshot ? lastAiFusionSnapshot.stance : 'UNKNOWN',
+        provider: aiProvider,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        outcome1: null,
+        outcome3: null,
+        outcome5: null
+    });
+
+    if (aiSignalLedger.length > 40) {
+        aiSignalLedger = aiSignalLedger.slice(0, 40);
+    }
+}
+
+function settleAiSignalLedger() {
+    aiSignalLedger.forEach(entry => {
+        [1, 3, 5].forEach(horizon => {
+            const key = `outcome${horizon}`;
+            if (entry[key] !== null) return;
+            if (history.length < entry.issuedAfterSpin + horizon) return;
+
+            let hit = false;
+            for (let index = entry.issuedAfterSpin; index < entry.issuedAfterSpin + horizon; index++) {
+                if (spinContainsFace(history[index], entry.targetFace)) {
+                    hit = true;
+                    break;
+                }
+            }
+            entry[key] = hit ? 'HIT' : 'MISS';
+        });
+    });
+}
+
+function refreshAdvancementStates() {
+    advancementLog = advancementLog.map(entry => ({
+        ...entry,
+        state: history.length - entry.spin >= 5 ? 'expired' : 'active'
+    }));
+}
+
+function buildPredictionLogSignal(signal) {
+    return {
+        patternName: signal.patternName || AI_TAKEOVER_PATTERN,
+        signalSource: signal.signalSource || 'math',
+        targetFace: Number.isInteger(signal.targetFace) ? signal.targetFace : null,
+        comboLabel: signal.comboLabel || null,
+        confidence: Number.isFinite(signal.confidence) ? signal.confidence : null,
+        reason: signal.reason || signal.subtitle || '',
+        mode: signal.mode || null,
+        status: signal.status || 'GO'
+    };
+}
+
+function updateNeuralPredictionUi() {
+    const btn = document.getElementById('neuralModeToggle');
+    const knob = document.getElementById('neuralKnob');
+    const takeoverSwitch = document.getElementById('aiTakeoverSwitch');
+    const takeoverKnob = document.getElementById('aiTakeoverKnob');
+    const takeoverStatus = document.getElementById('aiTakeoverStatus');
+
+    const applySwitchState = (switchBtn, switchKnob) => {
+        if (!switchBtn || !switchKnob) return;
+        if (neuralPredictionEnabled) {
+            switchBtn.classList.replace('bg-white/10', 'bg-[#bf5af2]/20');
+            switchBtn.classList.replace('border-white/20', 'border-[#bf5af2]/50');
+            switchKnob.classList.replace('bg-gray-400', 'bg-[#bf5af2]');
+            switchKnob.style.transform = 'translateX(20px)';
+        } else {
+            switchBtn.classList.replace('bg-[#bf5af2]/20', 'bg-white/10');
+            switchBtn.classList.replace('border-[#bf5af2]/50', 'border-white/20');
+            switchKnob.classList.replace('bg-[#bf5af2]', 'bg-gray-400');
+            switchKnob.style.transform = 'translateX(0)';
+        }
+    };
+
+    applySwitchState(btn, knob);
+    applySwitchState(takeoverSwitch, takeoverKnob);
+
+    if (takeoverStatus) {
+        if (neuralPredictionEnabled) {
+            takeoverStatus.innerText = 'AI LIVE';
+            takeoverStatus.className = 'text-[9px] font-black bg-[#bf5af2]/20 px-2.5 py-1 rounded-md text-[#bf5af2] shadow-inner';
+        } else if (aiEnabled && aiApiKey) {
+            takeoverStatus.innerText = 'MATH';
+            takeoverStatus.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/70 shadow-inner';
+        } else {
+            takeoverStatus.innerText = 'OFF';
+            takeoverStatus.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/40 shadow-inner';
+        }
+    }
+}
+
+function toggleAiPredictionTakeover(forceState = null) {
+    const nextState = typeof forceState === 'boolean' ? forceState : !neuralPredictionEnabled;
+    if (nextState && (!aiEnabled || !aiApiKey)) {
+        alert("Please enable AI and configure your API key first.");
+        return;
+    }
+
+    neuralPredictionEnabled = nextState;
+    updateNeuralPredictionUi();
+
+    if (neuralPredictionEnabled) {
+        void requestNeuralPrediction({ force: true });
+    } else {
+        neuralPredictionRequestId++;
+        currentNeuralSignal = null;
+        aiPredictionCacheKey = '';
+        aiPredictionCacheSignal = null;
+        aiPredictionInFlight = null;
+        window.currentAlerts = [];
+        updateAiFusionSnapshot(null);
+        void refreshPredictionEngineUI();
+    }
+
+    saveSessionData();
+}
+
+function toggleNeuralPrediction() {
+    toggleAiPredictionTakeover();
+}
+
+async function requestNeuralPrediction(options = {}) {
+    if (!neuralPredictionEnabled || !aiEnabled || !aiApiKey) return;
+
+    const renderDashboardNow = options.renderDashboardNow !== false;
+    const force = options.force === true;
+    const cacheKey = `${history.slice(-80).map(s => s.num).join(',')}|${Object.values(faceGaps).join('-')}|${engineStats.netUnits}`;
+
+    const applyAiSignal = (signal) => {
+        currentNeuralSignal = signal;
+        updateAiFusionSnapshot(signal);
+        if (signal && signal.targetFace && signal.status !== 'SIT_OUT') {
+            activeBets = [signal];
+            window.currentAlerts = [{
+                type: 'AI',
+                patternName: AI_TAKEOVER_PATTERN,
+                targetFace: signal.targetFace,
+                comboLabel: signal.comboLabel,
+                accentColor: signal.accentColor,
+                signalKind: 'ai-takeover'
+            }];
+            recordAiSignalInLedger(signal);
+        } else {
+            activeBets = [];
+            window.currentAlerts = [];
+        }
+        if (renderDashboardNow) {
+            renderDashboard(window.currentAlerts || []);
+            refreshHighlights();
+            if (!document.getElementById('analyticsModal').classList.contains('hidden')) renderAnalytics();
+        }
+        saveSessionData();
+        return signal;
+    };
+
+    if (!force && aiPredictionCacheKey === cacheKey && aiPredictionCacheSignal) {
+        return applyAiSignal({ ...aiPredictionCacheSignal });
+    }
+
+    if (!force && aiPredictionInFlight && aiPredictionInFlight.key === cacheKey) {
+        return aiPredictionInFlight.promise;
+    }
+
+    const requestId = ++neuralPredictionRequestId;
+    const prompt = buildAiTakeoverPrompt();
+
+    const predictionPromise = (async () => {
+        try {
+            const responseText = await requestAiText(prompt, {
+                requestMode: 'prediction-takeover',
+                temperature: 0.18,
+                maxOutputTokens: 260,
+                responseMimeType: 'application/json',
+                responseSchema: getAiTakeoverSchema()
+            });
+            let jsonResponse;
+            try {
+                jsonResponse = extractAiJsonPayload(responseText);
+            } catch (parseError) {
+                console.warn('AI takeover JSON parse fallback engaged', parseError);
+                jsonResponse = salvageAiTakeoverPayload(responseText);
+            }
+            const targetFace = Number(jsonResponse.targetFace);
+            const status = String(jsonResponse.status || 'SIT_OUT').trim().toUpperCase().replace(/\s+/g, '_');
+            const comboLabel = String(jsonResponse.combo || 'NONE').toUpperCase();
+            const mode = String(jsonResponse.mode || 'WAIT').trim().toUpperCase().replace(/\s+/g, '_');
+            const confidence = Math.max(0, Math.min(100, Math.round(Number(jsonResponse.confidence) || 0)));
+            const reason = String(jsonResponse.reason || 'No tactical reason returned.').trim();
+            const normalizedTargetFace = Number.isInteger(targetFace) && targetFace >= 1 && targetFace <= 5 ? targetFace : null;
+
+            if (requestId !== neuralPredictionRequestId || !neuralPredictionEnabled) return currentNeuralSignal;
+
+            const signal = {
+                signalSource: 'ai',
+                patternName: AI_TAKEOVER_PATTERN,
+                filterKey: AI_TAKEOVER_PATTERN,
+                strategy: AI_TAKEOVER_PATTERN,
+                targetFace: status === 'SIT_OUT' ? null : normalizedTargetFace,
+                accentColor: '#bf5af2',
+                subtitle: `${mode}${confidence ? ` • ${confidence}%` : ''}`,
+                reason,
+                confidence,
+                confirmed: false,
+                comboLabel,
+                mode,
+                status
+            };
+
+            aiPredictionCacheKey = cacheKey;
+            aiPredictionCacheSignal = { ...signal };
+            return applyAiSignal(signal);
+        } catch (error) {
+            console.error("Neural Prediction Failed", error);
+            if (requestId !== neuralPredictionRequestId) return currentNeuralSignal;
+
+            aiPredictionCacheKey = cacheKey;
+            aiPredictionCacheSignal = {
+                signalSource: 'ai',
+                patternName: AI_TAKEOVER_PATTERN,
+                targetFace: null,
+                accentColor: '#bf5af2',
+                subtitle: 'SIT OUT',
+                reason: (error && error.message ? error.message : 'AI link failed').slice(0, 160),
+                confidence: 0,
+                confirmed: false,
+                comboLabel: 'NONE',
+                mode: 'WAIT',
+                status: 'SIT_OUT'
+            };
+            return applyAiSignal({ ...aiPredictionCacheSignal });
+        } finally {
+            if (aiPredictionInFlight && aiPredictionInFlight.key === cacheKey) {
+                aiPredictionInFlight = null;
+            }
+        }
+    })();
+
+    aiPredictionInFlight = {
+        key: cacheKey,
+        promise: predictionPromise
+    };
+
+    return predictionPromise;
 }
 
 function adjustPredictionPerimeterWindow(delta) {
@@ -1682,7 +2252,13 @@ async function processSpinValue(val, options = {}) {
                 filterKey: stratKey,          // Key for patternConfig
                 targetFace: bet.targetFace,
                 isWin: isWin,
-                label: label
+                label: label,
+                comboLabel: bet.comboLabel || null,
+                confidence: Number.isFinite(bet.confidence) ? bet.confidence : null,
+                reason: bet.reason || bet.subtitle || '',
+                mode: bet.mode || null,
+                status: bet.status || 'GO',
+                signalSource: bet.signalSource || 'math'
             });
         });
         activeBets = [];
@@ -1698,17 +2274,32 @@ async function processSpinValue(val, options = {}) {
         id: Date.now() + Math.random()
     };
     history.push(spinObj);
+    settleAiSignalLedger();
+    refreshAdvancementStates();
 
     // 3. SCAN FOR NEW PATTERNS
-    const alerts = await scanAllStrategies();
+    let alerts = await scanAllStrategies();
+
+    if (neuralPredictionEnabled) {
+        await requestNeuralPrediction({ renderDashboardNow: false });
+        alerts = window.currentAlerts || [];
+    }
 
     // 4. PREPARE NEW SIGNALS FOR DISPLAY (Next Spin's Bets)
     // These are what show up on the dashboard, but we also want to show them in the table row
-    if (activeBets.length > 0) {
+    if (neuralPredictionEnabled && currentNeuralSignal) {
+        spinObj.newSignals = [buildPredictionLogSignal(currentNeuralSignal)];
+    } else if (activeBets.length > 0) {
         spinObj.newSignals = activeBets.map(b => ({
             patternName: b.patternName,
             filterKey: b.filterKey || b.patternName,
-            targetFace: b.targetFace
+            targetFace: b.targetFace,
+            comboLabel: b.comboLabel || null,
+            confidence: Number.isFinite(b.confidence) ? b.confidence : null,
+            reason: b.reason || b.subtitle || '',
+            mode: b.mode || null,
+            status: b.status || 'GO',
+            signalSource: b.signalSource || 'math'
         }));
     }
 
@@ -1799,14 +2390,18 @@ function updateUserStats(isWin, bet, spinIndex, unitChange) {
 function applyAnalyticsTabUI() {
     const strategyPanel = document.getElementById('strategyAnalyticsPanel');
     const intelligencePanel = document.getElementById('intelligenceAnalyticsPanel');
+    const advancementsPanel = document.getElementById('advancementsAnalyticsPanel');
     const tabStrategy = document.getElementById('tabStrategy');
     const tabIntelligence = document.getElementById('tabIntelligence');
+    const tabAdvancements = document.getElementById('tabAdvancements');
     const modeSelect = document.getElementById('intelligenceViewSelect');
 
     if (strategyPanel) strategyPanel.classList.toggle('hidden', currentAnalyticsTab !== 'strategy');
     if (intelligencePanel) intelligencePanel.classList.toggle('hidden', currentAnalyticsTab !== 'intelligence');
+    if (advancementsPanel) advancementsPanel.classList.toggle('hidden', currentAnalyticsTab !== 'advancements');
     if (tabStrategy) tabStrategy.classList.toggle('active', currentAnalyticsTab === 'strategy');
     if (tabIntelligence) tabIntelligence.classList.toggle('active', currentAnalyticsTab === 'intelligence');
+    if (tabAdvancements) tabAdvancements.classList.toggle('active', currentAnalyticsTab === 'advancements');
     if (modeSelect) modeSelect.value = currentIntelligenceMode;
 }
 
@@ -1852,13 +2447,160 @@ function renderAnalytics() {
         renderIntelligencePanel();
         return;
     }
+    if (currentAnalyticsTab === 'advancements') {
+        renderAdvancementLog();
+        return;
+    }
 
     renderStrategyAnalytics();
 }
 
 function switchAnalyticsTab(tab) {
-    currentAnalyticsTab = tab === 'intelligence' ? 'intelligence' : 'strategy';
+    currentAnalyticsTab = ['strategy', 'intelligence', 'advancements'].includes(tab) ? tab : 'strategy';
     renderAnalytics();
+}
+
+function addAdvancement(text) {
+    const entry = {
+        id: Date.now(),
+        spin: history.length,
+        text,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        state: 'active'
+    };
+    advancementLog.unshift(entry);
+    renderAdvancementLog();
+    saveSessionData();
+}
+
+function renderAdvancementLog() {
+    const container = document.getElementById('advancementLogContainer');
+    if (!container) return;
+    refreshAdvancementStates();
+    if (advancementLog.length === 0) {
+        container.innerHTML = '<div class="text-center py-10 text-white/20 italic text-xs">No active tactical pivots. AI is currently monitoring baseline FON math.</div>';
+    } else {
+        container.innerHTML = advancementLog.map(log => `
+            <div class="frosted-plate p-3 border-l-2 ${log.state === 'active' ? 'border-[#bf5af2]/50' : 'border-white/10'} hover:bg-white/5 transition-colors">
+                <div class="flex justify-between items-center mb-1 gap-3">
+                    <span class="text-[9px] font-bold ${log.state === 'active' ? 'text-[#bf5af2]' : 'text-white/45'} uppercase tracking-tighter">Advancement @ Spin #${log.spin}</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[8px] font-black uppercase tracking-[0.16em] px-2 py-0.5 rounded-md ${log.state === 'active' ? 'bg-[#bf5af2]/15 text-[#bf5af2]' : 'bg-white/10 text-white/45'}">${log.state}</span>
+                        <span class="text-[9px] text-white/30 font-mono">${log.timestamp}</span>
+                    </div>
+                </div>
+                <div class="text-[11px] text-gray-200 leading-relaxed">${escapeAiMarkup(log.text)}</div>
+            </div>
+        `).join('');
+    }
+
+    renderAiFusionPanel();
+    renderAiLedger();
+    renderAiDebugPanel();
+}
+
+function renderAiFusionPanel() {
+    const container = document.getElementById('aiFusionContainer');
+    if (!container) return;
+
+    const fusion = lastAiFusionSnapshot;
+    if (!fusion) {
+        container.innerHTML = '<div class="text-center py-6 text-white/20 italic text-xs">Fusion state will appear when AI takeover is active.</div>';
+        return;
+    }
+
+    const tone = {
+        AGREE: { color: '#30D158', border: 'rgba(48,209,88,0.25)', bg: 'rgba(48,209,88,0.08)' },
+        CONFLICT: { color: '#FF9F0A', border: 'rgba(255,159,10,0.25)', bg: 'rgba(255,159,10,0.08)' },
+        AI_ONLY: { color: '#bf5af2', border: 'rgba(191,90,242,0.25)', bg: 'rgba(191,90,242,0.08)' },
+        MATH_ONLY: { color: '#64D2FF', border: 'rgba(100,210,255,0.25)', bg: 'rgba(100,210,255,0.08)' },
+        NO_EDGE: { color: 'rgba(255,255,255,0.55)', border: 'rgba(255,255,255,0.1)', bg: 'rgba(255,255,255,0.05)' }
+    }[fusion.stance] || { color: 'rgba(255,255,255,0.55)', border: 'rgba(255,255,255,0.1)', bg: 'rgba(255,255,255,0.05)' };
+
+    container.innerHTML = `
+        <div class="rounded-xl border p-3" style="color:${tone.color}; border-color:${tone.border}; background:${tone.bg};">
+            <div class="flex items-center justify-between gap-3">
+                <div class="text-[10px] font-black uppercase tracking-[0.16em]">${escapeAiMarkup(fusion.stance)}</div>
+                <div class="text-[9px] text-white/45 font-mono">AI ${fusion.aiConfidence}% / Math ${fusion.mathConfidence}%</div>
+            </div>
+            <div class="mt-2 text-[11px] leading-relaxed text-white/75">${escapeAiMarkup(fusion.summary)}</div>
+            <div class="mt-3 grid grid-cols-2 gap-3 text-[10px]">
+                <div class="rounded-lg border border-white/10 bg-black/20 p-2">
+                    <div class="text-white/35 uppercase tracking-[0.14em] text-[8px] font-black">AI Read</div>
+                    <div class="mt-1 font-bold text-[#bf5af2]">${escapeAiMarkup(fusion.aiCombo)}${fusion.aiFace ? ` -> F${fusion.aiFace}` : ''}</div>
+                </div>
+                <div class="rounded-lg border border-white/10 bg-black/20 p-2">
+                    <div class="text-white/35 uppercase tracking-[0.14em] text-[8px] font-black">Math Read</div>
+                    <div class="mt-1 font-bold text-[#64D2FF]">${escapeAiMarkup(fusion.mathCombo)}${fusion.mathFace ? ` -> F${fusion.mathFace}` : ''}</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderAiLedger() {
+    const container = document.getElementById('aiLedgerContainer');
+    if (!container) return;
+    if (aiSignalLedger.length === 0) {
+        container.innerHTML = '<div class="text-center py-6 text-white/20 italic text-xs">No AI signals have been scored yet.</div>';
+        return;
+    }
+
+    container.innerHTML = aiSignalLedger.slice(0, 8).map(entry => `
+        <div class="rounded-xl border border-white/8 bg-black/25 p-3">
+            <div class="flex items-center justify-between gap-3">
+                <div class="text-[10px] font-black uppercase tracking-[0.15em] text-[#bf5af2]">${escapeAiMarkup(entry.comboLabel)} -> F${entry.targetFace}</div>
+                <div class="text-[9px] text-white/35 font-mono">${entry.timestamp}</div>
+            </div>
+            <div class="mt-1 text-[10px] text-white/55">${escapeAiMarkup(String(entry.mode || 'WAIT').replace(/_/g, ' '))} • ${entry.confidence}% • ${escapeAiMarkup(entry.stance)}</div>
+            <div class="mt-2 text-[11px] leading-relaxed text-gray-200">${escapeAiMarkup(entry.reason)}</div>
+            <div class="mt-3 grid grid-cols-3 gap-2 text-center text-[9px] font-black uppercase tracking-[0.14em]">
+                <div class="rounded-md border border-white/10 bg-white/5 px-2 py-1 ${entry.outcome1 === 'HIT' ? 'text-[#30D158]' : entry.outcome1 === 'MISS' ? 'text-[#FF453A]' : 'text-white/35'}">1: ${entry.outcome1 || 'PENDING'}</div>
+                <div class="rounded-md border border-white/10 bg-white/5 px-2 py-1 ${entry.outcome3 === 'HIT' ? 'text-[#30D158]' : entry.outcome3 === 'MISS' ? 'text-[#FF453A]' : 'text-white/35'}">3: ${entry.outcome3 || 'PENDING'}</div>
+                <div class="rounded-md border border-white/10 bg-white/5 px-2 py-1 ${entry.outcome5 === 'HIT' ? 'text-[#30D158]' : entry.outcome5 === 'MISS' ? 'text-[#FF453A]' : 'text-white/35'}">5: ${entry.outcome5 || 'PENDING'}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderAiDebugPanel() {
+    const container = document.getElementById('aiDebugContainer');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="rounded-xl border border-white/8 bg-black/25 p-3 space-y-3">
+            <div class="grid grid-cols-2 gap-3 text-[10px]">
+                <div>
+                    <div class="text-white/35 uppercase tracking-[0.14em] text-[8px] font-black">Status</div>
+                    <div class="mt-1 font-bold text-white">${escapeAiMarkup(aiRuntimeState.status)}</div>
+                </div>
+                <div>
+                    <div class="text-white/35 uppercase tracking-[0.14em] text-[8px] font-black">Provider</div>
+                    <div class="mt-1 font-bold text-white">${escapeAiMarkup(aiRuntimeState.provider)}</div>
+                </div>
+                <div>
+                    <div class="text-white/35 uppercase tracking-[0.14em] text-[8px] font-black">Mode</div>
+                    <div class="mt-1 font-bold text-white">${escapeAiMarkup(aiRuntimeState.lastRequestMode || 'idle')}</div>
+                </div>
+                <div>
+                    <div class="text-white/35 uppercase tracking-[0.14em] text-[8px] font-black">Latency</div>
+                    <div class="mt-1 font-bold text-white">${aiRuntimeState.lastLatencyMs || 0}ms</div>
+                </div>
+            </div>
+            <div>
+                <div class="text-white/35 uppercase tracking-[0.14em] text-[8px] font-black">Last Error</div>
+                <div class="mt-1 text-[11px] leading-relaxed text-white/60">${escapeAiMarkup(aiRuntimeState.lastError || 'None')}</div>
+            </div>
+            <div>
+                <div class="text-white/35 uppercase tracking-[0.14em] text-[8px] font-black">Prompt Preview</div>
+                <div class="mt-1 text-[10px] leading-relaxed text-white/45 whitespace-pre-wrap">${escapeAiMarkup(aiRuntimeState.lastPromptPreview || 'No prompt yet.')}</div>
+            </div>
+            <div>
+                <div class="text-white/35 uppercase tracking-[0.14em] text-[8px] font-black">Response Preview</div>
+                <div class="mt-1 text-[10px] leading-relaxed text-white/45 whitespace-pre-wrap">${escapeAiMarkup(aiRuntimeState.lastResponsePreview || 'No response yet.')}</div>
+            </div>
+        </div>
+    `;
 }
 
 function setIntelligenceMode(mode) {
@@ -2219,7 +2961,33 @@ function renderRow(spin) {
             let icon = win ? '<i class="fas fa-check-circle text-[#30D158] mr-1"></i>' : '<i class="fas fa-times-circle text-[#FF453A] mr-1"></i>';
             let status = win ? 'WIN' : 'LOSS';
             let colorClass = win ? 'text-[#30D158]' : 'text-[#FF453A]';
-            predHTMLParts.push(`<div class="flex items-center text-[10px] font-bold ${colorClass}">${icon}${status}: F${bet.targetFace} (${bet.patternName})</div>`);
+            const summary = bet.signalSource === 'ai'
+                ? `${status}: ${bet.comboLabel || 'AI'}${bet.targetFace ? ` -> F${bet.targetFace}` : ''}${Number.isFinite(bet.confidence) ? ` • ${bet.confidence}%` : ''}`
+                : `${status}: F${bet.targetFace} (${bet.patternName})`;
+            predHTMLParts.push(`<div class="flex items-center text-[10px] font-bold ${colorClass}">${icon}${escapeAiMarkup(summary)}</div>`);
+            if (bet.signalSource === 'ai' && bet.reason) {
+                predHTMLParts.push(`<div class="ml-5 text-[9px] leading-relaxed text-white/45">${escapeAiMarkup(bet.reason)}</div>`);
+            }
+        });
+    }
+
+    if (spin.newSignals && spin.newSignals.length > 0) {
+        spin.newSignals.forEach(signal => {
+            if (signal.signalSource !== 'ai') return;
+
+            const signalStatus = String(signal.status || 'GO').toUpperCase();
+            const toneClass = signalStatus === 'SIT_OUT' ? 'text-[#FFD60A]' : 'text-[#bf5af2]';
+            const icon = signalStatus === 'SIT_OUT'
+                ? '<i class="fas fa-pause-circle mr-1"></i>'
+                : '<i class="fas fa-brain mr-1"></i>';
+            const signalLabel = signalStatus === 'SIT_OUT'
+                ? `AI SIT OUT${signal.comboLabel && signal.comboLabel !== 'NONE' ? ` • ${signal.comboLabel}` : ''}`
+                : `AI CALL: ${signal.comboLabel || 'READ'}${signal.targetFace ? ` -> F${signal.targetFace}` : ''}${Number.isFinite(signal.confidence) ? ` • ${signal.confidence}%` : ''}`;
+
+            predHTMLParts.push(`<div class="mt-1 flex items-center text-[10px] font-bold ${toneClass}">${icon}${escapeAiMarkup(signalLabel)}</div>`);
+            if (signal.reason) {
+                predHTMLParts.push(`<div class="ml-5 text-[9px] leading-relaxed text-white/45">${escapeAiMarkup(signal.reason)}</div>`);
+            }
         });
     }
 
@@ -2418,8 +3186,17 @@ function renderDashboard(alerts) {
         const filterKey = bet.filterKey || bet.patternName;
         if (patternConfig[filterKey] === false) return;
 
-        const subtitle = bet.subtitle || (bet.comboLabel ? `${bet.comboLabel} combo` : bet.patternName);
+        const isAiSignal = bet.signalSource === 'ai';
+        const subtitle = isAiSignal
+            ? (bet.reason || bet.subtitle || 'AI rhythm read active.')
+            : (bet.subtitle || (bet.comboLabel ? `${bet.comboLabel} combo` : bet.patternName));
         const accent = bet.accentColor || '#FF3B30';
+        const title = isAiSignal
+            ? `${bet.comboLabel || 'AI PLAY'}${bet.targetFace ? ` -> F${bet.targetFace}` : ''}`
+            : `BET F${bet.targetFace}`;
+        const metaLabel = isAiSignal
+            ? `${String(bet.mode || 'READ').replace(/_/g, ' ')}${Number.isFinite(bet.confidence) ? ` • ${bet.confidence}%` : ''}`
+            : '';
 
         // Dynamic styling based on combo color (Theme Matching)
         const bgStyle = bet.confirmed
@@ -2436,14 +3213,28 @@ function renderDashboard(alerts) {
                  title="Double-click to ${bet.confirmed ? 'unselect' : 'select'}"
                  style="border-left: 3px solid ${accent}; ${borderStyle}; ${bgStyle}; box-shadow: 0 4px 15px ${accent}15;">
                 <div class="min-w-0">
-                    <div class="text-[15px] leading-tight font-black text-white tracking-wide drop-shadow-sm">BET F${bet.targetFace}</div>
-                    <div class="text-[11px] leading-tight text-white/80 font-semibold mt-0.5">${subtitle}</div>
+                    <div class="text-[15px] leading-tight font-black text-white tracking-wide drop-shadow-sm">${escapeAiMarkup(title)}</div>
+                    <div class="text-[11px] leading-tight text-white/80 font-semibold mt-0.5">${escapeAiMarkup(subtitle)}</div>
                 </div>
+                ${metaLabel ? `<div class="ml-3 shrink-0 rounded-md border border-white/10 bg-black/25 px-2 py-1 text-[9px] font-black tracking-[0.14em] text-white/80">${escapeAiMarkup(metaLabel)}</div>` : ''}
             </div>
         `);
     });
 
     if (cards.length === 0) {
+        if (neuralPredictionEnabled && currentNeuralSignal && currentNeuralSignal.status === 'SIT_OUT') {
+            dash.innerHTML = `
+                <div class="w-full h-[60px] rounded-xl border border-[#bf5af2]/20 bg-gradient-to-r from-[#bf5af2]/10 to-transparent px-4 py-2 flex items-center justify-between">
+                    <div class="min-w-0">
+                        <div class="text-[11px] font-black tracking-[0.16em] text-[#bf5af2] uppercase">AI Stand Down</div>
+                        <div class="text-[10px] text-white/65 leading-tight mt-1">${escapeAiMarkup(currentNeuralSignal.reason || 'No clean combo edge right now.')}</div>
+                    </div>
+                    <div class="ml-3 shrink-0 rounded-md border border-[#bf5af2]/25 bg-black/25 px-2 py-1 text-[9px] font-black tracking-[0.14em] text-[#bf5af2]">SIT OUT</div>
+                </div>
+            `;
+            return;
+        }
+
         const snapshot = engineSnapshot || createEmptyEngineSnapshot(history.length);
         let emptyLabel = 'SCANNING...';
 
@@ -2484,6 +3275,25 @@ function resetData(skipConfirm = false) {
         activeBets = [];
         spinProcessingQueue = Promise.resolve();
         chatMessageHistory = [];
+        advancementLog = [];
+        neuralPredictionEnabled = false;
+        currentNeuralSignal = null;
+        neuralPredictionRequestId++;
+        aiSignalLedger = [];
+        lastAiFusionSnapshot = null;
+        aiPredictionCacheKey = '';
+        aiPredictionCacheSignal = null;
+        aiPredictionInFlight = null;
+        aiRuntimeState = {
+            status: 'IDLE',
+            provider: aiProvider,
+            lastError: '',
+            lastRequestMode: '',
+            lastLatencyMs: 0,
+            lastPromptPreview: '',
+            lastResponsePreview: '',
+            lastUpdatedLabel: 'Never'
+        };
         window.currentAlerts = [];
         engineSnapshot = createEmptyEngineSnapshot(0);
         lastActionableComboLabel = null;
@@ -2503,6 +3313,7 @@ function resetData(skipConfirm = false) {
         renderUserAnalytics();
         renderGapStats();
         resetAiChatUi();
+        updateNeuralPredictionUi();
 
         updatePredictionSettingsUI();
         updatePerimeterAnalytics();
@@ -2590,11 +3401,40 @@ function updateAiUiState() {
             headerAiBtn.title = 'Configure your AI key in the menu to activate chat.';
         }
     }
+
+    if ((!aiEnabled || !aiApiKey) && neuralPredictionEnabled) {
+        neuralPredictionEnabled = false;
+        currentNeuralSignal = null;
+        neuralPredictionRequestId++;
+        aiPredictionCacheKey = '';
+        aiPredictionCacheSignal = null;
+        aiPredictionInFlight = null;
+        lastAiFusionSnapshot = null;
+        void refreshPredictionEngineUI();
+    }
+    updateNeuralPredictionUi();
+    const analyticsModal = document.getElementById('analyticsModal');
+    if (analyticsModal && !analyticsModal.classList.contains('hidden')) {
+        renderAnalytics();
+    }
 }
 
 function toggleAiMasterSwitch() {
+    const wasNeuralEnabled = neuralPredictionEnabled;
     aiEnabled = !aiEnabled;
+    if (!aiEnabled) {
+        neuralPredictionEnabled = false;
+        currentNeuralSignal = null;
+        neuralPredictionRequestId++;
+        aiPredictionCacheKey = '';
+        aiPredictionCacheSignal = null;
+        aiPredictionInFlight = null;
+        lastAiFusionSnapshot = null;
+    }
     updateAiUiState();
+    if (!aiEnabled && wasNeuralEnabled) {
+        void refreshPredictionEngineUI();
+    }
     saveSessionData();
 }
 
@@ -2619,13 +3459,14 @@ async function saveAiConfig() {
 
     try {
         if (testProvider === 'gemini') {
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${testKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: 'Respond with the word: connected' }] }] })
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}`, {
+                method: 'GET',
+                headers: {
+                    'x-goog-api-key': testKey
+                }
             });
             const data = await res.json();
-            if (!res.ok || data.error) throw new Error("Invalid Gemini Key");
+            if (!res.ok || data.error) throw new Error((data.error && data.error.message) || `Gemini request failed (${res.status})`);
         } else if (testProvider === 'openai') {
             const res = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
@@ -2636,11 +3477,16 @@ async function saveAiConfig() {
                 body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: 'ping' }] })
             });
             const data = await res.json();
-            if (!res.ok || data.error) throw new Error("Invalid OpenAI Key");
+            if (!res.ok || data.error) throw new Error((data.error && data.error.message) || `OpenAI request failed (${res.status})`);
         }
 
         aiProvider = testProvider;
         aiApiKey = testKey;
+        stampAiRuntimeState({
+            status: 'CONNECTED',
+            provider: testProvider,
+            lastError: ''
+        });
         updateAiUiState();
         saveSessionData();
 
@@ -2656,26 +3502,46 @@ async function saveAiConfig() {
             toggleModal('aiConfigModal');
         }, 1200);
     } catch (error) {
-        btn.innerHTML = '<i class="fas fa-times-circle mr-2"></i> INVALID KEY';
-        btn.classList.remove('opacity-70', 'text-[#30D158]', 'border-[#30D158]/30', 'bg-[#30D158]/20');
-        btn.classList.add('text-[#ff1a33]', 'border-[#ff1a33]/50', 'bg-[#ff1a33]/20');
+        console.error("Gemini Connection Error:", error);
+        btn.innerHTML = `<i class="fas fa-times-circle mr-2"></i> ${error.message.toUpperCase()}`;
+        btn.className = 'flex-[2] py-2.5 rounded-lg font-bold text-[10px] uppercase tracking-wider text-[#ff1a33] border border-[#ff1a33]/50 bg-[#ff1a33]/10';
 
         setTimeout(() => {
             btn.innerHTML = originalText;
-            btn.classList.add('text-[#30D158]', 'border-[#30D158]/30', 'bg-[#30D158]/20');
-            btn.classList.remove('text-[#ff1a33]', 'border-[#ff1a33]/50', 'bg-[#ff1a33]/20');
+            btn.className = 'flex-[2] py-2.5 rounded-lg font-bold text-[10px] uppercase tracking-wider bg-[#30D158]/20 hover:bg-[#30D158]/30 text-[#30D158] border border-[#30D158]/30 transition-colors shadow-[0_0_15px_rgba(48,209,88,0.15)]';
             btn.disabled = false;
-        }, 2000);
+        }, 5000);
     }
 }
 
 function clearAiConfig() {
+    const wasNeuralEnabled = neuralPredictionEnabled;
     aiApiKey = '';
     chatMessageHistory = [];
+    neuralPredictionEnabled = false;
+    currentNeuralSignal = null;
+    neuralPredictionRequestId++;
+    aiPredictionCacheKey = '';
+    aiPredictionCacheSignal = null;
+    aiPredictionInFlight = null;
+    lastAiFusionSnapshot = null;
+    aiRuntimeState = {
+        status: 'IDLE',
+        provider: aiProvider,
+        lastError: '',
+        lastRequestMode: '',
+        lastLatencyMs: 0,
+        lastPromptPreview: '',
+        lastResponsePreview: '',
+        lastUpdatedLabel: 'Never'
+    };
     const keyInput = document.getElementById('aiApiKeyInput');
     if (keyInput) keyInput.value = '';
     updateAiUiState();
     resetAiChatUi();
+    if (wasNeuralEnabled) {
+        void refreshPredictionEngineUI();
+    }
     saveSessionData();
     alert('API Key removed from browser storage.');
 }
@@ -2746,40 +3612,11 @@ async function runAiAnalysis() {
     const promptText = generateAiPrompt();
 
     try {
-        let responseText = '';
-
-        if (aiProvider === 'gemini') {
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${aiApiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
-            });
-            const data = await res.json();
-            if (!res.ok || data.error) throw new Error((data.error && data.error.message) || `Gemini request failed (${res.status})`);
-            responseText = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]
-                ? data.candidates[0].content.parts[0].text
-                : 'No response returned by Gemini.';
-        } else if (aiProvider === 'openai') {
-            const res = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${aiApiKey}`
-                },
-                body: JSON.stringify({
-                    model: 'gpt-4o-mini',
-                    messages: [{ role: 'user', content: promptText }]
-                })
-            });
-            const data = await res.json();
-            if (!res.ok || data.error) throw new Error((data.error && data.error.message) || `OpenAI request failed (${res.status})`);
-            responseText = data && data.choices && data.choices[0] && data.choices[0].message
-                ? data.choices[0].message.content
-                : 'No response returned by OpenAI.';
-        } else {
-            throw new Error("Provider not fully implemented yet.");
-        }
-
+        const responseText = await requestAiText(promptText, {
+            requestMode: 'session-analysis',
+            temperature: 0.22,
+            maxOutputTokens: 420
+        });
         responseBox.innerHTML = `<span class="text-[#30D158] font-bold tracking-wide uppercase text-[10px] block mb-2">Neural Output:</span>${escapeAiMarkup(responseText)}`;
     } catch (error) {
         responseBox.innerHTML = `<span class="text-[#ff1a33] font-bold"><i class="fas fa-exclamation-triangle"></i> Error:</span> ${escapeAiMarkup(error.message)}`;
@@ -2843,54 +3680,43 @@ async function sendAiChatMessage() {
     appendChatMessage('user', message);
     chatMessageHistory.push({ role: 'user', content: message });
 
-    const recentSpins = history.slice(-60).map(s => s.num).join(', ');
-    const gaps = Object.entries(faceGaps).map(([face, gap]) => `F${face}:${gap}`).join(', ');
-    const systemContext = `SYSTEM CONTEXT (DO NOT MENTION THIS UNLESS RELEVANT): The user is playing roulette. Current Net Units: ${engineStats.netUnits}. Spins since last hit (Gaps): ${gaps}. Last 60 spins: ${recentSpins || 'None yet'}. Answer the user's question concisely like a professional data analyst.`;
-    const recentConversation = chatMessageHistory.slice(0, -1).slice(-8).map(entry => `${entry.role.toUpperCase()}: ${entry.content}`).join('\n');
-    const fullPrompt = `${systemContext}${recentConversation ? `\nRecent Conversation:\n${recentConversation}\n` : '\n'}\nUSER QUESTION: ${message}`;
+    const systemInstruction = `
+ROLE: You are the "FON Combo Strategist." Your goal is to maximize the efficiency of the Perimeter Combo game (5-2, 5-3, 1-3, 2-4).
+
+SMART PLAY PROTOCOL:
+1. COMBO VELOCITY: Do not just bet because a combo hit 3 times in 14 spins. Analyze the "Rest" between hits. If a combo hits 3 times in 5 spins, it is "Leaking" (Trending). STAND DOWN.
+2. THE SNAPBACK WINDOW: The "Smart" entry is when a fatigued combo has NOT hit for the last 4-6 spins, suggesting the "Sticky" phase has ended and the "Inversion" is imminent.
+3. DOMINANCE FILTER: Identify the "Dominant Combo" (highest hit rate) versus the "Runner Up." If the Dominant Combo is currently "Hot," do not bet against it until you see a "Rhythm Break" (two consecutive misses).
+
+ADVERSARIAL TASKS:
+- Check the current Net Units: ${engineStats.netUnits}. If losing, identify which Combo is currently "Breaking the Math."
+- Look at the last 60 spins: ${history.slice(-60).map(s => s.num).join(', ')}. Find the "Ghost Combo"—a pattern that isn't in the rules but is repeating on the wheel right now.
+- Provide ONE "Smart Entry" for the next 5 spins. If none exist, strictly command the user to "SIT OUT."
+
+STRICT DATA LIMIT:
+- Use ONLY Faces (F1-F5) and the 4 Perimeter Combos.
+- NO generic advice. NO Dozens/Columns.
+`;
+    const recentConversation = chatMessageHistory.slice(0, -1).slice(-6).map(entry => `${entry.role.toUpperCase()}: ${entry.content}`).join('\n');
+    const fullPrompt = `${systemInstruction}\n\nRECENT CONVERSATION:\n${recentConversation}\n\nUSER INPUT: ${message}`;
 
     try {
-        let responseText = '';
-
-        if (aiProvider === 'gemini') {
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${aiApiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }] })
-            });
-            const data = await res.json();
-            if (!res.ok || data.error) throw new Error((data.error && data.error.message) || `Gemini request failed (${res.status})`);
-            responseText = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]
-                ? data.candidates[0].content.parts[0].text
-                : 'No response returned by Gemini.';
-        } else if (aiProvider === 'openai') {
-            const res = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${aiApiKey}`
-                },
-                body: JSON.stringify({
-                    model: 'gpt-4o-mini',
-                    messages: [{ role: 'user', content: fullPrompt }]
-                })
-            });
-            const data = await res.json();
-            if (!res.ok || data.error) throw new Error((data.error && data.error.message) || `OpenAI request failed (${res.status})`);
-            responseText = data && data.choices && data.choices[0] && data.choices[0].message
-                ? data.choices[0].message.content
-                : 'No response returned by OpenAI.';
-        } else {
-            throw new Error("Provider not fully implemented yet.");
+        const responseText = await requestAiText(fullPrompt, {
+            requestMode: 'chat-strategy',
+            temperature: 0.1,
+            maxOutputTokens: 800
+        });
+        if (responseText.toUpperCase().includes("ADVANCEMENT:") || responseText.toUpperCase().includes("PIVOT:")) {
+            const lines = responseText.split('\n');
+            const advancementLine = lines.find(line => line.toUpperCase().includes("ADVANCEMENT:") || line.toUpperCase().includes("PIVOT:"));
+            if (advancementLine) {
+                addAdvancement(advancementLine.replace(/ADVANCEMENT:|PIVOT:/gi, '').trim());
+            }
         }
-
         chatMessageHistory.push({ role: 'assistant', content: responseText });
-        if (chatMessageHistory.length > 12) {
-            chatMessageHistory = chatMessageHistory.slice(-12);
-        }
         appendChatMessage('ai', responseText);
     } catch (error) {
-        appendChatMessage('error', `Connection Error: ${error.message}`);
+        appendChatMessage('error', `Strategic Link Error: ${error.message}`);
     } finally {
         input.disabled = false;
         input.focus();
