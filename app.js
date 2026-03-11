@@ -1,4 +1,4 @@
-﻿﻿// --- CONFIGURATION ---
+// --- CONFIGURATION ---
 const RED_NUMS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
 const PERIMETER_RULE_KEY = 'Perimeter Rule';
 const PREDICTION_PERIMETER_PATTERN = 'Prediction Perimeter';
@@ -72,8 +72,29 @@ let userStats = {
     betLog: []
 };
 
-let currentPredictionStrategy = 'momentum-gap';
+let currentPredictionStrategy = 'series';
+let currentGameplayStrategy = 'series'; // 'series' or 'combo'
 let strategies = {};
+
+const SEQUENCES = [
+    { name: "1-2-3", a: 1, b: 2, target: 3 },
+    { name: "2-3-4", a: 2, b: 3, target: 4 },
+    { name: "3-4-5", a: 3, b: 4, target: 5 },
+    { name: "5-4-3", a: 5, b: 4, target: 3 },
+    { name: "4-3-2", a: 4, b: 3, target: 2 },
+    { name: "3-2-1", a: 3, b: 2, target: 1 },
+    { name: "1-3-5", a: 1, b: 3, target: 5 },
+    { name: "5-3-1", a: 5, b: 3, target: 1 }
+];
+
+function changePredictionStrategy(val) {
+    currentGameplayStrategy = val;
+    const labelEl = document.getElementById('activeAnalyticsStrategyLabel');
+    if (labelEl) {
+        labelEl.innerText = val === 'series' ? 'Series Strategy' : 'Combo Strategy';
+    }
+    updateVisibility();
+}
 
 // --- PERSISTENCE ---
 const SESSION_STORAGE_KEY = 'insideTool_session_v1';
@@ -941,40 +962,81 @@ async function buildPredictionEngineSnapshot(allSpins = history) {
 }
 
 async function syncPredictionEngine() {
+    activeBets = [];
+    window.currentAlerts = [];
+    
+    // NEW: Modular Strategy Selection
+    if (currentGameplayStrategy === 'series') {
+        const { notifications, nextBets } = runSequenceEngine(history);
+        window.currentAlerts = notifications;
+        activeBets = nextBets;
+    } else if (currentGameplayStrategy === 'combo') {
+        // Reserved for future Combo strategy implementation
+    }
+
+    // Still build the background snapshot for the heatmap/HUD
     const snapshot = await buildPredictionEngineSnapshot();
     engineSnapshot = snapshot;
 
-    if (!perimeterRuleEnabled || !snapshot.currentPrediction || !['READY', 'FOLLOW_UP'].includes(snapshot.engineState)) {
-        activeBets = [];
-        window.currentAlerts = [];
-        return [];
-    }
-    activeBets = [{
-        patternName: PREDICTION_PERIMETER_PATTERN,
-        filterKey: PERIMETER_RULE_KEY,
-        strategy: PREDICTION_PERIMETER_PATTERN,
-        targetFace: snapshot.currentPrediction.targetFace,
-        triggerFace: snapshot.currentPrediction.triggerFace,
-        comboLabel: snapshot.currentPrediction.comboLabel,
-        accentColor: snapshot.currentPrediction.accentColor,
-        confirmed: false,
-        signalKind: snapshot.signalKind,
-        subtitle: snapshot.currentPrediction.subtitle || `${snapshot.currentPrediction.action} ${snapshot.currentPrediction.comboLabel}`
-    }];
-
-    window.currentAlerts = [{
-        type: 'ACTIVE',
-        patternName: PREDICTION_PERIMETER_PATTERN,
-        targetFace: snapshot.currentPrediction.targetFace,
-        comboLabel: snapshot.currentPrediction.comboLabel,
-        accentColor: snapshot.currentPrediction.accentColor,
-        signalKind: snapshot.signalKind
-    }];
-
-    lastActionableComboLabel = snapshot.currentPrediction.comboLabel;
-    lastActionableTargetFace = snapshot.currentPrediction.targetFace;
-    lastActionableCheckpointSpin = snapshot.checkpointSpin || snapshot.spinCount;
     return window.currentAlerts;
+}
+
+// --- SERIES ENGINE LOGIC ---
+function runSequenceEngine(historyData) {
+    if (historyData.length < 2) return { notifications: [], nextBets: [] };
+    
+    let notifications = [];
+    let nextBets = [];
+    
+    const latest = historyData[historyData.length - 1];
+    const prev = historyData[historyData.length - 2];
+    
+    if (!latest.faces || !prev.faces) return { notifications: [], nextBets: [] }; 
+
+    const seqKey = `${prev.faces[0]}-${latest.faces[0]}`; 
+    
+    SEQUENCES.forEach(seq => {
+        if (prev.faces.includes(seq.a) && latest.faces.includes(seq.b)) {
+            const patternName = `(${seq.name.replace(/-/g, '')})`;
+            
+            // Only add the bet if its pattern is enabled in the global config
+            if (patternConfig[patternName] !== false) {
+                notifications.push({
+                    type: 'ACTIVE', 
+                    fA: seq.a, 
+                    fB: seq.target, 
+                    count: 1, 
+                    strategy: 'Sequence',
+                    patternName: patternName
+                });
+                
+                nextBets.push({
+                    targetFace: seq.target,
+                    originPairKey: seqKey, 
+                    strategy: 'Sequence',
+                    highlightIds: [prev.id, latest.id],
+                    patternName: patternName,
+                    confirmed: false
+                });
+            }
+        }
+    });
+
+    return { notifications, nextBets };
+}
+
+function refreshHighlights() {
+    document.querySelectorAll('.highlight-pair').forEach(el => el.classList.remove('highlight-pair'));
+    if (activeBets.length > 0) {
+        activeBets.forEach(bet => {
+            if (bet.highlightIds) {
+                bet.highlightIds.forEach(id => {
+                    const tag = document.querySelector(`.face-tag[data-spin-id="${id}"]`);
+                    if (tag) tag.classList.add('highlight-pair');
+                });
+            }
+        });
+    }
 }
 
 function getEngineStateTone(state) {
@@ -2417,241 +2479,176 @@ function updateUserStats(isWin, bet, spinIndex, unitChange) {
         units: unitChange
     });
 }
-
-function applyAnalyticsTabUI() {
-    const strategyPanel = document.getElementById('strategyAnalyticsPanel');
-    const intelligencePanel = document.getElementById('intelligenceAnalyticsPanel');
-    const advancementsPanel = document.getElementById('advancementsAnalyticsPanel');
-    const tabStrategy = document.getElementById('tabStrategy');
-    const tabIntelligence = document.getElementById('tabIntelligence');
-    const tabAdvancements = document.getElementById('tabAdvancements');
-    const modeSelect = document.getElementById('intelligenceViewSelect');
-
-    if (strategyPanel) strategyPanel.classList.toggle('hidden', currentAnalyticsTab !== 'strategy');
-    if (intelligencePanel) intelligencePanel.classList.toggle('hidden', currentAnalyticsTab !== 'intelligence');
-    if (advancementsPanel) advancementsPanel.classList.toggle('hidden', currentAnalyticsTab !== 'advancements');
-    if (tabStrategy) tabStrategy.classList.toggle('active', currentAnalyticsTab === 'strategy');
-    if (tabIntelligence) tabIntelligence.classList.toggle('active', currentAnalyticsTab === 'intelligence');
-    if (tabAdvancements) tabAdvancements.classList.toggle('active', currentAnalyticsTab === 'advancements');
-    if (modeSelect) modeSelect.value = currentIntelligenceMode;
-}
-
-function renderStrategyAnalytics() {
-    const displayStats = {
-        wins: engineStats.totalWins,
-        losses: engineStats.totalLosses,
-        net: engineStats.netUnits,
-        streak: engineStats.currentStreak,
-        history: engineStats.bankrollHistory,
-        patterns: engineStats.patternStats
+function renderAnalytics() {
+    let displayStats = {
+        wins: 0, losses: 0, net: 0, streak: 0,
+        history: [0], patterns: {} 
     };
 
-    document.getElementById('graphTitle').innerText = 'Theoretical Bankroll (All Strategies)';
-    document.getElementById('labelHitRate').innerText = 'Global Hit Rate';
-    document.getElementById('labelNet').innerText = 'Theoretical Net';
+    const targetStrategy = currentGameplayStrategy === 'series' ? 'Sequence' : 'TripleCs';
+
+    // Only count stats for the currently active gameplay strategy
+    engineStats.signalLog.forEach(log => {
+        if (log.rawStrategy === targetStrategy) {
+            if (log.result === 'WIN') {
+                displayStats.wins++;
+                displayStats.streak = displayStats.streak >= 0 ? displayStats.streak + 1 : 1;
+            } else {
+                displayStats.losses++;
+                displayStats.streak = displayStats.streak <= 0 ? displayStats.streak - 1 : -1;
+            }
+            displayStats.net += log.units;
+            displayStats.history.push(displayStats.net);
+
+            if (!displayStats.patterns[log.patternName]) {
+                displayStats.patterns[log.patternName] = { wins: 0, losses: 0 };
+            }
+            if (log.result === 'WIN') displayStats.patterns[log.patternName].wins++;
+            else displayStats.patterns[log.patternName].losses++;
+        }
+    });
 
     const totalSignals = displayStats.wins + displayStats.losses;
     const hitRate = totalSignals === 0 ? 0 : Math.round((displayStats.wins / totalSignals) * 100);
 
     const hrEl = document.getElementById('kpiHitRate');
-    hrEl.innerText = hitRate + "%";
-    hrEl.className = `text-3xl font-bold tracking-tight ${hitRate >= 50 ? 'text-[#30D158]' : 'text-[#FF453A]'}`;
+    if (hrEl) {
+        hrEl.innerText = hitRate + "%";
+        hrEl.className = `text-3xl font-bold tracking-tight ${hitRate >= 50 ? 'text-[#30D158]' : 'text-[#FF453A]'}`;
+    }
 
     const netEl = document.getElementById('kpiNet');
-    netEl.innerText = (displayStats.net > 0 ? '+' : '') + displayStats.net;
-    netEl.className = `text-3xl font-bold tracking-tight ${displayStats.net >= 0 ? 'text-[#30D158]' : 'text-[#FF453A]'}`;
+    if (netEl) {
+        netEl.innerText = (displayStats.net > 0 ? '+' : '') + displayStats.net;
+        netEl.className = `text-3xl font-bold tracking-tight ${displayStats.net >= 0 ? 'text-[#30D158]' : 'text-[#FF453A]'}`;
+    }
 
-    document.getElementById('kpiSignals').innerText = totalSignals;
+    const sigsEl = document.getElementById('kpiSignals');
+    if (sigsEl) sigsEl.innerText = totalSignals;
 
     const s = displayStats.streak;
     const formEl = document.getElementById('kpiForm');
-    formEl.innerText = s > 0 ? `W${s}` : (s < 0 ? `L${Math.abs(s)}` : '-');
-    formEl.className = `text-3xl font-bold tracking-tight ${s > 0 ? 'text-[#30D158]' : (s < 0 ? 'text-[#FF453A]' : 'text-gray-400')}`;
+    if (formEl) {
+        formEl.innerText = s > 0 ? `W${s}` : (s < 0 ? `L${Math.abs(s)}` : '-');
+        formEl.className = `text-3xl font-bold tracking-tight ${s > 0 ? 'text-[#30D158]' : (s < 0 ? 'text-[#FF453A]' : 'text-gray-400')}`;
+    }
 
     drawAdvancedGraph(displayStats.history, displayStats.wins, displayStats.losses, 'graphContainer');
     updatePatternHeatmap(displayStats.patterns);
 }
 
-function renderAnalytics() {
-    applyAnalyticsTabUI();
-    if (currentAnalyticsTab === 'intelligence') {
-        renderIntelligencePanel();
+function updatePatternHeatmap(patternData) {
+    const tbody = document.getElementById('heatmapBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    const patterns = Object.entries(patternData || {});
+    
+    if (patterns.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-[#8E8E93] italic">No patterns recorded yet</td></tr>';
         return;
     }
-    if (currentAnalyticsTab === 'advancements') {
-        renderAdvancementLog();
-        return;
-    }
+    
+    patterns.sort((a, b) => {
+        const rA = a[1].wins / (a[1].wins + a[1].losses);
+        const rB = b[1].wins / (b[1].wins + b[1].losses);
+        return rB - rA;
+    });
 
-    renderStrategyAnalytics();
-}
+    patterns.forEach(([name, s]) => {
+        const total = s.wins + s.losses;
+        const rate = total === 0 ? 0 : Math.round((s.wins / total) * 100);
+        const color = rate >= 50 ? 'text-[#30D158]' : 'text-[#FF453A]';
+        const bar = rate >= 50 ? 'bg-[#30D158]' : 'bg-[#FF453A]';
 
-function switchAnalyticsTab(tab) {
-    currentAnalyticsTab = ['strategy', 'intelligence', 'advancements'].includes(tab) ? tab : 'strategy';
-    renderAnalytics();
-}
-
-function addAdvancement(text) {
-    const entry = {
-        id: Date.now(),
-        spin: history.length,
-        text,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        state: 'active'
-    };
-    advancementLog.unshift(entry);
-    renderAdvancementLog();
-    saveSessionData();
-}
-
-function renderAdvancementLog() {
-    const container = document.getElementById('advancementLogContainer');
-    if (!container) return;
-    refreshAdvancementStates();
-    if (advancementLog.length === 0) {
-        container.innerHTML = '<div class="text-center py-10 text-white/20 italic text-xs">No active tactical pivots. AI is currently monitoring baseline FON math.</div>';
-    } else {
-        container.innerHTML = advancementLog.map(log => `
-            <div class="frosted-plate p-3 border-l-2 ${log.state === 'active' ? 'border-[#bf5af2]/50' : 'border-white/10'} hover:bg-white/5 transition-colors">
-                <div class="flex justify-between items-center mb-1 gap-3">
-                    <span class="text-[9px] font-bold ${log.state === 'active' ? 'text-[#bf5af2]' : 'text-white/45'} uppercase tracking-tighter">Advancement @ Spin #${log.spin}</span>
-                    <div class="flex items-center gap-2">
-                        <span class="text-[8px] font-black uppercase tracking-[0.16em] px-2 py-0.5 rounded-md ${log.state === 'active' ? 'bg-[#bf5af2]/15 text-[#bf5af2]' : 'bg-white/10 text-white/45'}">${log.state}</span>
-                        <span class="text-[9px] text-white/30 font-mono">${log.timestamp}</span>
+        tbody.innerHTML += `
+            <tr class="hover:bg-white/5 transition-colors">
+                <td class="p-3 font-semibold text-gray-200">
+                    <div class="flex items-center justify-between">
+                        <span class="tracking-wide">${name}</span>
+                        <button onclick="event.stopPropagation(); openPatternLog('${name}')" class="text-[#8E8E93] hover:text-white cursor-pointer px-2 py-1 rounded-full hover:bg-white/10 transition-colors" title="View Log">
+                            <i class="fas fa-list-ul"></i>
+                        </button>
                     </div>
-                </div>
-                <div class="text-[11px] text-gray-200 leading-relaxed">${escapeAiMarkup(log.text)}</div>
-            </div>
-        `).join('');
+                </td>
+                <td class="p-3 text-right text-[#30D158] font-mono font-bold drop-shadow-sm">${s.wins}</td>
+                <td class="p-3 text-right text-[#FF453A] font-mono font-bold drop-shadow-sm">${s.losses}</td>
+                <td class="p-3 text-right w-24 relative">
+                    <div class="absolute inset-y-4 left-2 right-2 bg-[#3a3a3c] rounded-full overflow-hidden h-1.5 mt-2 shadow-inner">
+                        <div class="h-full ${bar}" style="width: ${rate}%"></div>
+                    </div>
+                    <span class="relative z-10 ${color} font-bold text-[10px] top-[-8px] right-[0px]">${rate}%</span>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+function openPatternLog(patternName) {
+    const logs = engineStats.signalLog.filter(s => s.patternName === patternName);
+    logs.sort((a, b) => a.spinIndex - b.spinIndex);
+    
+    let runningROI = 0;
+    let lastIndex = -1;
+    
+    let displayLogs = logs.map((log, i) => {
+        runningROI += log.units;
+        let gap = (i === 0) ? 0 : (log.spinIndex - lastIndex);
+        lastIndex = log.spinIndex;
+        return { ...log, gap, roi: runningROI };
+    });
+    
+    displayLogs.sort((a, b) => b.spinIndex - a.spinIndex);
+    
+    const tbody = document.getElementById('patternDetailBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (displayLogs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-[#8E8E93] italic">No signals recorded yet</td></tr>';
+    } else {
+        displayLogs.forEach(log => {
+            let badgeClass = '';
+            if (log.spinNum === 0) badgeClass = 'bg-[#30d158]/20 text-[#30d158] border-[#30d158]/30'; 
+            else if (RED_NUMS.includes(log.spinNum)) badgeClass = 'bg-[#ff453a]/20 text-[#ff453a] border-[#ff453a]/30'; 
+            else badgeClass = 'bg-[#3a3a3c] text-gray-200 border-white/10'; 
+            
+            const isWin = log.result === 'WIN';
+            const resClass = isWin ? 'text-[#30D158]' : 'text-[#FF453A]';
+            const unitClass = log.units > 0 ? 'text-[#30D158]' : 'text-[#FF453A]';
+            const roiClass = log.roi >= 0 ? 'text-[#30D158]' : 'text-[#FF453A]';
+            const unitSign = log.units > 0 ? '+' : '';
+            const roiSign = log.roi > 0 ? '+' : '';
+            
+            tbody.innerHTML += `
+                <tr class="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 text-xs">
+                    <td class="p-3 text-[#8E8E93] font-mono">#${log.spinIndex + 1}</td>
+                    <td class="p-3 text-center">
+                        <span class="inline-block w-8 h-6 flex items-center justify-center rounded-md border ${badgeClass} font-bold mx-auto border-opacity-50">
+                            ${log.spinNum}
+                        </span>
+                    </td>
+                    <td class="p-3 text-center text-gray-400 font-mono">${log.gap}</td>
+                    <td class="p-3 text-center font-bold ${resClass}">${log.result}</td>
+                    <td class="p-3 text-right font-mono font-bold ${unitClass}">${unitSign}${log.units}</td>
+                    <td class="p-3 text-right font-mono font-bold ${roiClass}">${roiSign}${log.roi}</td>
+                </tr>
+            `;
+        });
     }
 
-    renderAiFusionPanel();
-    renderAiLedger();
-    renderAiDebugPanel();
+    const titleEl = document.getElementById('patternDetailTitle');
+    if (titleEl) titleEl.innerText = `LOG: ${patternName}`;
+    const modal = document.getElementById('patternDetailModal');
+    if (modal) modal.classList.remove('hidden');
 }
 
-function renderAiFusionPanel() {
-    const container = document.getElementById('aiFusionContainer');
-    if (!container) return;
+// Ensure obsolete Intelligence functions don't throw errors
+function renderIntelligencePanel() {}
+function renderAdvancementLog() {}
+function renderAiFusionPanel() {}
+function renderAiLedger() {}
+function renderAiDebugPanel() {}
 
-    const fusion = lastAiFusionSnapshot;
-    if (!fusion) {
-        container.innerHTML = '<div class="text-center py-6 text-white/20 italic text-xs">Fusion state will appear when AI takeover is active.</div>';
-        return;
-    }
-
-    const aiConfidence = fusion.aiSignal && fusion.aiSignal.confidence ? fusion.aiSignal.confidence : 0;
-    const mathConfidence = fusion.mathSignal && fusion.mathSignal.confidence ? fusion.mathSignal.confidence : 0;
-    const aiCombo = fusion.aiSignal && fusion.aiSignal.comboLabel ? fusion.aiSignal.comboLabel : 'NONE';
-    const mathCombo = fusion.mathSignal && fusion.mathSignal.comboLabel ? fusion.mathSignal.comboLabel : 'NONE';
-    const aiFace = fusion.aiSignal && fusion.aiSignal.targetFace ? fusion.aiSignal.targetFace : null;
-    const mathFace = fusion.mathSignal && fusion.mathSignal.targetFace ? fusion.mathSignal.targetFace : null;
-
-
-    const tone = {
-        SYNCED: { color: '#30D158', border: 'rgba(48,209,88,0.25)', bg: 'rgba(48,209,88,0.08)' },
-        DIVERGENT: { color: '#FF9F0A', border: 'rgba(255,159,10,0.25)', bg: 'rgba(255,159,10,0.08)' },
-        NEUTRAL: { color: '#FFD60A', border: 'rgba(255,214,10,0.25)', bg: 'rgba(255,214,10,0.08)' },
-        AI_ONLY: { color: '#bf5af2', border: 'rgba(191,90,242,0.25)', bg: 'rgba(191,90,242,0.08)' },
-        AI_VETO: { color: '#ff1a33', border: 'rgba(255,26,51,0.25)', bg: 'rgba(255,26,51,0.08)' },
-        MUTUAL_WAIT: { color: 'rgba(255,255,255,0.7)', border: 'rgba(255,255,255,0.15)', bg: 'rgba(255,255,255,0.08)' },
-        MATH_ONLY: { color: '#64D2FF', border: 'rgba(100,210,255,0.25)', bg: 'rgba(100,210,255,0.08)' },
-        NO_EDGE: { color: 'rgba(255,255,255,0.55)', border: 'rgba(255,255,255,0.1)', bg: 'rgba(255,255,255,0.05)' }
-    }[fusion.stance] || { color: 'rgba(255,255,255,0.55)', border: 'rgba(255,255,255,0.1)', bg: 'rgba(255,255,255,0.05)' };
-
-    container.innerHTML = `
-        <div class="rounded-xl border p-3" style="color:${tone.color}; border-color:${tone.border}; background:${tone.bg};">
-            <div class="flex items-center justify-between gap-3">
-                <div class="text-[10px] font-black uppercase tracking-[0.16em]">${escapeAiMarkup(fusion.stance)}</div>
-                <div class="text-[9px] text-white/45 font-mono">AI ${aiConfidence}% / Math ${mathConfidence}%</div>
-            </div>
-            <div class="mt-2 text-[11px] leading-relaxed text-white/75">${escapeAiMarkup(fusion.summary)}</div>
-            <div class="mt-3 grid grid-cols-2 gap-3 text-[10px]">
-                <div class="rounded-lg border border-white/10 bg-black/20 p-2">
-                    <div class="text-white/35 uppercase tracking-[0.14em] text-[8px] font-black">AI Read</div>
-                    <div class="mt-1 font-bold text-[#bf5af2]">${escapeAiMarkup(aiCombo)}${aiFace ? ` -> F${aiFace}` : ''}</div>
-                </div>
-                <div class="rounded-lg border border-white/10 bg-black/20 p-2">
-                    <div class="text-white/35 uppercase tracking-[0.14em] text-[8px] font-black">Math Read</div>
-                    <div class="mt-1 font-bold text-[#64D2FF]">${escapeAiMarkup(mathCombo)}${mathFace ? ` -> F${mathFace}` : ''}</div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function renderAiLedger() {
-    const container = document.getElementById('aiLedgerContainer');
-    if (!container) return;
-    if (aiSignalLedger.length === 0) {
-        container.innerHTML = '<div class="text-center py-6 text-white/20 italic text-xs">No AI signals have been scored yet.</div>';
-        return;
-    }
-
-    container.innerHTML = aiSignalLedger.slice(0, 8).map(entry => `
-        <div class="rounded-xl border border-white/8 bg-black/25 p-3">
-            <div class="flex items-center justify-between gap-3">
-                <div class="text-[10px] font-black uppercase tracking-[0.15em] text-[#bf5af2]">${escapeAiMarkup(entry.comboLabel)} -> F${entry.targetFace}</div>
-                <div class="text-[9px] text-white/35 font-mono">${entry.timestamp}</div>
-            </div>
-            <div class="mt-1 text-[10px] text-white/55">${escapeAiMarkup(String(entry.mode || 'WAIT').replace(/_/g, ' '))} • ${entry.confidence}% • ${escapeAiMarkup(entry.stance)}</div>
-            <div class="mt-2 text-[11px] leading-relaxed text-gray-200">${escapeAiMarkup(entry.reason)}</div>
-            <div class="mt-3 grid grid-cols-3 gap-2 text-center text-[9px] font-black uppercase tracking-[0.14em]">
-                <div class="rounded-md border border-white/10 bg-white/5 px-2 py-1 ${entry.outcome1 === 'HIT' ? 'text-[#30D158]' : entry.outcome1 === 'MISS' ? 'text-[#FF453A]' : 'text-white/35'}">1: ${entry.outcome1 || 'PENDING'}</div>
-                <div class="rounded-md border border-white/10 bg-white/5 px-2 py-1 ${entry.outcome3 === 'HIT' ? 'text-[#30D158]' : entry.outcome3 === 'MISS' ? 'text-[#FF453A]' : 'text-white/35'}">3: ${entry.outcome3 || 'PENDING'}</div>
-                <div class="rounded-md border border-white/10 bg-white/5 px-2 py-1 ${entry.outcome5 === 'HIT' ? 'text-[#30D158]' : entry.outcome5 === 'MISS' ? 'text-[#FF453A]' : 'text-white/35'}">5: ${entry.outcome5 || 'PENDING'}</div>
-            </div>
-        </div>
-    `).join('');
-}
-
-function renderAiDebugPanel() {
-    const container = document.getElementById('aiDebugContainer');
-    if (!container) return;
-
-    container.innerHTML = `
-        <div class="rounded-xl border border-white/8 bg-black/25 p-3 space-y-3">
-            <div class="grid grid-cols-2 gap-3 text-[10px]">
-                <div>
-                    <div class="text-white/35 uppercase tracking-[0.14em] text-[8px] font-black">Status</div>
-                    <div class="mt-1 font-bold text-white">${escapeAiMarkup(aiRuntimeState.status)}</div>
-                </div>
-                <div>
-                    <div class="text-white/35 uppercase tracking-[0.14em] text-[8px] font-black">Provider</div>
-                    <div class="mt-1 font-bold text-white">${escapeAiMarkup(aiRuntimeState.provider)}</div>
-                </div>
-                <div>
-                    <div class="text-white/35 uppercase tracking-[0.14em] text-[8px] font-black">Mode</div>
-                    <div class="mt-1 font-bold text-white">${escapeAiMarkup(aiRuntimeState.lastRequestMode || 'idle')}</div>
-                </div>
-                <div>
-                    <div class="text-white/35 uppercase tracking-[0.14em] text-[8px] font-black">Latency</div>
-                    <div class="mt-1 font-bold text-white">${aiRuntimeState.lastLatencyMs || 0}ms</div>
-                </div>
-            </div>
-            <div>
-                <div class="text-white/35 uppercase tracking-[0.14em] text-[8px] font-black">Last Error</div>
-                <div class="mt-1 text-[11px] leading-relaxed text-white/60">${escapeAiMarkup(aiRuntimeState.lastError || 'None')}</div>
-            </div>
-            <div>
-                <div class="text-white/35 uppercase tracking-[0.14em] text-[8px] font-black">Prompt Preview</div>
-                <div class="mt-1 text-[10px] leading-relaxed text-white/45 whitespace-pre-wrap">${escapeAiMarkup(aiRuntimeState.lastPromptPreview || 'No prompt yet.')}</div>
-            </div>
-            <div>
-                <div class="text-white/35 uppercase tracking-[0.14em] text-[8px] font-black">Response Preview</div>
-                <div class="mt-1 text-[10px] leading-relaxed text-white/45 whitespace-pre-wrap">${escapeAiMarkup(aiRuntimeState.lastResponsePreview || 'No response yet.')}</div>
-            </div>
-        </div>
-    `;
-}
-
-function setIntelligenceMode(mode) {
-    persistIntelligenceMode(mode);
-    applyAnalyticsTabUI();
-    if (currentAnalyticsTab === 'intelligence') {
-        renderIntelligencePanel();
-    }
-}
 
 function renderGapStats() {
     const container = document.getElementById('faceGapContainer');
@@ -2688,27 +2685,36 @@ function renderUserAnalytics() {
     updateUserBetLog();
 }
 
-// --- ADVANCED GRAPHING ---
 function drawAdvancedGraph(historyArray, winCount, lossCount, containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
     container.innerHTML = '';
-    container.className = "flex flex-col h-full w-full rounded-b-xl overflow-hidden";
+    container.className = "flex flex-col h-full w-full rounded-b-xl overflow-hidden relative";
 
     const chartDiv = document.createElement('div');
-    chartDiv.className = "relative h-[80%] w-full bg-black/20";
+    chartDiv.className = "relative h-[80%] w-full bg-black/20 group";
     container.appendChild(chartDiv);
 
     // HUD
     const hudDiv = document.createElement('div');
-    hudDiv.className = "h-[20%] w-full flex justify-between items-center px-4 text-[10px] font-bold bg-white/5 border-t border-white/5 backdrop-blur-sm";
+    hudDiv.className = "h-[20%] w-full flex justify-between items-center px-4 text-[10px] font-bold bg-white/5 border-t border-white/5 backdrop-blur-sm z-10 relative";
     hudDiv.innerHTML = `
-            <span class="text-[#4ade80] drop-shadow-sm tracking-wide">WINS: ${winCount}</span>
-            <span class="text-[#e5e7eb] drop-shadow-sm tracking-wide">SPINS: ${historyArray ? Math.max(0, historyArray.length - 1) : 0}</span>
-            <span class="text-[#f87171] drop-shadow-sm tracking-wide">LOSSES: ${lossCount}</span>
-        `;
+        <span class="text-[#4ade80] drop-shadow-sm tracking-wide">WINS: ${winCount}</span>
+        <span class="text-[#e5e7eb] drop-shadow-sm tracking-wide">SPINS: ${historyArray ? Math.max(0, historyArray.length - 1) : 0}</span>
+        <span class="text-[#f87171] drop-shadow-sm tracking-wide">LOSSES: ${lossCount}</span>
+    `;
     container.appendChild(hudDiv);
+
+    // Dynamic Tooltip Div
+    const tooltipId = `tooltip-${containerId}`;
+    let tooltipEl = document.getElementById(tooltipId);
+    if (!tooltipEl) {
+        tooltipEl = document.createElement('div');
+        tooltipEl.id = tooltipId;
+        tooltipEl.className = "pointer-events-none absolute hidden z-50 rounded-lg py-2 px-3 bg-[#1c1c1e]/95 border border-white/10 shadow-2xl backdrop-blur-md transform -translate-x-1/2 -translate-y-[120%] flex-col items-center justify-center transition-opacity duration-150";
+        container.appendChild(tooltipEl);
+    }
 
     if (!historyArray || historyArray.length < 2) {
         chartDiv.innerHTML = `<div class="flex items-center justify-center h-full text-xs text-[#8E8E93] font-mono animate-pulse">Waiting for Data...</div>`;
@@ -2745,27 +2751,115 @@ function drawAdvancedGraph(historyArray, winCount, lossCount, containerId) {
     }
 
     const svgContent = `
-            <svg viewBox="0 0 ${vWidth} ${vHeight}" width="100%" height="100%" preserveAspectRatio="none" style="overflow: visible;">
-                <defs>
-                    <linearGradient id="profitGrad-${containerId}" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stop-color="#4ade80" />
-                        <stop offset="${zeroOffset}%" stop-color="#4ade80" />
-                        <stop offset="${zeroOffset}%" stop-color="#f87171" />
-                        <stop offset="100%" stop-color="#f87171" />
-                    </linearGradient>
-                </defs>
-                
-                <line x1="${padding}" y1="${zeroY}" x2="${vWidth - padding}" y2="${zeroY}" 
-                      stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 6" opacity="0.3" vector-effect="non-scaling-stroke" />
-                
-                <path d="${pathD}" fill="none" stroke="url(#profitGrad-${containerId})" 
-                      stroke-width="3" stroke-linecap="round" stroke-linejoin="round" 
-                      vector-effect="non-scaling-stroke" 
-                      style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));" />
-            </svg>
-        `;
+        <svg id="svg-${containerId}" viewBox="0 0 ${vWidth} ${vHeight}" width="100%" height="100%" preserveAspectRatio="none" style="overflow: visible;" class="cursor-crosshair absolute inset-0 z-0">
+            <defs>
+                <linearGradient id="profitGrad-${containerId}" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#4ade80" />
+                    <stop offset="${zeroOffset}%" stop-color="#4ade80" />
+                    <stop offset="${zeroOffset}%" stop-color="#f87171" />
+                    <stop offset="100%" stop-color="#f87171" />
+                </linearGradient>
+            </defs>
+            
+            <line x1="${padding}" y1="${zeroY}" x2="${vWidth - padding}" y2="${zeroY}" 
+                  stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 6" opacity="0.3" vector-effect="non-scaling-stroke" />
+            
+            <path d="${pathD}" fill="none" stroke="url(#profitGrad-${containerId})" 
+                  stroke-width="3" stroke-linecap="round" stroke-linejoin="round" 
+                  vector-effect="non-scaling-stroke" 
+                  style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));" />
+                  
+            <!-- Interactive Elements -->
+            <line id="trackerLine-${containerId}" x1="0" y1="0" x2="0" y2="200" stroke="white" stroke-width="1.5" opacity="0" stroke-dasharray="4 4" vector-effect="non-scaling-stroke" class="transition-opacity duration-150" />
+            <circle id="trackerDot-${containerId}" cx="0" cy="0" r="4.5" fill="white" opacity="0" style="filter: drop-shadow(0 0 4px rgba(255,255,255,0.8));" class="transition-opacity duration-150" />
+            
+            <rect id="touchTarget-${containerId}" x="0" y="0" width="${vWidth}" height="${vHeight}" fill="transparent" />
+        </svg>
+    `;
 
     chartDiv.innerHTML = svgContent;
+
+    // Attach 120Hz Hover Interactivity
+    // Use requestAnimationFrame for smooth performance
+    setTimeout(() => {
+        const svgArea = document.getElementById(`svg-${containerId}`);
+        const touchTarget = document.getElementById(`touchTarget-${containerId}`);
+        const trackerLine = document.getElementById(`trackerLine-${containerId}`);
+        const trackerDot = document.getElementById(`trackerDot-${containerId}`);
+        
+        if (!svgArea || !touchTarget) return;
+
+        let ticking = false;
+        let lastEvent = null;
+
+        const updateTooltip = () => {
+            if (!lastEvent) return;
+            
+            const rect = svgArea.getBoundingClientRect();
+            let rawX = lastEvent.clientX - rect.left;
+            let rawY = lastEvent.clientY - rect.top;
+            
+            const scaleX = vWidth / rect.width;
+            let svgX = rawX * scaleX;
+            
+            if (svgX < padding) svgX = padding;
+            if (svgX > vWidth - padding) svgX = vWidth - padding;
+
+            const indexFloat = ((svgX - padding) / (vWidth - 2 * padding)) * (historyArray.length - 1);
+            let closestIndex = Math.round(indexFloat);
+            if (closestIndex < 0) closestIndex = 0;
+            if (closestIndex >= historyArray.length) closestIndex = historyArray.length - 1;
+
+            const snapX = getX(closestIndex);
+            
+            // Map snapX (which is Viewbox coordinates) back to absolute DOM coordinates for the tooltip div
+            const domSnapX = (snapX / vWidth) * rect.width;
+            
+            const snapY = getY(historyArray[closestIndex]);
+            const profitAtPoint = historyArray[closestIndex];
+
+            trackerLine.setAttribute('x1', String(snapX));
+            trackerLine.setAttribute('x2', String(snapX));
+            trackerLine.setAttribute('opacity', '0.5');
+            
+            trackerDot.setAttribute('cx', String(snapX));
+            trackerDot.setAttribute('cy', String(snapY));
+            trackerDot.setAttribute('opacity', '1');
+
+            const netColor = profitAtPoint >= 0 ? 'text-[#30D158]' : 'text-[#FF453A]';
+            const netSign = profitAtPoint > 0 ? '+' : '';
+            
+            tooltipEl.innerHTML = `
+                <div class="text-[8px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Spin #${closestIndex}</div>
+                <div class="${netColor} font-bold text-sm tracking-tight leading-none">${netSign}${profitAtPoint} <span class="text-[9px] text-gray-500 uppercase">u</span></div>
+            `;
+            
+            tooltipEl.classList.remove('hidden');
+            tooltipEl.classList.add('flex');
+            tooltipEl.style.left = `${domSnapX}px`;
+            tooltipEl.style.top = `${Math.max(20, rawY)}px`;
+            
+            ticking = false;
+        };
+
+        const handleHover = (e) => {
+            lastEvent = e;
+            if (!ticking) {
+                requestAnimationFrame(updateTooltip);
+                ticking = true;
+            }
+        };
+
+        const hideHover = () => {
+            trackerLine.setAttribute('opacity', '0');
+            trackerDot.setAttribute('opacity', '0');
+            tooltipEl.classList.add('hidden');
+            tooltipEl.classList.remove('flex');
+        };
+
+        touchTarget.addEventListener('mousemove', handleHover);
+        touchTarget.addEventListener('mouseleave', hideHover);
+    }, 50);
 }
 
 function updatePatternHeatmap(patternData) {
@@ -3277,20 +3371,7 @@ function renderDashboard(alerts) {
             return;
         }
 
-        const snapshot = engineSnapshot || createEmptyEngineSnapshot(history.length);
-        let emptyLabel = 'SCANNING...';
-
-        if (snapshot.engineState === 'BUILDING') {
-            emptyLabel = `BUILDING ENGINE • ${snapshot.spinsUntilNextCheckpoint} SPINS UNTIL FIRST READ`;
-        } else if (snapshot.engineState === 'WAITING') {
-            emptyLabel = `NEXT READ IN ${snapshot.spinsUntilNextCheckpoint} SPINS`;
-        } else if (snapshot.engineState === 'WATCHLIST') {
-            emptyLabel = `WATCHLIST • ${snapshot.dominantCombo ? snapshot.dominantCombo.label : 'NO ACTION'}`;
-        } else if (snapshot.engineState === 'NO_SIGNAL') {
-            emptyLabel = 'NO SIGNAL • CHECKPOINT CLEAR';
-        }
-
-        dash.innerHTML = `<div class="dashboard-empty w-full text-center text-[10px] font-medium text-[#8E8E93]/60 border border-dashed border-white/5 rounded-xl p-2 select-none tracking-wide flex items-center justify-center h-[60px]"><span>${emptyLabel}</span></div>`;
+        dash.innerHTML = `<div class="dashboard-empty w-full text-center text-[10px] font-medium text-[#8E8E93]/60 border border-dashed border-white/5 rounded-xl p-2 select-none tracking-wide flex items-center justify-center h-[60px]"><span>NO ACTIVE PREDICTIONS</span></div>`;
         return;
     }
 
@@ -3643,7 +3724,7 @@ LIVE TELEMETRY:
 TASK:
 Provide a strict, 3-sentence tactical breakdown of the table. 
 1. Is the wheel "Chopping" or "Trending" on specific combo zones (${combos})?
-2. Is the math engine getting chopped up by variance (look at the Hit Rate and Net Units)?
+2. Are there any undeniable gaps forming on the faces?
 3. What is the explicit physical play right now, or should the player walk away? Do NOT give generic advice.`;
 }
 
@@ -3809,13 +3890,67 @@ function importSpins(input) {
         try {
             const data = JSON.parse(e.target.result);
             if (Array.isArray(data.spins)) {
+                // Pause UI and reset core memory arrays
+                const bulkSpins = data.spins;
                 resetData(true);
+                
+                // --- BULK IMPORT LOOP ---
                 const inputField = document.getElementById('spinInput');
-                for (let i = 0; i < data.spins.length; i++) {
-                    await enqueueSpin(data.spins[i], { preserveInput: true });
+                if (inputField) inputField.disabled = true;
+
+                for (let i = 0; i < bulkSpins.length; i++) {
+                    const val = bulkSpins[i];
+                    if (val < 0 || val > 36) continue;
+
+                    // 1. Silent History Push
+                    const matchedFaces = [];
+                    const matchedFaceMask = Object.prototype.hasOwnProperty.call(FON_MASK_MAP, val) ? FON_MASK_MAP[val] : 0;
+                    
+                    for (let f = 1; f <= 5; f++) {
+                        if ((matchedFaceMask & FACE_MASKS[f]) !== 0) {
+                            matchedFaces.push(f);
+                        }
+                    }
+
+                    // 2. Silent Stats Increment
+                    for (let f = 1; f <= 5; f++) {
+                        if (matchedFaces.includes(f)) faceGaps[f] = 0;
+                        else faceGaps[f]++;
+                    }
+
+                    const spinObj = {
+                        num: val,
+                        faces: matchedFaces,
+                        index: history.length,
+                        resolvedBets: [], // Predictions are disabled
+                        newSignals: [],
+                        id: Date.now() + Math.random()
+                    };
+                    
+                    history.push(spinObj);
                 }
-                inputField.value = '';
-                inputField.focus();
+
+                // --- SINGLE DOM RENDER ---
+                const historyBody = document.getElementById('historyBody');
+                if (historyBody) historyBody.innerHTML = '';
+                
+                for (let i = 0; i < history.length; i++) {
+                    renderRow(history[i]);
+                }
+
+                renderAnalytics();
+                updatePerimeterAnalytics();
+                updateAnalyticsHUD();
+                refreshHighlights();
+                saveSessionData();
+
+                if (inputField) {
+                    inputField.value = '';
+                    inputField.disabled = false;
+                    inputField.focus();
+                }
+
+                alert(`Successfully imported ${history.length} spins.`);
             } else {
                 alert("Invalid file format: 'spins' array missing.");
             }

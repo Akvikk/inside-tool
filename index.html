@@ -1,4 +1,4 @@
-﻿﻿﻿﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -159,51 +159,20 @@
             </div>
         </div>
 
-        <!-- PREDICTION SETTINGS -->
+        <!-- AI HINDSIGHT -->
         <div class="px-4 py-3 border-b border-white/5 bg-white/5 flex justify-between items-center cursor-pointer hover:bg-white/10 transition-colors"
-            onclick="toggleAccordion('predictionSubMenu')">
-            <span class="text-[10px] font-bold text-gray-300 uppercase tracking-wider">Prediction Settings</span>
+            onclick="toggleAccordion('aiHindsightSubMenu')">
+            <span class="text-[10px] font-bold text-gray-300 uppercase tracking-wider">AI Hindsight</span>
             <i class="fas fa-chevron-down text-gray-500 text-xs transition-transform duration-200"
-                id="predictionSubMenuIcon"></i>
+                id="aiHindsightSubMenuIcon"></i>
         </div>
-        <div id="predictionSubMenu" class="hidden bg-black/40 overflow-hidden transition-all duration-200">
-            <!-- Strategies Dropdown -->
-            <div class="px-4 py-3 border-b border-white/5 hover:bg-white/10 transition-colors">
-                <div class="flex flex-col gap-2">
-                    <label for="strategySelect" class="text-xs text-gray-300 flex items-center">
-                        <i class="fas fa-chess-knight mr-2 text-[#0A84FF]"></i>
-                        Active Strategy
-                    </label>
-                    <select id="strategySelect" onchange="changePredictionStrategy(this.value)" class="w-full bg-white/5 border border-white/10 text-white text-xs rounded p-2 outline-none appearance-none cursor-pointer focus:border-[#0A84FF]/50 transition-colors">
-                        <option value="momentum-gap" class="bg-gray-900">Momentum & Gap Filter</option>
-                        <option value="legacy-face" class="bg-gray-900">Legacy Face Predictor</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="px-4 py-3 border-b border-white/5 hover:bg-white/10 transition-colors">
-                <div class="flex items-center justify-between">
-                    <div class="text-xs text-gray-300 flex items-center">
-                        <i class="fas fa-vector-square mr-2 text-[#30D158]"></i>
-                        Perimeter Window
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button onclick="event.stopPropagation(); adjustPredictionPerimeterWindow(-1)"
-                            class="w-7 h-7 rounded-md border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white text-sm font-black leading-none">-</button>
-                        <span id="perimeterWindowValue"
-                            class="min-w-[74px] text-center text-[10px] font-bold bg-white/10 px-2 py-1 rounded-md text-white">14
-                            Spins</span>
-                        <button onclick="event.stopPropagation(); adjustPredictionPerimeterWindow(1)"
-                            class="w-7 h-7 rounded-md border border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white text-sm font-black leading-none">+</button>
-                    </div>
-                </div>
-            </div>
+        <div id="aiHindsightSubMenu" class="hidden bg-black/40 overflow-hidden transition-all duration-200">
             <div class="px-4 py-3 border-b border-white/5 hover:bg-white/10 transition-colors">
                 <div class="flex items-center justify-between gap-3">
                     <div class="min-w-0">
                         <div class="text-xs text-gray-200 flex items-center">
                             <i class="fas fa-brain mr-2 text-[#bf5af2]"></i>
-                            AI Card Takeover
+                            AI Takeover
                         </div>
                         <div class="text-[9px] text-white/35 mt-1 leading-snug">AI replaces the prediction cards and writes the reasoning into the log.</div>
                     </div>
@@ -343,12 +312,8 @@
                 <button onclick="toggleModal('analyticsModal')"
                     class="text-gray-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
             </div>
-            <div class="p-3 border-b border-white/5">
-                <div class="segmented-control max-w-lg mx-auto">
-                    <button class="tab-btn active" id="tabStrategy" onclick="switchAnalyticsTab('strategy')">Strategy</button>
-                    <button class="tab-btn" id="tabIntelligence" onclick="switchAnalyticsTab('intelligence')">Intelligence</button>
-                    <button class="tab-btn" id="tabAdvancements" onclick="switchAnalyticsTab('advancements')">Advancements</button>
-                </div>
+            <div class="p-3 border-b border-white/5 flex justify-center items-center">
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Currently Displaying: <span id="activeAnalyticsStrategyLabel" class="text-white">Series Strategy</span></span>
             </div>
             <div class="flex-1 overflow-y-auto p-6 space-y-5 custom-scroll">
                 <div id="strategyAnalyticsPanel" class="space-y-5">
@@ -401,78 +366,7 @@
                         </table>
                     </div>
                 </div>
-                <div id="intelligenceAnalyticsPanel" class="hidden space-y-5">
-                    <div class="intel-toolbar">
-                        <div class="intel-toolbar-main">
-                            <div id="intelStateChip" class="intel-state-chip intel-chip-building">BUILDING</div>
-                            <div class="intel-toolbar-copy">
-                                <div id="intelCheckpointSummary" class="intel-toolbar-title">Building initial read</div>
-                                <div id="intelNextCheckpointMeta" class="intel-toolbar-meta">14 spins until first read</div>
-                            </div>
-                        </div>
-                        <div class="intel-toolbar-side">
-                            <div class="intel-next-box">
-                                <span class="intel-next-label">Next</span>
-                                <span id="intelNextCheckpoint" class="intel-next-value">14</span>
-                            </div>
-                            <label class="intel-select-wrap">
-                                <span class="intel-select-label">View</span>
-                                <select id="intelligenceViewSelect" class="intel-select" onchange="setIntelligenceMode(this.value)">
-                                    <option value="brief">Decision Brief</option>
-                                    <option value="diagnostic">Diagnostic Panel</option>
-                                    <option value="minimal">Minimal Only</option>
-                                </select>
-                            </label>
-                        </div>
-                    </div>
-                    <div id="aiAnalysisContainer" class="hidden flex-col gap-3 mb-4">
-                        <div class="flex items-center justify-between p-3 mb-2 rounded-xl border border-[#bf5af2]/20 bg-[#bf5af2]/5">
-                            <div>
-                                <div class="text-[10px] font-bold text-white uppercase tracking-wider">Neural Prediction Mode</div>
-                                <div class="text-[8px] text-gray-400 mt-0.5">Bypasses 14-spin math for pure AI behavior analysis.</div>
-                            </div>
-                            <button id="neuralModeToggle" onclick="toggleNeuralPrediction()" class="w-10 h-5 rounded-full bg-white/10 border border-white/20 relative transition-all duration-300">
-                                <div id="neuralKnob" class="absolute left-1 top-1 w-3 h-3 rounded-full bg-gray-400 transition-transform duration-300"></div>
-                            </button>
-                        </div>
-                        <button id="runAiBtn" onclick="runAiAnalysis()" class="w-full py-3 rounded-xl font-bold text-xs uppercase tracking-wider bg-gradient-to-r from-[#bf5af2]/20 to-[#0a84ff]/20 hover:from-[#bf5af2]/30 hover:to-[#0a84ff]/30 text-white border border-[#bf5af2]/30 transition-all shadow-[0_0_15px_rgba(191,90,242,0.15)] flex justify-center items-center gap-2">
-                            <i class="fas fa-brain text-[#bf5af2]"></i> Request AI Session Analysis
-                        </button>
-                        <div id="aiResponseBox" class="hidden p-4 rounded-xl border border-white/10 bg-[#0a0a0c]/80 text-gray-300 text-xs leading-relaxed max-h-[250px] overflow-y-auto custom-scroll whitespace-pre-wrap"></div>
-                    </div>
-                    <div id="intelligenceContent"></div>
-                </div>
-                <div id="advancementsAnalyticsPanel" class="hidden space-y-5">
-                    <div class="frosted-plate p-4 bg-gradient-to-r from-[#bf5af2]/10 to-transparent border-l-4 border-[#bf5af2]">
-                        <h3 class="text-[#bf5af2] font-black text-xs uppercase tracking-widest flex items-center gap-2">
-                            <i class="fas fa-shield-alt"></i> Active Tactical Overrides
-                        </h3>
-                        <p class="text-[10px] text-gray-400 mt-1 leading-relaxed">
-                            These are AI-suggested advancements to your core math based on the current wheel rhythm.
-                        </p>
-                    </div>
-                    <div id="advancementLogContainer" class="space-y-3">
-                        <div class="text-center py-10 text-white/20 italic text-xs">No active tactical pivots. AI is currently monitoring baseline FON math.</div>
-                    </div>
-                    <div class="frosted-plate p-4">
-                        <div class="text-[10px] font-black uppercase tracking-[0.16em] text-white/60 mb-3">Math vs AI Fusion</div>
-                        <div id="aiFusionContainer" class="space-y-3">
-                            <div class="text-center py-6 text-white/20 italic text-xs">Fusion state will appear when AI takeover is active.</div>
-                        </div>
-                    </div>
-                    <div class="frosted-plate p-4">
-                        <div class="text-[10px] font-black uppercase tracking-[0.16em] text-white/60 mb-3">AI Performance Ledger</div>
-                        <div id="aiLedgerContainer" class="space-y-3">
-                            <div class="text-center py-6 text-white/20 italic text-xs">No AI signals have been scored yet.</div>
-                        </div>
-                    </div>
-                    <div class="frosted-plate p-4">
-                        <div class="text-[10px] font-black uppercase tracking-[0.16em] text-white/60 mb-3">AI Router Debug</div>
-                        <div id="aiDebugContainer" class="space-y-3">
-                            <div class="text-center py-6 text-white/20 italic text-xs">Router telemetry will appear after the first AI request.</div>
-                        </div>
-                    </div>
-                </div>
+                <!-- Intelligence and Advancements Panels Removed for Redesign -->
                 <div class="text-center pt-2">
                     <button onclick="resetData()"
                         class="text-[10px] font-bold uppercase tracking-widest border px-4 py-2 rounded-lg transition-colors hover:bg-[#ff1a33]/10"
@@ -638,6 +532,19 @@
                 </div>
             </div>
 
+            <!-- Strategies Dropdown -->
+            <div class="px-4 py-3 border-b border-white/5 hover:bg-white/10 transition-colors">
+                <div class="flex flex-col gap-2">
+                    <label for="strategySelect" class="text-xs text-gray-300 flex items-center">
+                        <i class="fas fa-chess-knight mr-2 text-[#0A84FF]"></i>
+                        Active Strategy
+                    </label>
+                    <select id="strategySelect" onchange="changePredictionStrategy(this.value)" class="w-full bg-white/5 border border-white/10 text-white text-xs rounded p-2 outline-none appearance-none cursor-pointer focus:border-[#0A84FF]/50 transition-colors">
+                        <option value="series" class="bg-gray-900">Series Strategy (1-2-3)</option>
+                        <option value="combo" class="bg-gray-900">Combo Strategy (Pair Scan)</option>
+                    </select>
+                </div>
+            </div>
             <!-- Stats Table -->
             <div id="hudStats" class="px-2.5 pb-2 shrink-0">
                 <!-- Injected via JS -->
