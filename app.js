@@ -3210,25 +3210,43 @@ function renderRow(spin, container = null) {
             const prevMask = Object.prototype.hasOwnProperty.call(FON_MASK_MAP, prevSpin.num) ? FON_MASK_MAP[prevSpin.num] : 0;
             const currMask = Object.prototype.hasOwnProperty.call(FON_MASK_MAP, spin.num) ? FON_MASK_MAP[spin.num] : 0;
 
-            for (let comboIndex = 0; comboIndex < PERIMETER_COMBOS.length; comboIndex++) {
-                const trackedCombo = PERIMETER_COMBOS[comboIndex];
-                const prevHasA = (prevMask & FACE_MASKS[trackedCombo.a]) !== 0;
-                const prevHasB = (prevMask & FACE_MASKS[trackedCombo.b]) !== 0;
-                const currHasA = (currMask & FACE_MASKS[trackedCombo.a]) !== 0;
-                const currHasB = (currMask & FACE_MASKS[trackedCombo.b]) !== 0;
+            if (currentGameplayStrategy === 'combo') {
+                for (let comboIndex = 0; comboIndex < PERIMETER_COMBOS.length; comboIndex++) {
+                    const trackedCombo = PERIMETER_COMBOS[comboIndex];
+                    const prevHasA = (prevMask & FACE_MASKS[trackedCombo.a]) !== 0;
+                    const prevHasB = (prevMask & FACE_MASKS[trackedCombo.b]) !== 0;
+                    const currHasA = (currMask & FACE_MASKS[trackedCombo.a]) !== 0;
+                    const currHasB = (currMask & FACE_MASKS[trackedCombo.b]) !== 0;
 
-                if (prevHasA && currHasB) {
-                    detectedCombo = trackedCombo;
-                    matchedPrevFace = trackedCombo.a;
-                    matchedCurrFace = trackedCombo.b;
-                    break;
+                    if (prevHasA && currHasB) {
+                        detectedCombo = trackedCombo;
+                        matchedPrevFace = trackedCombo.a;
+                        matchedCurrFace = trackedCombo.b;
+                        break;
+                    }
+
+                    if (prevHasB && currHasA) {
+                        detectedCombo = trackedCombo;
+                        matchedPrevFace = trackedCombo.b;
+                        matchedCurrFace = trackedCombo.a;
+                        break;
+                    }
                 }
+            } else if (currentGameplayStrategy === 'series') {
+                for (let seqIndex = 0; seqIndex < SEQUENCES.length; seqIndex++) {
+                    const seq = SEQUENCES[seqIndex];
+                    const prevHasA = (prevMask & FACE_MASKS[seq.a]) !== 0;
+                    const currHasB = (currMask & FACE_MASKS[seq.b]) !== 0;
 
-                if (prevHasB && currHasA) {
-                    detectedCombo = trackedCombo;
-                    matchedPrevFace = trackedCombo.b;
-                    matchedCurrFace = trackedCombo.a;
-                    break;
+                    if (prevHasA && currHasB) {
+                        detectedCombo = {
+                            label: `${seq.a}-${seq.b}`,
+                            color: SEQUENCE_COLORS[seqIndex % SEQUENCE_COLORS.length]
+                        };
+                        matchedPrevFace = seq.a;
+                        matchedCurrFace = seq.b;
+                        break;
+                    }
                 }
             }
 

@@ -336,8 +336,13 @@
                 <button onclick="toggleModal('analyticsModal')"
                     class="text-gray-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
             </div>
-            <div class="p-3 border-b border-white/5 flex justify-center items-center">
-                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Currently Displaying: <span id="activeAnalyticsStrategyLabel" class="text-white">Series Strategy</span></span>
+            <div class="p-3 border-b border-white/5 flex justify-center items-center gap-3">
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Analytics Mode:</span>
+                <div class="flex bg-black/40 rounded-lg p-0.5 border border-white/5 w-48 relative">
+                    <div id="analyticsTogglePillBg" class="absolute w-1/2 h-[calc(100%-4px)] bg-[#30D158]/20 border border-[#30D158]/50 rounded-md top-[2px] left-[2px] transition-all duration-300 pointer-events-none"></div>
+                    <button onclick="setAnalyticsDisplayStrategy('series')" id="analyticsBtnSeries" class="flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 text-[#30D158] transition-colors relative z-10">SERIES</button>
+                    <button onclick="setAnalyticsDisplayStrategy('combo')" id="analyticsBtnCombo" class="flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 text-gray-400 transition-colors relative z-10">COMBOS</button>
+                </div>
             </div>
             <div class="flex-1 overflow-y-auto p-6 space-y-5 custom-scroll">
                 <div id="strategyAnalyticsPanel" class="space-y-5">
