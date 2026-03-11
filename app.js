@@ -105,9 +105,12 @@ let cachedAddSpinBtn = null;
 
 function changePredictionStrategy(val) {
     currentGameplayStrategy = val;
-    const labelEl = document.getElementById('activeAnalyticsStrategyLabel');
-    if (labelEl) {
-        labelEl.innerText = val === 'series' ? 'Series Strategy' : 'Combo Strategy';
+    const headerEl = document.getElementById('historyComboHeader');
+    if (headerEl) {
+        headerEl.innerText = val === 'series' ? 'SEQUENCE' : 'COMBO';
+    }
+    if (typeof setAnalyticsDisplayStrategy === 'function') {
+        setAnalyticsDisplayStrategy(val);
     }
     // Update HUD strategy label
     const hudLabel = document.getElementById('hudStrategyLabel');
@@ -244,6 +247,7 @@ let engineSnapshot = null;
 let lastActionableComboLabel = null;
 let lastActionableTargetFace = null;
 let lastActionableCheckpointSpin = 0;
+let analyticsDisplayStrategy = 'series';
 window.currentAlerts = [];
 
 function normalizeIntelligenceMode(mode) {
@@ -408,6 +412,14 @@ window.onload = async () => {
     updateAiUiState();
 
     if (hasSession) {
+        const headerEl = document.getElementById('historyComboHeader');
+        if (headerEl) {
+            headerEl.innerText = currentGameplayStrategy === 'series' ? 'SEQUENCE' : 'COMBO';
+        }
+        if (typeof setAnalyticsDisplayStrategy === 'function') {
+            setAnalyticsDisplayStrategy(currentGameplayStrategy);
+        }
+
         // Rebuild pattern config based on saved strategy
         rebuildPatternConfig();
         updateStopwatchDisplay();
@@ -2750,9 +2762,9 @@ function renderAnalytics() {
         history: [0], patterns: {} 
     };
 
-    const targetStrategy = currentGameplayStrategy === 'series' ? 'Sequence' : 'TripleCs';
+    const targetStrategy = analyticsDisplayStrategy === 'series' ? 'Sequence' : 'TripleCs';
 
-    // Only count stats for the currently active gameplay strategy
+    // Only count stats for the currently active analytics strategy
     engineStats.signalLog.forEach(log => {
         if (log.rawStrategy === targetStrategy) {
             if (log.result === 'WIN') {
@@ -2800,6 +2812,30 @@ function renderAnalytics() {
 
     drawAdvancedGraph(displayStats.history, displayStats.wins, displayStats.losses, 'graphContainer');
     updatePatternHeatmap(displayStats.patterns);
+}
+
+function setAnalyticsDisplayStrategy(strategy) {
+    if (analyticsDisplayStrategy === strategy) return;
+    
+    analyticsDisplayStrategy = strategy;
+    
+    const seriesBtn = document.getElementById('analyticsBtnSeries');
+    const comboBtn = document.getElementById('analyticsBtnCombo');
+    const bgPill = document.getElementById('analyticsTogglePillBg');
+    
+    if (seriesBtn && comboBtn) {
+        if (strategy === 'series') {
+            seriesBtn.classList.replace('text-gray-400', 'text-[#30D158]');
+            comboBtn.classList.replace('text-[#30D158]', 'text-gray-400');
+            if (bgPill) bgPill.style.transform = 'translateX(0)';
+        } else {
+            comboBtn.classList.replace('text-gray-400', 'text-[#30D158]');
+            seriesBtn.classList.replace('text-[#30D158]', 'text-gray-400');
+            if (bgPill) bgPill.style.transform = 'translateX(100%)';
+        }
+    }
+    
+    renderAnalytics();
 }
 
 function updatePatternHeatmap(patternData) {
