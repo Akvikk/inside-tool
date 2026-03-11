@@ -67,6 +67,9 @@ let patternConfig = {};
 // { 'series': [...bets], 'combo': [...bets] }
 let backgroundBets = {};
 
+// Triple Cs Resets - persistent state for the Triple Cs sub-strategy
+let tripleCsResets = {};
+
 let engineStats = {
     totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0,
     bankrollHistory: [0], patternStats: {},
@@ -1097,7 +1100,8 @@ async function syncPredictionEngine() {
             ? patternConfig
             : (strat.buildPatternConfig ? strat.buildPatternConfig(true) : {});
 
-        const result = strat.run(history, snapshot, stratPatternConfig);
+        // Pass tripleCsResets to the run function
+        const result = strat.run(history, snapshot, stratPatternConfig, { tripleCsResets });
         backgroundBets[stratKey] = result.nextBets || [];
 
         // Only the active strategy drives the live dashboard & alerts
@@ -2500,13 +2504,6 @@ async function undoSpin() {
     saveSessionData();
 }
 
-// Global Ctrl+Z / Cmd+Z Support
-document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-        e.preventDefault();
-        undoSpin();
-    }
-});
 
 async function processSpinValue(val, options = {}) {
     // Animate the Plus Icon on Add
@@ -2560,6 +2557,11 @@ async function processSpinValue(val, options = {}) {
                 updateUserStats(isWin, bet, currentSpinIndex, unitChange);
             }
 
+            // Triple Cs Reset logic: if a TripleCs bet wins, record the reset index
+            if (isWin && bet.strategy === 'TripleCs' && bet.originPairKey) {
+                tripleCsResets[bet.originPairKey] = currentSpinIndex;
+            }
+
             // Store Data Object
             resolvedBets.push({
                 patternName: bet.patternName, // Display Name
@@ -2590,6 +2592,11 @@ async function processSpinValue(val, options = {}) {
             const unitChange = isWin ? (35 - count) : -count;
             // Record in engineStats silently — no user stats, no display
             updateEngineStats(isWin, bet.patternName, unitChange, bet.strategy, bet.patternName, currentSpinIndex, val);
+
+            // Triple Cs Reset logic for background bets
+            if (isWin && bet.strategy === 'TripleCs' && bet.originPairKey) {
+                tripleCsResets[bet.originPairKey] = currentSpinIndex;
+            }
         });
         backgroundBets[stratKey] = [];
     }
@@ -2727,7 +2734,9 @@ function renderAnalytics() {
         history: [0], patterns: {} 
     };
 
-    const targetStrategy = analyticsDisplayStrategy === 'series' ? 'Sequence' : 'TripleCs';
+    // Map display strategy key to the rawStrategy value stored in engineStats.signalLog
+    // Series uses 'Sequence', Combo uses 'Combo' (as set by strategy.combo.js)
+    const targetStrategy = analyticsDisplayStrategy === 'series' ? 'Sequence' : 'Combo';
 
     // Only count stats for the currently active analytics strategy
     engineStats.signalLog.forEach(log => {
@@ -3591,6 +3600,7 @@ function resetData(skipConfirm = false) {
         lastActionableCheckpointSpin = 0;
         strategies = {};
         backgroundBets = {};
+        tripleCsResets = {};
         engineStats = {
             totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0,
             bankrollHistory: [0], patternStats: {}, signalLog: []
@@ -3616,21 +3626,6 @@ function resetData(skipConfirm = false) {
         }
         saveSessionData();
     }
-}
-
-async function undoSpin() {
-    if (history.length === 0) return;
-    let oldHist = [...history];
-    oldHist.pop();
-
-    resetData(true);
-    for (let i = 0; i < oldHist.length; i++) {
-        await enqueueSpin(oldHist[i].num, { preserveInput: true });
-    }
-
-    updatePerimeterAnalytics();
-    updateAnalyticsHUD();
-    saveSessionData();
 }
 
 function updateAiUiState() {

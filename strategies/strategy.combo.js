@@ -22,7 +22,7 @@ window.StrategyRegistry.combo = {
      */
     get PATTERN_FILTER_META() {
         return Object.fromEntries(
-            (window.PERIMETER_COMBOS || []).map(combo => [combo.label, {
+            (PERIMETER_COMBOS || []).map(combo => [combo.label, {
                 label: combo.label,
                 hint: `Track ${combo.label} inside the prediction engine and dashboard flow.`,
                 icon: 'fa-link',
@@ -37,7 +37,7 @@ window.StrategyRegistry.combo = {
      */
     buildPatternConfig(enabled = true) {
         return Object.fromEntries(
-            (window.PERIMETER_COMBOS || []).map(combo => [combo.label, enabled])
+            (PERIMETER_COMBOS || []).map(combo => [combo.label, enabled])
         );
     },
 
@@ -91,7 +91,7 @@ window.StrategyRegistry.combo = {
      * @param {Object} FACE_MASKS - the global FACE_MASKS lookup
      */
     detectBridge(prevMask, currMask, FACE_MASKS) {
-        const combos = window.PERIMETER_COMBOS || [];
+        const combos = PERIMETER_COMBOS || [];
         for (let i = 0; i < combos.length; i++) {
             const combo = combos[i];
             const prevHasA = (prevMask & FACE_MASKS[combo.a]) !== 0;

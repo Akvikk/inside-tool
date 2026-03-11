@@ -1,0 +1,2100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TRIPLE Cs - ULTIMATE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <style>
+        :root {
+            /* Deep Dark macOS Palette */
+            --bg-base: #000000; /* Pure black base for contrast with orbs */
+            --glass-border: rgba(255, 255, 255, 0.08);
+            
+            /* Vivid iOS System Colors with Depth */
+            --ios-blue: #0A84FF;
+            --ios-green: #30D158;
+            --ios-red: #FF453A;
+            --ios-yellow: #FFD60A;
+            --ios-purple: #BF5AF2;
+            --ios-gray: #98989D;
+            
+            /* Animation Curves */
+            --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            --ease-smooth: cubic-bezier(0.2, 0.8, 0.2, 1);
+            --apple-spring: cubic-bezier(0.25, 1.4, 0.35, 1);
+        }
+
+        body {
+            background-color: var(--bg-base);
+            /* Removed static gradient, replaced with ambient orbs below */
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+            -webkit-font-smoothing: antialiased;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- AMBIENT LIVING BACKGROUND --- */
+        @keyframes float-orb {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+
+        .ambient-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.35;
+            animation: float-orb 25s infinite ease-in-out;
+            pointer-events: none;
+        }
+        .orb-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: radial-gradient(circle, var(--ios-blue), transparent 70%); }
+        .orb-2 { bottom: -20%; right: -10%; width: 60vw; height: 60vw; background: radial-gradient(circle, var(--ios-purple), transparent 70%); animation-delay: -5s; }
+        .orb-3 { top: 30%; left: 40%; width: 40vw; height: 40vw; background: radial-gradient(circle, var(--ios-green), transparent 70%); animation-delay: -12s; opacity: 0.2; }
+
+        /* --- NEXT-LEVEL GLASSMORPHISM --- */
+        .glass-panel {
+            background: rgba(30, 30, 35, 0.65);
+            backdrop-filter: blur(50px) saturate(190%);
+            -webkit-backdrop-filter: blur(50px) saturate(190%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 
+                0 0 0 1px rgba(0,0,0, 0.1),
+                0 25px 50px -12px rgba(0, 0, 0, 0.7),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .glass-header {
+            background: rgba(10, 10, 12, 0.5); /* More transparent */
+            backdrop-filter: blur(30px) saturate(160%);
+            -webkit-backdrop-filter: blur(30px) saturate(160%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .glass-strip {
+            background: rgba(5, 5, 8, 0.4);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        /* MESMERISING GRID (Number Pad) */
+        .mesmer-grid {
+            background: rgba(20, 20, 25, 0.2); /* Very translucent */
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-right: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 5px 0 30px rgba(0,0,0,0.3);
+        }
+
+        /* CRYSTAL BUTTONS */
+        .grid-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(5px);
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 1.1rem;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+            color: rgba(255,255,255,0.9);
+            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+        .grid-btn::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .grid-btn:hover {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 15px rgba(255,255,255,0.1);
+            z-index: 10;
+        }
+        .grid-btn:hover::after { opacity: 1; }
+        .grid-btn:active { transform: scale(0.95); }
+
+        /* Specific Grid Colors */
+        .grid-red { color: #ff453a; background: rgba(255, 69, 58, 0.05); border-color: rgba(255, 69, 58, 0.15); }
+        .grid-red:hover { background: rgba(255, 69, 58, 0.15); box-shadow: 0 0 20px rgba(255, 69, 58, 0.3); color: #fff; }
+        
+        .grid-green { color: #30d158; background: rgba(48, 209, 88, 0.05); border-color: rgba(48, 209, 88, 0.15); }
+        .grid-green:hover { background: rgba(48, 209, 88, 0.15); box-shadow: 0 0 20px rgba(48, 209, 88, 0.3); color: #fff; }
+
+        /* APPLE-LIKE MENU POPUP */
+        .glass-menu {
+            background: rgba(22, 22, 24, 0.6); /* More transparent for blur visibility */
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 
+                0 0 0 1px rgba(0,0,0,0.2),
+                0 20px 60px rgba(0,0,0,0.6),
+                inset 0 1px 0 rgba(255,255,255,0.15);
+            border-radius: 16px;
+            animation: menuSpring 0.35s var(--apple-spring) forwards;
+            transform-origin: top right;
+        }
+
+        /* --- ANIMATIONS --- */
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(15px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.92); filter: blur(2px); }
+            100% { opacity: 1; transform: scale(1); filter: blur(0); }
+        }
+
+        @keyframes modalEnter {
+            0% { opacity: 0; transform: scale(0.94) translateY(15px); filter: blur(4px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+        }
+
+        @keyframes menuSpring {
+            0% { opacity: 0; transform: scale(0.8) translateY(-10px); filter: blur(8px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+        }
+        
+        @keyframes slideUpFade {
+            0% { transform: translate(-50%, 100%); opacity: 0; }
+            100% { transform: translate(-50%, 0); opacity: 1; }
+        }
+
+        /* ELEMENTAL ANIMATIONS (NEW) */
+        @keyframes fire-flicker {
+            0% { box-shadow: 0 0 15px rgba(255, 69, 0, 0.4), inset 0 0 10px rgba(255, 69, 0, 0.2); border-color: rgba(255, 69, 0, 0.6); }
+            50% { box-shadow: 0 0 30px rgba(255, 140, 0, 0.7), inset 0 0 20px rgba(255, 140, 0, 0.4); border-color: rgba(255, 140, 0, 1); }
+            100% { box-shadow: 0 0 15px rgba(255, 69, 0, 0.4), inset 0 0 10px rgba(255, 69, 0, 0.2); border-color: rgba(255, 69, 0, 0.6); }
+        }
+
+        @keyframes ice-shimmer {
+            0% { box-shadow: 0 0 15px rgba(0, 255, 255, 0.3), inset 0 0 5px rgba(0, 255, 255, 0.1); border-color: rgba(0, 255, 255, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(0, 191, 255, 0.6), inset 0 0 15px rgba(0, 191, 255, 0.2); border-color: rgba(0, 191, 255, 0.8); }
+            100% { box-shadow: 0 0 15px rgba(0, 255, 255, 0.3), inset 0 0 5px rgba(0, 255, 255, 0.1); border-color: rgba(0, 255, 255, 0.4); }
+        }
+
+        /* --- COMPONENT STYLES --- */
+        .ios-btn {
+            transition: all 0.2s var(--ease-smooth);
+            position: relative;
+            overflow: hidden;
+        }
+        .ios-btn:active { transform: scale(0.94); filter: brightness(0.9); }
+        .ios-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+
+        /* --- UNIFIED TABLE STYLE --- */
+        .history-table { 
+            width: 100%; 
+            border-collapse: separate; 
+            border-spacing: 0; 
+            table-layout: fixed; 
+        }
+        
+        .history-table th {
+            color: var(--ios-gray);
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: rgba(5, 5, 5, 0.7); /* More transparent header */
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 8px 4px;
+        }
+        
+        .history-table td {
+            padding: 4px;
+            vertical-align: middle;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .history-row {
+            height: 44px;
+            transition: background-color 0.15s ease;
+            animation: slideInRight 0.3s var(--ease-smooth) forwards;
+        }
+        .history-row:hover { background-color: rgba(255,255,255,0.06); }
+
+        .num-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            margin: 0 auto;
+            border-radius: 7px;
+            font-weight: 800;
+            font-size: 0.95rem;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        .bg-red { background: linear-gradient(145deg, #ff453a, #c0281e); border: 1px solid rgba(255, 69, 58, 0.3); }
+        .bg-black { background: linear-gradient(145deg, #3a3a3c, #1c1c1e); border: 1px solid rgba(255,255,255,0.1); }
+        .bg-green { background: linear-gradient(145deg, #30d158, #1da33d); border: 1px solid rgba(48, 209, 88, 0.3); }
+
+        .face-tag {
+            font-weight: 700;
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 5px;
+            display: inline-block;
+            min-width: 40px;
+            text-align: center;
+            letter-spacing: 0.05em;
+        }
+        
+        .highlight-pair {
+            box-shadow: 0 0 0 1px var(--ios-green), 0 0 15px rgba(48, 209, 88, 0.2);
+            animation: breathe 2.5s infinite ease-in-out;
+        }
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.05); filter: brightness(1.2); }
+        }
+
+        /* --- SLEEK PREDICTION CARDS (REDESIGNED) --- */
+        .card-lock {
+            background: rgba(20, 20, 22, 0.6);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 14px;
+            animation: popIn 0.4s var(--ease-spring) forwards;
+            min-width: 100px;
+        }
+        
+        /* Redesigned Active Card */
+        .card-active {
+            background: linear-gradient(180deg, rgba(30, 30, 32, 0.9) 0%, rgba(20, 20, 22, 0.95) 100%);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-left: 4px solid var(--ios-blue); /* Solid contrasting stripe */
+            border-radius: 14px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            overflow: hidden;
+            animation: popIn 0.4s var(--ease-spring) forwards;
+            transition: all 0.2s var(--ease-smooth);
+            min-width: 130px;
+        }
+        .card-active:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.6);
+            background: linear-gradient(180deg, rgba(40, 40, 45, 0.9) 0%, rgba(25, 25, 28, 0.95) 100%);
+        }
+
+        /* FIRE CARD (HOT) - Replacing Badge with Animation */
+        .card-fire {
+            animation: fire-flicker 1.5s infinite alternate !important;
+            background: linear-gradient(135deg, rgba(60, 10, 0, 0.95), rgba(30, 5, 0, 0.98)) !important;
+            border-left-color: #FF453A !important;
+            border-top-color: rgba(255, 69, 58, 0.3) !important;
+        }
+        /* Inner flame overlay simulation */
+        .card-fire::after {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(circle at 50% 120%, rgba(255, 100, 0, 0.25), transparent 60%);
+            z-index: 0; pointer-events: none;
+            mix-blend-mode: screen;
+        }
+
+        /* ICE CARD (COLD/FATIGUED) - Replacing Warning with Animation */
+        .card-ice {
+            animation: ice-shimmer 3s infinite alternate !important;
+            background: linear-gradient(135deg, rgba(0, 20, 40, 0.95), rgba(0, 10, 20, 0.98)) !important;
+            border-left-color: #0A84FF !important;
+            border-top-color: rgba(10, 132, 255, 0.3) !important;
+        }
+        /* Inner frost overlay simulation */
+        .card-ice::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(to top, rgba(0, 200, 255, 0.15), transparent);
+            z-index: 0; pointer-events: none;
+        }
+
+        .card-content { position: relative; z-index: 10; }
+
+        /* Power Bet - Gold Theme */
+        .card-power {
+            background: linear-gradient(180deg, rgba(42, 32, 0, 0.9) 0%, rgba(26, 20, 0, 0.95) 100%) !important;
+            border-left-color: var(--ios-yellow) !important;
+            border-top-color: rgba(255, 214, 10, 0.2) !important;
+            box-shadow: 0 10px 30px -5px rgba(255, 214, 10, 0.15) !important;
+            animation: popIn 0.4s var(--ease-spring) forwards, pulse-border 2s infinite !important;
+        }
+        
+        @keyframes pulse-border {
+            0%, 100% { border-left-color: rgba(255, 214, 10, 0.6); }
+            50% { border-left-color: rgba(255, 214, 10, 1); }
+        }
+
+        /* Confirmed - Green Theme */
+        .card-confirmed {
+            background: linear-gradient(180deg, rgba(0, 31, 10, 0.9) 0%, rgba(0, 20, 5, 0.95) 100%) !important;
+            border-left-color: var(--ios-green) !important;
+            border-top-color: rgba(48, 209, 88, 0.2) !important;
+        }
+
+        .bet-checkbox {
+            width: 1.1rem; height: 1.1rem;
+            accent-color: var(--ios-green);
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+        .bet-checkbox:hover { opacity: 1; }
+
+        /* Pills */
+        .status-pill {
+            font-size: 0.6rem;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .pill-hot { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .pill-power { background: rgba(255, 214, 10, 0.15); color: #FFD60A; border: 1px solid rgba(255, 214, 10, 0.3); }
+        
+        /* Warning Badge */
+        .fatigue-warning {
+            position: absolute; top: 8px; right: 30px;
+            color: #ff453a;
+            font-size: 0.7rem; 
+            animation: pulse-red 2s infinite;
+        }
+        @keyframes pulse-red { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+
+        /* --- IOS TAB SEGMENTED CONTROL --- */
+        .segmented-control {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 9px; padding: 3px; display: flex;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+        }
+        .tab-btn {
+            flex: 1; padding: 6px 12px; font-weight: 600; color: #a1a1aa;
+            border-radius: 7px; font-size: 0.75rem; transition: all 0.2s var(--ease-smooth);
+            text-align: center;
+        }
+        .tab-btn.active {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        /* INPUT STYLING */
+        .ios-input {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 10px;
+            color: white;
+            font-family: "SF Mono", monospace;
+            transition: all 0.2s var(--ease-smooth);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .ios-input:focus {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: var(--ios-blue);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.2);
+        }
+
+        /* MODAL ANIMATION */
+        .modal-content-animated {
+            animation: modalEnter 0.4s var(--apple-spring) forwards;
+        }
+
+        /* Custom Scrollbar */
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+        /* Hide scrollbar for Horizontal Menu on Mobile */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col text-sm bg-[#050505] selection:bg-blue-500/30">
+
+    <!-- AMBIENT ORBS (LIVING BACKGROUND) -->
+    <div class="ambient-orb orb-1"></div>
+    <div class="ambient-orb orb-2"></div>
+    <div class="ambient-orb orb-3"></div>
+
+    <!-- 1. CONTROLS HEADER (Compact) -->
+    <div class="glass-header pl-4 flex items-center shrink-0 z-30 h-[56px] gap-2">
+        <div class="flex gap-3 items-center shrink-0 mr-2">
+            <div class="relative">
+                <input type="number" id="spinInput" min="0" max="36" 
+                    class="ios-input w-[64px] h-8 text-lg font-bold text-center placeholder-white/20"
+                    placeholder="#">
+            </div>
+            
+            <button onclick="addSpin()" 
+                class="ios-btn h-8 px-5 bg-gradient-to-b from-[#0A84FF] to-[#0066CC] hover:from-[#3399FF] hover:to-[#0A84FF] text-white font-bold rounded-lg shadow-lg text-xs tracking-wider border border-[#0A84FF]/50">
+                ADD
+            </button>
+            
+            <button onclick="undoSpin()" 
+                class="ios-btn h-8 w-8 bg-[#2c2c2e] hover:bg-[#3a3a3c] text-[#8E8E93] hover:text-white font-bold rounded-lg border border-white/10 flex items-center justify-center shadow-md">
+                <i class="fas fa-undo text-[10px]"></i>
+            </button>
+        </div>
+
+        <div class="flex-1 flex gap-2 items-center overflow-x-auto no-scrollbar pr-4 justify-start md:justify-end">
+            <!-- LOCAL SAVE STATUS -->
+            <div id="saveStatus" class="flex items-center justify-center w-8 h-8 rounded-full border border-white/5 bg-white/5 transition-all duration-300 shrink-0">
+                <i class="fas fa-save text-[#8E8E93] text-xs"></i>
+            </div>
+
+            <!-- DATA MENU -->
+            <div class="relative shrink-0">
+                <button id="dataBtn" onclick="toggleDataMenu()" 
+                    class="ios-btn h-8 px-3 bg-white/5 hover:bg-white/10 text-[#98989D] font-semibold rounded-lg border border-white/10 flex items-center gap-2 text-xs">
+                    <i class="fas fa-database"></i> DATA
+                </button>
+                <!-- FIXED: Fixed positioning with JS calculation to handle horizontal scroll clipping -->
+                <div id="dataMenu" class="hidden fixed z-[100] w-48 glass-menu overflow-hidden shadow-2xl transition-all duration-200" style="top: 0; left: 0;">
+                    <button onclick="exportSpins()" class="w-full text-left px-4 py-3 text-xs text-gray-200 hover:bg-white/10 border-b border-white/5 transition-colors">
+                        <i class="fas fa-download mr-2 text-[#0A84FF]"></i> Export Spins
+                    </button>
+                    <label class="w-full text-left px-4 py-3 text-xs text-gray-200 hover:bg-white/10 transition-colors cursor-pointer block border-b border-white/5">
+                        <i class="fas fa-upload mr-2 text-[#30D158]"></i> Import Spins
+                        <input type="file" id="importFile" class="hidden" accept=".json" onchange="importSpins(this)">
+                    </label>
+                    <button onclick="showResetModal()" class="w-full text-left px-4 py-3 text-xs text-[#FF453A] font-bold hover:bg-[#FF453A]/10 transition-colors uppercase tracking-wide">
+                        <i class="fas fa-skull mr-2"></i> RESET SESSION
+                    </button>
+                </div>
+            </div>
+
+            <button onclick="toggleModal('patternsModal')" 
+                class="ios-btn h-8 px-3 bg-white/5 hover:bg-white/10 text-[#BF5AF2] font-semibold rounded-lg border border-[#BF5AF2]/20 flex items-center gap-2 text-xs shrink-0">
+                <i class="fas fa-filter"></i> PATTERNS
+            </button>
+
+            <button onclick="toggleModal('betsModal'); renderUserAnalytics();" 
+                class="ios-btn h-8 px-3 bg-white/5 hover:bg-white/10 text-[#0A84FF] font-semibold rounded-lg border border-[#0A84FF]/20 flex items-center gap-2 text-xs shrink-0">
+                <i class="fas fa-list-check"></i> BETS
+            </button>
+
+            <button onclick="toggleModal('analyticsModal'); renderAnalytics();" 
+                class="ios-btn h-8 px-3 bg-white/5 hover:bg-white/10 text-[#FFD60A] font-semibold rounded-lg border border-[#FFD60A]/20 flex items-center gap-2 text-xs shrink-0">
+                <i class="fas fa-chart-line"></i> STATS
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. DASHBOARD (Sleek, Slim, Effective) -->
+    <div id="dashboard" class="px-4 py-1.5 flex gap-2 overflow-x-auto h-[80px] shrink-0 items-center glass-strip shadow-inner">
+        <!-- Content filled via JS -->
+        <div class="w-full text-center text-[10px] font-medium text-[#8E8E93]/60 border border-dashed border-white/5 rounded-xl p-2 select-none tracking-wide flex items-center justify-center h-[60px]">
+            <span>GHOST MODE ACTIVE • SCANNING...</span>
+        </div>
+    </div>
+
+    <!-- 3. MAIN CONTENT -->
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Desktop Grid (Number Pad) - NOW MESMERISING -->
+        <div class="hidden md:block w-[240px] shrink-0 mesmer-grid p-3 overflow-y-auto custom-scroll" id="desktopGrid">
+            <div class="grid grid-cols-3 gap-2">
+                <button class="grid-btn grid-green col-span-3 py-4 shadow-sm" onclick="handleGridClick(0)">0</button>
+                <!-- JS Fills 1-36 -->
+            </div>
+        </div>
+
+        <!-- History Table -->
+        <div class="flex-1 flex flex-col relative w-full bg-transparent overflow-hidden" id="scrollContainer">
+            <div class="flex-1 overflow-y-auto custom-scroll">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th class="w-[10%] text-center">#</th>
+                            <th class="w-[15%] text-center">SPIN</th>
+                            <th class="w-[30%] text-center">FACE</th>
+                            <th class="w-[45%] pl-4">PREDICTION</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <!-- Content Injected Here -->
+                    </tbody>
+                </table>
+                <div class="h-16"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL TEMPLATES -->
+    
+    <!-- RESET CONFIRMATION MODAL (NEW) -->
+    <div id="resetConfirmModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[200] flex items-center justify-center p-4" onclick="toggleModal('resetConfirmModal')">
+        <div class="glass-panel w-full max-w-xs rounded-2xl p-6 text-center shadow-2xl transform scale-100 modal-content-animated" onclick="event.stopPropagation()">
+            <div class="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4 border border-red-500/30">
+                <i class="fas fa-exclamation-triangle text-[#FF453A] text-xl"></i>
+            </div>
+            <h3 class="text-white font-bold text-lg mb-2">Reset Session?</h3>
+            <p class="text-gray-400 text-xs mb-6 leading-relaxed">This will permanently wipe all history and betting data. This action cannot be undone.</p>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="toggleModal('resetConfirmModal')" class="py-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 font-bold text-xs transition-colors border border-white/5">CANCEL</button>
+                <button onclick="executeHardReset()" class="py-3 rounded-xl bg-[#FF453A] hover:bg-red-600 text-white font-bold text-xs shadow-lg shadow-red-500/30 transition-all border border-red-500/50">CONFIRM</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toastContainer" class="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-[300] flex flex-col gap-2 pointer-events-none w-max max-w-[90vw]"></div>
+
+    <!-- PATTERNS MODAL -->
+    <div id="patternsModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4 transition-all duration-300" onclick="toggleModal('patternsModal')">
+        <div class="glass-panel w-full max-w-sm rounded-2xl shadow-2xl flex flex-col overflow-hidden modal-content-animated" onclick="event.stopPropagation()">
+            <div class="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
+                <h2 class="text-[#BF5AF2] font-bold text-sm tracking-wide uppercase">Filters</h2>
+                <button onclick="toggleModal('patternsModal')" class="text-gray-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="bg-black/30 p-4 border-b border-white/5">
+                <div class="flex justify-between items-end mb-2">
+                    <div class="text-[10px] font-bold text-[#8E8E93] uppercase tracking-wider">Gap Counter (Cold > 15)</div>
+                </div>
+                <div class="grid grid-cols-5 gap-2" id="faceGapContainer"></div>
+            </div>
+            <div class="p-4 space-y-2 bg-black/20 max-h-[50vh] overflow-y-auto custom-scroll">
+                <div id="patternsList" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACTUAL BETS MODAL -->
+    <div id="betsModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4" onclick="toggleModal('betsModal')">
+        <div class="glass-panel w-full max-w-3xl h-[80vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden modal-content-animated" onclick="event.stopPropagation()">
+            <div class="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
+                <h2 class="text-[#0A84FF] font-bold text-sm tracking-wide uppercase">Bet History</h2>
+                <button onclick="toggleModal('betsModal')" class="text-gray-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6 space-y-6 bg-black/20 custom-scroll">
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="bg-white/5 p-4 rounded-xl border border-white/5 text-center shadow-lg">
+                        <div class="text-[#8E8E93] text-[10px] font-bold uppercase tracking-wider mb-1">Net Units</div>
+                        <div id="userNet" class="text-4xl font-bold text-white tracking-tight">0</div>
+                    </div>
+                    <div class="bg-white/5 p-4 rounded-xl border border-white/5 text-center shadow-lg">
+                        <div class="text-[#8E8E93] text-[10px] font-bold uppercase tracking-wider mb-1">Hit Rate</div>
+                        <div id="userHitRate" class="text-4xl font-bold text-[#0A84FF] tracking-tight">0%</div>
+                    </div>
+                    <div class="bg-white/5 p-4 rounded-xl border border-white/5 text-center shadow-lg">
+                        <div class="text-[#8E8E93] text-[10px] font-bold uppercase tracking-wider mb-1">Total Bets</div>
+                        <div id="userTotal" class="text-4xl font-bold text-gray-300 tracking-tight">0</div>
+                    </div>
+                </div>
+                <div class="bg-white/5 border border-white/5 rounded-xl p-4 shadow-lg">
+                    <div class="text-[#8E8E93] text-[10px] font-bold uppercase tracking-wide mb-2">Trend</div>
+                    <!-- REPLACED: New container ID -->
+                    <div class="h-36 w-full relative" id="userGraphContainer"></div>
+                </div>
+                <div class="bg-white/5 border border-white/5 rounded-xl overflow-hidden shadow-lg">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-black/30 text-[#8E8E93] border-b border-white/5">
+                            <tr>
+                                <th class="p-3 font-bold uppercase">#</th>
+                                <th class="p-3 font-bold uppercase">Pattern</th>
+                                <th class="p-3 font-bold uppercase text-center">Target</th>
+                                <th class="p-3 font-bold uppercase text-right">Result</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userBetsBody" class="divide-y divide-white/5">
+                            <tr><td colspan="4" class="p-6 text-center text-[#8E8E93] italic">No confirmed bets yet</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ANALYTICS MODAL -->
+    <div id="analyticsModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4" onclick="toggleModal('analyticsModal')">
+        <div class="glass-panel w-full max-w-3xl h-[85vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden modal-content-animated" onclick="event.stopPropagation()">
+            <div class="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
+                <h2 class="text-[#FFD60A] font-bold text-sm tracking-wide uppercase">Analytics Engine</h2>
+                <button onclick="toggleModal('analyticsModal')" class="text-gray-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-3 bg-black/30 border-b border-white/5">
+                <div class="segmented-control max-w-md mx-auto">
+                    <button class="tab-btn active" id="tabGod" onclick="switchAnalyticsTab('god')">Strategy (God View)</button>
+                    <button class="tab-btn" id="tabPlayer" onclick="switchAnalyticsTab('player')">Filtered (Player View)</button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6 space-y-5 bg-black/10 custom-scroll">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div class="bg-white/5 p-3 rounded-xl border border-white/5 text-center shadow-md">
+                        <div class="text-[#8E8E93] text-[9px] font-bold uppercase tracking-wider mb-1"><span id="labelHitRate">Global Hit Rate</span></div>
+                        <div id="kpiHitRate" class="text-2xl font-bold text-white">0%</div>
+                    </div>
+                    <div class="bg-white/5 p-3 rounded-xl border border-white/5 text-center shadow-md">
+                        <div class="text-[#8E8E93] text-[9px] font-bold uppercase tracking-wider mb-1"><span id="labelNet">Theoretical Net</span></div>
+                        <div id="kpiNet" class="text-2xl font-bold text-white">0</div>
+                    </div>
+                    <div class="bg-white/5 p-3 rounded-xl border border-white/5 text-center shadow-md">
+                        <div class="text-[#8E8E93] text-[9px] font-bold uppercase tracking-wider mb-1">Total Signals</div>
+                        <div id="kpiSignals" class="text-2xl font-bold text-[#0A84FF]">0</div>
+                    </div>
+                    <div class="bg-white/5 p-3 rounded-xl border border-white/5 text-center shadow-md">
+                        <div class="text-[#8E8E93] text-[9px] font-bold uppercase tracking-wider mb-1">Form</div>
+                        <div id="kpiForm" class="text-2xl font-bold text-gray-400">-</div>
+                    </div>
+                </div>
+                <div class="bg-white/5 border border-white/5 rounded-xl p-4 shadow-lg relative z-10">
+                    <div class="flex justify-between items-center mb-3">
+                        <div class="text-[#8E8E93] text-[10px] font-bold uppercase tracking-wider" id="graphTitle">Theoretical Bankroll</div>
+                        
+                        <div class="relative">
+                             <button id="simFilterBtn" onclick="toggleSimMenu()" class="hidden text-[10px] bg-[#BF5AF2]/10 hover:bg-[#BF5AF2]/20 text-[#BF5AF2] border border-[#BF5AF2]/30 px-3 py-1 rounded-lg font-bold transition-colors flex items-center gap-2">
+                                <i class="fas fa-sliders-h"></i> SIMULATE
+                            </button>
+                            <!-- Dropdown -->
+                            <div id="simFilterMenu" class="hidden absolute right-0 top-full mt-2 w-48 glass-menu z-20 overflow-hidden">
+                                <div class="p-2 space-y-1 max-h-[200px] overflow-y-auto custom-scroll" id="simFilterList">
+                                    <!-- JS Fills this -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- REPLACED: New container ID -->
+                    <div class="h-36 w-full relative" id="graphContainer"></div>
+                </div>
+                <div class="bg-white/5 border border-white/5 rounded-xl overflow-hidden shadow-lg">
+                    <div class="p-3 bg-black/20 border-b border-white/5 text-[#8E8E93] text-[10px] font-bold uppercase tracking-wider">Pattern Efficiency</div>
+                    <table class="w-full text-left text-xs">
+                        <thead class="text-[#8E8E93] border-b border-white/5 bg-black/10">
+                            <tr>
+                                <th class="p-3 font-semibold">Name</th>
+                                <th class="p-3 font-semibold text-right">Wins</th>
+                                <th class="p-3 font-semibold text-right">Losses</th>
+                                <th class="p-3 font-semibold text-right w-24">Eff %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="heatmapBody" class="divide-y divide-white/5">
+                            <tr><td colspan="4" class="p-6 text-center text-[#8E8E93] italic">No data</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-center pt-2">
+                    <button onclick="resetData()" class="text-[10px] text-[#FF453A] hover:text-red-300 font-bold uppercase tracking-widest border border-[#FF453A]/30 px-4 py-2 rounded-lg hover:bg-[#FF453A]/10 transition-colors">
+                        RESET SESSION
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PATTERN DETAIL MODAL -->
+    <div id="patternDetailModal" class="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-4" onclick="toggleModal('patternDetailModal')">
+        <div class="glass-panel w-full max-w-xl rounded-2xl shadow-2xl flex flex-col overflow-hidden modal-content-animated" onclick="event.stopPropagation()">
+            <div class="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
+                <h2 id="patternDetailTitle" class="text-[#0A84FF] font-bold text-sm tracking-wide uppercase">Pattern Log</h2>
+                <button onclick="toggleModal('patternDetailModal')" class="text-gray-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-0 max-h-[60vh] bg-black/10 custom-scroll">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-[#1c1c1e] text-[#8E8E93] border-b border-white/5 sticky top-0 z-10">
+                        <tr>
+                            <th class="p-3 font-bold uppercase">Spin #</th>
+                            <th class="p-3 font-bold uppercase text-center">Result</th>
+                            <th class="p-3 font-bold uppercase text-right">Units</th>
+                        </tr>
+                    </thead>
+                    <tbody id="patternDetailBody" class="divide-y divide-white/5"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- CONFIGURATION ---
+    const FACES = {
+        1: { id: 1, nums: [1, 6, 10, 15, 24, 29, 33], color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)', border: '#0891b2' }, // Cyan
+        2: { id: 2, nums: [2, 7, 11, 16, 20, 24, 25, 29, 34], color: '#f97316', bg: 'rgba(249, 115, 22, 0.15)', border: '#ea580c' }, // Orange
+        3: { id: 3, nums: [3, 8, 12, 17, 21, 26, 30, 35], color: '#a855f7', bg: 'rgba(168, 85, 247, 0.15)', border: '#9333ea' }, // Purple
+        4: { id: 4, nums: [4, 9, 13, 18, 22, 27, 31, 36], color: '#eab308', bg: 'rgba(234, 179, 8, 0.15)', border: '#ca8a04' }, // Yellow
+        5: { id: 5, nums: [0, 5, 10, 14, 15, 19, 23, 28, 32], color: '#30D158', bg: 'rgba(48, 209, 88, 0.15)', border: '#22c55e' } // Green (Updated)
+    };
+
+    const SEQUENCES = [
+        { name: "123", a: 1, b: 2, target: 3 },
+        { name: "321", a: 3, b: 2, target: 1 },
+        { name: "234", a: 2, b: 3, target: 4 },
+        { name: "432", a: 4, b: 3, target: 2 },
+        { name: "132", a: 1, b: 3, target: 2 },
+        { name: "231", a: 2, b: 3, target: 1 }
+    ];
+
+    const RED_NUMS = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+
+    // --- STATE MANAGEMENT ---
+    let history = []; 
+    let activeBets = []; 
+    let faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }; 
+    
+    // Global Pattern Configuration - The Source of Truth
+    let patternConfig = {
+        'TripleCs': true,
+        '(123)': true,
+        '(321)': true,
+        '(234)': true,
+        '(432)': true,
+        '(132)': true,
+        '(231)': true
+    };
+
+    // Independent Simulation Configuration for Analytics
+    let simulationConfig = {};
+
+    let engineStats = {
+        totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0,
+        bankrollHistory: [0], patternStats: {},
+        signalLog: [] 
+    };
+
+    let userStats = {
+        totalWins: 0, totalLosses: 0, netUnits: 0, 
+        bankrollHistory: [0], 
+        betLog: [] 
+    };
+    
+    let strategies = { 'TripleCs': { resets: {} }, 'Sequence': {} };
+    
+    let currentAnalyticsTab = 'god';
+
+    // --- INIT ---
+    window.onload = () => {
+        initDesktopGrid();
+        
+        // Default Sim Config (will be overwritten if loadLocal succeeds)
+        simulationConfig = JSON.parse(JSON.stringify(patternConfig));
+        
+        renderFilterMenu(); // Render default state
+        renderGapStats();   // Render default state
+
+        loadLocal(); // Overwrites state and Re-renders if data exists
+
+        document.getElementById('spinInput').focus();
+        document.getElementById('spinInput').addEventListener("keypress", (e) => {
+            if (e.key === "Enter") addSpin();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+                e.preventDefault();
+                undoSpin();
+            }
+        });
+        
+        // Global Click listener for menus
+        document.addEventListener('click', (e) => {
+            // Sim Menu
+            const simMenu = document.getElementById('simFilterMenu');
+            const simBtn = document.getElementById('simFilterBtn');
+            if (simMenu && !simMenu.classList.contains('hidden') && !simMenu.contains(e.target) && !simBtn.contains(e.target)) {
+                simMenu.classList.add('hidden');
+            }
+            
+            // Data Menu
+            const dataMenu = document.getElementById('dataMenu');
+            const dataBtn = document.getElementById('dataBtn');
+            if (dataMenu && !dataMenu.classList.contains('hidden') && !dataMenu.contains(e.target) && (!dataBtn || !dataBtn.contains(e.target))) {
+                dataMenu.classList.add('hidden');
+            }
+        });
+    };
+
+    // --- LOCAL STORAGE PERSISTENCE ---
+    function saveLocal() {
+        const data = {
+            history,
+            activeBets,
+            engineStats,
+            userStats,
+            faceGaps,
+            strategies,
+            patternConfig,
+            simulationConfig,
+            currentAlerts: window.currentAlerts || []
+        };
+        try {
+            localStorage.setItem('triple_cs_session', JSON.stringify(data));
+            
+            // Flash Icon
+            const el = document.getElementById('saveStatus');
+            if(el) {
+                el.className = "flex items-center justify-center w-8 h-8 rounded-full border border-[#30D158] bg-[#30D158]/20 transition-all duration-300 shadow-[0_0_10px_rgba(48,209,88,0.4)] shrink-0";
+                el.innerHTML = '<i class="fas fa-check text-[#30D158] text-xs"></i>';
+                setTimeout(() => {
+                    el.className = "flex items-center justify-center w-8 h-8 rounded-full border border-white/5 bg-white/5 transition-all duration-500 shrink-0";
+                    el.innerHTML = '<i class="fas fa-save text-[#8E8E93] text-xs"></i>';
+                }, 600);
+            }
+        } catch(e) { console.error("Save failed", e); }
+    }
+
+    function loadLocal() {
+        const raw = localStorage.getItem('triple_cs_session');
+        if(!raw) return;
+        try {
+            const data = JSON.parse(raw);
+            if(data.history) history = data.history;
+            if(data.activeBets) activeBets = data.activeBets;
+            if(data.engineStats) engineStats = data.engineStats;
+            if(data.userStats) userStats = data.userStats;
+            if(data.faceGaps) faceGaps = data.faceGaps;
+            if(data.strategies) strategies = data.strategies;
+            if(data.patternConfig) patternConfig = data.patternConfig;
+            if(data.simulationConfig) simulationConfig = data.simulationConfig;
+            if(data.currentAlerts) window.currentAlerts = data.currentAlerts;
+            
+            reRenderHistory();
+            renderDashboard(window.currentAlerts);
+            renderAnalytics();
+            renderUserAnalytics();
+            renderGapStats();
+            renderFilterMenu();
+            renderSimFilterMenu();
+            
+            setTimeout(() => {
+                const sc = document.getElementById('scrollContainer').firstElementChild; 
+                if(sc) sc.scrollTop = sc.scrollHeight;
+            }, 100);
+        } catch(e) { console.error("Load error", e); }
+    }
+    
+    // --- RESET MODAL LOGIC (FIXED) ---
+    function showResetModal() {
+        // Close data menu first
+        document.getElementById('dataMenu').classList.add('hidden');
+        document.getElementById('resetConfirmModal').classList.remove('hidden');
+    }
+
+    function executeHardReset() {
+        localStorage.removeItem('triple_cs_session');
+        location.reload();
+    }
+    
+    function resetData(skipConfirm = false) {
+        // This is the soft reset used by the "Reset Session" button in analytics
+        // Redirecting to the hard reset modal flow for consistency if user triggers from UI
+        if(!skipConfirm) {
+            showResetModal();
+            return;
+        }
+        
+        // This part is for programmatic resets (like import)
+        history = [];
+        activeBets = [];
+        strategies['TripleCs'].resets = {};
+        engineStats = { 
+            totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, 
+            bankrollHistory: [0], patternStats: {}, signalLog: [] 
+        };
+        userStats = { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
+        faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+        document.getElementById('historyBody').innerHTML = '';
+        renderDashboard([]);
+        renderAnalytics();
+        renderUserAnalytics();
+        renderGapStats();
+        
+        const am = document.getElementById('analyticsModal');
+        if(!am.classList.contains('hidden')) am.classList.add('hidden');
+        
+        saveLocal();
+        showToast("Session Reset", "success");
+    }
+    
+    // --- TOAST NOTIFICATION SYSTEM ---
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        const el = document.createElement('div');
+        
+        let colors = 'bg-[#3a3a3c] border-white/10 text-white';
+        let icon = '<i class="fas fa-info-circle text-blue-400"></i>';
+        
+        if (type === 'success') {
+            colors = 'bg-[#30D158]/20 border-[#30D158]/30 text-[#30D158]';
+            icon = '<i class="fas fa-check-circle"></i>';
+        } else if (type === 'error') {
+            colors = 'bg-[#FF453A]/20 border-[#FF453A]/30 text-[#FF453A]';
+            icon = '<i class="fas fa-exclamation-circle"></i>';
+        }
+        
+        el.className = `flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-md shadow-xl text-xs font-bold tracking-wide animate-[slideUpFade_0.3s_ease-out] ${colors}`;
+        el.innerHTML = `${icon} <span>${message}</span>`;
+        
+        container.appendChild(el);
+        
+        // Remove after 3s
+        setTimeout(() => {
+            el.style.opacity = '0';
+            el.style.transform = 'translate(-50%, 10px)';
+            setTimeout(() => el.remove(), 300);
+        }, 3000);
+    }
+
+    function initDesktopGrid() {
+        const grid = document.getElementById('desktopGrid').firstElementChild;
+        // Clean existing
+        grid.innerHTML = '<button class="grid-btn grid-green col-span-3 py-4 shadow-sm" onclick="handleGridClick(0)">0</button>';
+        
+        for(let i=1; i<=36; i++) {
+            let btn = document.createElement('button');
+            const isRed = RED_NUMS.includes(i);
+            // Apply new glass classes
+            btn.className = `grid-btn py-4 shadow-sm ${isRed ? 'grid-red' : 'grid-black'}`;
+            btn.innerText = i;
+            btn.onclick = () => handleGridClick(i);
+            grid.appendChild(btn);
+        }
+    }
+
+    function renderFilterMenu() {
+        const list = document.getElementById('patternsList');
+        list.innerHTML = '';
+        
+        // Define display labels for keys
+        const labels = {
+            'TripleCs': 'Triple Cs Pattern',
+            '(123)': 'Seq 1-2-3',
+            '(321)': 'Seq 3-2-1',
+            '(234)': 'Seq 2-3-4',
+            '(432)': 'Seq 4-3-2',
+            '(132)': 'Seq 1-3-2',
+            '(231)': 'Seq 2-3-1'
+        };
+
+        for (let key in patternConfig) {
+            let isChecked = patternConfig[key];
+            let label = labels[key] || key;
+            
+            let item = document.createElement('div');
+            item.className = "flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5 transition-colors hover:bg-white/10";
+            item.innerHTML = `
+                <span class="text-gray-200 font-semibold text-xs tracking-wide">${label}</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" class="sr-only peer" ${isChecked ? 'checked' : ''} onchange="togglePatternFilter('${key}', this.checked)">
+                    <div class="w-10 h-6 bg-black/40 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#30D158] shadow-inner"></div>
+                </label>
+            `;
+            list.appendChild(item);
+        }
+    }
+
+    function togglePatternFilter(key, isChecked) {
+        patternConfig[key] = isChecked;
+        updateVisibility();
+    }
+
+    function updateVisibility() {
+        // 1. Re-render Dashboard (Cards)
+        renderDashboard(window.currentAlerts || []);
+        
+        // 2. Re-render History Table (Rows)
+        reRenderHistory();
+        
+        // 3. Update Analytics if visible
+        if(!document.getElementById('analyticsModal').classList.contains('hidden') && currentAnalyticsTab === 'player') {
+            renderAnalytics();
+        }
+    }
+
+    function reRenderHistory() {
+        const tbody = document.getElementById('historyBody');
+        tbody.innerHTML = '';
+        history.forEach(spin => renderRow(spin));
+    }
+
+    function handleGridClick(n) {
+        document.getElementById('spinInput').value = n;
+        addSpin();
+    }
+
+    function playNotificationSound() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(500, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1000, ctx.currentTime + 0.1);
+            
+            gain.gain.setValueAtTime(0.05, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+            
+            osc.start();
+            osc.stop(ctx.currentTime + 0.3);
+        } catch (e) {
+            console.warn("Audio play failed (interaction required)", e);
+        }
+    }
+
+    function addSpin(isReplay = false) {
+        const input = document.getElementById('spinInput');
+        const val = parseInt(input.value);
+        if (isNaN(val) || val < 0 || val > 36) return;
+
+        // NEW: Detect all matching faces
+        let matchedFaces = [];
+        for(let f in FACES) {
+            if(FACES[f].nums.includes(val)) matchedFaces.push(parseInt(f));
+        }
+
+        // Update Gaps for ALL matching faces
+        for(let f=1; f<=5; f++) faceGaps[f]++; 
+        matchedFaces.forEach(f => faceGaps[f] = 0);
+        
+        if(!isReplay) renderGapStats();
+        
+        const currentSpinIndex = history.length; 
+        
+        // 1. RESOLVE PREVIOUS BETS
+        // We calculate results here and store them as raw data, NOT HTML
+        let resolvedBets = [];
+        
+        if (activeBets.length > 0) {
+            activeBets.forEach(bet => {
+                // Check if the bet target is in the matched faces (Overlapping Support)
+                let isWin = matchedFaces.includes(bet.targetFace);
+                let label = `BET F${bet.targetFace}`;
+                
+                let count = 0;
+                if(FACES[bet.targetFace]) {
+                    count = FACES[bet.targetFace].nums.length;
+                }
+                
+                let unitChange = isWin ? (35 - count) : -count;
+
+                // AGGREGATION LOGIC: Group Triple Cs, keep Sequences individual
+                let statsName = bet.patternName;
+                if (bet.strategy === 'TripleCs') {
+                    statsName = 'Triple Cs Pattern';
+                }
+
+                // Strategy mapping logic for filter config (UI visibility)
+                let stratKey = bet.strategy === 'TripleCs' ? 'TripleCs' : bet.patternName; 
+
+                // Update Engine Stats with Aggregated Name (statsName) but preserve Specific Name (bet.patternName)
+                updateEngineStats(isWin, statsName, unitChange, bet.strategy, bet.patternName, currentSpinIndex, val);
+
+                if (bet.confirmed) {
+                    updateUserStats(isWin, bet, currentSpinIndex, unitChange);
+                }
+
+                if (bet.strategy === 'TripleCs') {
+                    strategies['TripleCs'].resets[bet.originPairKey] = currentSpinIndex;
+                }
+                
+                // Store Data Object
+                resolvedBets.push({
+                    patternName: bet.patternName, // Display Name
+                    filterKey: stratKey,          // Key for patternConfig
+                    targetFace: bet.targetFace,
+                    isWin: isWin,
+                    label: label
+                });
+            });
+            activeBets = []; 
+        }
+
+        // 2. ADD TO HISTORY
+        const spinObj = { 
+            num: val, 
+            faces: matchedFaces, // Store array of matching faces
+            index: currentSpinIndex,
+            resolvedBets: resolvedBets, // Store results
+            newSignals: [],             // Placeholder for signals generated this turn
+            id: Date.now() + Math.random() 
+        };
+        history.push(spinObj); 
+
+        // 3. SCAN FOR NEW PATTERNS
+        const alerts = scanAllStrategies();
+        
+        // 4. PREPARE NEW SIGNALS FOR DISPLAY (Next Spin's Bets)
+        // These are what show up on the dashboard, but we also want to show them in the table row
+        if (activeBets.length > 0) {
+            spinObj.newSignals = activeBets.map(b => ({
+                patternName: b.patternName,
+                filterKey: b.strategy === 'TripleCs' ? 'TripleCs' : b.patternName,
+                targetFace: b.targetFace
+            }));
+        }
+
+        // Store alerts globally even during replay so dashboard is correct at the end
+        if (alerts) window.currentAlerts = alerts;
+
+        // UI & AUDIO BLOCK (SKIPPED DURING REPLAY)
+        if (!isReplay) {
+            // Check Audio on unfiltered alerts (or filtered? usually audio triggers on ANY detection)
+            // Let's trigger audio if ANY active alert exists, visibility handles the rest
+            if (alerts.some(a => a.type === 'ACTIVE')) {
+                playNotificationSound();
+            }
+
+            renderRow(spinObj);
+            renderDashboard(alerts);
+            
+            if(!document.getElementById('analyticsModal').classList.contains('hidden')) renderAnalytics();
+            if(!document.getElementById('betsModal').classList.contains('hidden')) renderUserAnalytics();
+            
+            refreshHighlights();
+            
+            input.value = '';
+            input.focus();
+            
+            saveLocal(); // Persist State
+        }
+    }
+
+    function updateEngineStats(isWin, patternName, unitChange, rawStrategy, rawPattern, spinIndex, spinNum) {
+        if (isWin) {
+            engineStats.totalWins++;
+            engineStats.currentStreak = engineStats.currentStreak >= 0 ? engineStats.currentStreak + 1 : 1;
+        } else {
+            engineStats.totalLosses++;
+            engineStats.currentStreak = engineStats.currentStreak <= 0 ? engineStats.currentStreak - 1 : -1;
+        }
+        engineStats.netUnits += unitChange;
+        engineStats.bankrollHistory.push(engineStats.netUnits);
+
+        if (!engineStats.patternStats[patternName]) {
+            engineStats.patternStats[patternName] = { wins: 0, losses: 0 };
+        }
+        if (isWin) engineStats.patternStats[patternName].wins++;
+        else engineStats.patternStats[patternName].losses++;
+
+        engineStats.signalLog.push({
+            result: isWin ? 'WIN' : 'LOSS',
+            units: unitChange,
+            patternName: patternName,
+            rawStrategy: rawStrategy,
+            rawPattern: rawPattern,
+            spinIndex: spinIndex,
+            spinNum: spinNum
+        });
+    }
+
+    function checkFatigue(patternName) {
+        const currentSpin = history.length;
+        const windowStart = Math.max(0, currentSpin - 50);
+        
+        const recentSignals = engineStats.signalLog.filter(s => 
+            s.patternName === patternName && s.spinIndex >= windowStart
+        );
+
+        if (recentSignals.length < 3) return false; 
+
+        const wins = recentSignals.filter(s => s.result === 'WIN').length;
+        const hitRate = wins / recentSignals.length;
+
+        return (hitRate < 0.20);
+    }
+
+    function updateUserStats(isWin, bet, spinIndex, unitChange) {
+        if (isWin) {
+            userStats.totalWins++;
+        } else {
+            userStats.totalLosses++;
+        }
+        userStats.netUnits += unitChange;
+        userStats.bankrollHistory.push(userStats.netUnits);
+        
+        userStats.betLog.unshift({
+            id: userStats.totalWins + userStats.totalLosses,
+            pattern: bet.patternName,
+            target: `F${bet.targetFace}`,
+            result: isWin ? 'WIN' : 'LOSS',
+            spinNum: spinIndex + 1,
+            units: unitChange
+        });
+    }
+
+    function renderAnalytics() {
+        let displayStats = {
+            wins: 0, losses: 0, net: 0, streak: 0,
+            history: [0], patterns: {} 
+        };
+
+        if (currentAnalyticsTab === 'god') {
+            displayStats.wins = engineStats.totalWins;
+            displayStats.losses = engineStats.totalLosses;
+            displayStats.net = engineStats.netUnits;
+            displayStats.streak = engineStats.currentStreak;
+            displayStats.history = engineStats.bankrollHistory;
+            displayStats.patterns = engineStats.patternStats;
+
+            document.getElementById('graphTitle').innerText = 'Theoretical Bankroll (All Strategies)';
+            document.getElementById('labelHitRate').innerText = 'Global Hit Rate';
+            document.getElementById('labelNet').innerText = 'Theoretical Net';
+            document.getElementById('simFilterBtn').classList.add('hidden'); // Hide Sim button
+
+        } else {
+            document.getElementById('graphTitle').innerText = 'Filtered Bankroll (Active Filters Only)';
+            document.getElementById('labelHitRate').innerText = 'Filtered Hit Rate';
+            document.getElementById('labelNet').innerText = 'Filtered Net';
+            document.getElementById('simFilterBtn').classList.remove('hidden'); // Show Sim button
+
+            engineStats.signalLog.forEach(log => {
+                let isEnabled = false;
+                // Use simulationConfig instead of global patternConfig
+                if (log.rawStrategy === 'TripleCs') isEnabled = simulationConfig['TripleCs'];
+                else if (log.rawStrategy === 'Sequence') isEnabled = simulationConfig[log.rawPattern];
+
+                if (isEnabled) {
+                    if (log.result === 'WIN') {
+                        displayStats.wins++;
+                        displayStats.streak = displayStats.streak >= 0 ? displayStats.streak + 1 : 1;
+                    } else {
+                        displayStats.losses++;
+                        displayStats.streak = displayStats.streak <= 0 ? displayStats.streak - 1 : -1;
+                    }
+                    displayStats.net += log.units;
+                    displayStats.history.push(displayStats.net);
+
+                    if (!displayStats.patterns[log.patternName]) {
+                        displayStats.patterns[log.patternName] = { wins: 0, losses: 0 };
+                    }
+                    if (log.result === 'WIN') displayStats.patterns[log.patternName].wins++;
+                    else displayStats.patterns[log.patternName].losses++;
+                }
+            });
+        }
+
+        const totalSignals = displayStats.wins + displayStats.losses;
+        const hitRate = totalSignals === 0 ? 0 : Math.round((displayStats.wins / totalSignals) * 100);
+
+        const hrEl = document.getElementById('kpiHitRate');
+        hrEl.innerText = hitRate + "%";
+        hrEl.className = `text-3xl font-bold tracking-tight ${hitRate >= 50 ? 'text-[#30D158]' : 'text-[#FF453A]'}`;
+
+        const netEl = document.getElementById('kpiNet');
+        netEl.innerText = (displayStats.net > 0 ? '+' : '') + displayStats.net;
+        netEl.className = `text-3xl font-bold tracking-tight ${displayStats.net >= 0 ? 'text-[#30D158]' : 'text-[#FF453A]'}`;
+
+        document.getElementById('kpiSignals').innerText = totalSignals;
+
+        const s = displayStats.streak;
+        const formEl = document.getElementById('kpiForm');
+        formEl.innerText = s > 0 ? `W${s}` : (s < 0 ? `L${Math.abs(s)}` : '-');
+        formEl.className = `text-3xl font-bold tracking-tight ${s > 0 ? 'text-[#30D158]' : (s < 0 ? 'text-[#FF453A]' : 'text-gray-400')}`;
+
+        drawAdvancedGraph(displayStats.history, displayStats.wins, displayStats.losses, 'graphContainer');
+        updatePatternHeatmap(displayStats.patterns);
+    }
+
+    function switchAnalyticsTab(tab) {
+        currentAnalyticsTab = tab;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tab === 'god' ? 'tabGod' : 'tabPlayer').classList.add('active');
+        
+        if (tab === 'player') {
+            // Sync simulation config with global pattern config when switching to player view
+            simulationConfig = JSON.parse(JSON.stringify(patternConfig));
+            renderSimFilterMenu();
+        }
+        
+        // Hide menu if open
+        document.getElementById('simFilterMenu').classList.add('hidden');
+        
+        renderAnalytics();
+    }
+    
+    function toggleSimMenu() {
+        document.getElementById('simFilterMenu').classList.toggle('hidden');
+    }
+
+    function renderSimFilterMenu() {
+        const container = document.getElementById('simFilterList');
+        container.innerHTML = '';
+        
+        const labels = {
+            'TripleCs': 'Triple Cs Pattern',
+            '(123)': 'Seq 1-2-3',
+            '(321)': 'Seq 3-2-1',
+            '(234)': 'Seq 2-3-4',
+            '(432)': 'Seq 4-3-2',
+            '(132)': 'Seq 1-3-2',
+            '(231)': 'Seq 2-3-1'
+        };
+
+        for (let key in simulationConfig) {
+            let isChecked = simulationConfig[key];
+            let label = labels[key] || key;
+            
+            let item = document.createElement('div');
+            item.className = "flex items-center justify-between px-3 py-2 hover:bg-white/10 rounded-lg cursor-pointer transition-colors";
+            item.onclick = (e) => {
+                e.stopPropagation();
+                toggleSimFilter(key);
+            };
+            
+            item.innerHTML = `
+                <span class="text-xs text-gray-300 font-medium">${label}</span>
+                <div class="w-4 h-4 rounded flex items-center justify-center border ${isChecked ? 'bg-[#30D158] border-[#30D158]' : 'border-gray-600 bg-black/20'}">
+                    ${isChecked ? '<i class="fas fa-check text-[10px] text-black"></i>' : ''}
+                </div>
+            `;
+            container.appendChild(item);
+        }
+    }
+
+    function toggleSimFilter(key) {
+        simulationConfig[key] = !simulationConfig[key];
+        renderSimFilterMenu();
+        renderAnalytics();
+    }
+
+    function renderGapStats() {
+        const container = document.getElementById('faceGapContainer');
+        if(!container) return;
+        
+        container.innerHTML = '';
+        for(let f=1; f<=5; f++) {
+            const gap = faceGaps[f];
+            let colorClass = 'text-[#30D158]';
+            if(gap > 10) colorClass = 'text-[#FFD60A]';
+            if(gap > 15) colorClass = 'text-[#FF453A]';
+            
+            container.innerHTML += `
+                <div class="text-center p-2 rounded-xl bg-white/5 border border-white/5 shadow-sm backdrop-blur-sm transition-all hover:bg-white/10">
+                    <span class="block text-gray-400 text-[9px] font-bold mb-0.5 uppercase tracking-wider">F${f}</span>
+                    <span class="${colorClass} font-bold text-xl drop-shadow-sm">${gap}</span>
+                </div>
+            `;
+        }
+    }
+
+    function renderUserAnalytics() {
+        const totalBets = userStats.totalWins + userStats.totalLosses;
+        const hitRate = totalBets === 0 ? 0 : Math.round((userStats.totalWins / totalBets) * 100);
+
+        const netEl = document.getElementById('userNet');
+        netEl.innerText = (userStats.netUnits > 0 ? '+' : '') + userStats.netUnits;
+        netEl.className = `text-5xl font-bold tracking-tight ${userStats.netUnits >= 0 ? 'text-[#30D158]' : 'text-[#FF453A]'}`;
+        
+        document.getElementById('userHitRate').innerText = hitRate + "%";
+        document.getElementById('userTotal').innerText = totalBets;
+
+        drawAdvancedGraph(userStats.bankrollHistory, userStats.totalWins, userStats.totalLosses, 'userGraphContainer');
+        updateUserBetLog();
+    }
+
+    // --- ADVANCED GRAPHING ---
+    function drawAdvancedGraph(historyArray, winCount, lossCount, containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        container.innerHTML = '';
+        container.className = "flex flex-col h-full w-full rounded-b-xl overflow-hidden";
+        
+        const chartDiv = document.createElement('div');
+        chartDiv.className = "relative h-[80%] w-full bg-black/20";
+        container.appendChild(chartDiv);
+        
+        // HUD
+        const hudDiv = document.createElement('div');
+        hudDiv.className = "h-[20%] w-full flex justify-between items-center px-4 text-[10px] font-bold bg-white/5 border-t border-white/5 backdrop-blur-sm";
+        hudDiv.innerHTML = `
+            <span class="text-[#4ade80] drop-shadow-sm tracking-wide">WINS: ${winCount}</span>
+            <span class="text-[#e5e7eb] drop-shadow-sm tracking-wide">SPINS: ${historyArray ? Math.max(0, historyArray.length - 1) : 0}</span>
+            <span class="text-[#f87171] drop-shadow-sm tracking-wide">LOSSES: ${lossCount}</span>
+        `;
+        container.appendChild(hudDiv);
+
+        if (!historyArray || historyArray.length < 2) {
+            chartDiv.innerHTML = `<div class="flex items-center justify-center h-full text-xs text-[#8E8E93] font-mono animate-pulse">Waiting for Data...</div>`;
+            return;
+        }
+
+        // SVG Logic using Fixed ViewBox
+        const vWidth = 600;
+        const vHeight = 200;
+        const padding = 10;
+        
+        const maxVal = Math.max(...historyArray);
+        const minVal = Math.min(...historyArray);
+        let range = maxVal - minVal;
+        if (range === 0) range = 2;
+
+        const getX = i => (i / (historyArray.length - 1)) * (vWidth - 2 * padding) + padding;
+        const getY = v => vHeight - padding - ((v - minVal) / range) * (vHeight - 2 * padding);
+
+        let pathD = `M ${getX(0)} ${getY(historyArray[0])}`;
+        for (let i = 1; i < historyArray.length; i++) {
+            pathD += ` L ${getX(i)} ${getY(historyArray[i])}`;
+        }
+
+        const zeroY = getY(0);
+        
+        let zeroOffset = 0;
+        if (maxVal > 0 && minVal < 0) {
+            zeroOffset = (maxVal / range) * 100;
+        } else if (minVal >= 0) {
+            zeroOffset = 100; 
+        } else {
+            zeroOffset = 0;
+        }
+
+        const svgContent = `
+            <svg viewBox="0 0 ${vWidth} ${vHeight}" width="100%" height="100%" preserveAspectRatio="none" style="overflow: visible;">
+                <defs>
+                    <linearGradient id="profitGrad-${containerId}" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#4ade80" />
+                        <stop offset="${zeroOffset}%" stop-color="#4ade80" />
+                        <stop offset="${zeroOffset}%" stop-color="#f87171" />
+                        <stop offset="100%" stop-color="#f87171" />
+                    </linearGradient>
+                </defs>
+                
+                <line x1="${padding}" y1="${zeroY}" x2="${vWidth - padding}" y2="${zeroY}" 
+                      stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 6" opacity="0.3" vector-effect="non-scaling-stroke" />
+                
+                <path d="${pathD}" fill="none" stroke="url(#profitGrad-${containerId})" 
+                      stroke-width="3" stroke-linecap="round" stroke-linejoin="round" 
+                      vector-effect="non-scaling-stroke" 
+                      style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));" />
+            </svg>
+        `;
+        
+        chartDiv.innerHTML = svgContent;
+    }
+
+    function updatePatternHeatmap(patternData) {
+        const tbody = document.getElementById('heatmapBody');
+        tbody.innerHTML = '';
+        const patterns = Object.entries(patternData || {});
+        
+        if (patterns.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-[#8E8E93] italic">No patterns recorded yet</td></tr>';
+            return;
+        }
+        
+        patterns.sort((a, b) => {
+            const rA = a[1].wins / (a[1].wins + a[1].losses);
+            const rB = b[1].wins / (b[1].wins + b[1].losses);
+            return rB - rA;
+        });
+
+        patterns.forEach(([name, s]) => {
+            const total = s.wins + s.losses;
+            const rate = total === 0 ? 0 : Math.round((s.wins / total) * 100);
+            const color = rate >= 50 ? 'text-[#30D158]' : 'text-[#FF453A]';
+            const bar = rate >= 50 ? 'bg-[#30D158]' : 'bg-[#FF453A]';
+
+            tbody.innerHTML += `
+                <tr class="hover:bg-white/5 transition-colors">
+                    <td class="p-3 font-semibold text-gray-200">
+                        <div class="flex items-center justify-between">
+                            <span class="tracking-wide">${name}</span>
+                            <button onclick="event.stopPropagation(); openPatternLog('${name}')" class="text-[#8E8E93] hover:text-white cursor-pointer px-2 py-1 rounded-full hover:bg-white/10 transition-colors" title="View Log">
+                                <i class="fas fa-list-ul"></i>
+                            </button>
+                        </div>
+                    </td>
+                    <td class="p-3 text-right text-[#30D158] font-mono font-bold drop-shadow-sm">${s.wins}</td>
+                    <td class="p-3 text-right text-[#FF453A] font-mono font-bold drop-shadow-sm">${s.losses}</td>
+                    <td class="p-3 text-right w-24 relative">
+                        <div class="absolute inset-y-4 left-2 right-2 bg-[#3a3a3c] rounded-full overflow-hidden h-1.5 mt-2 shadow-inner">
+                            <div class="h-full ${bar}" style="width: ${rate}%"></div>
+                        </div>
+                        <span class="relative z-10 ${color} font-bold text-[10px] top-[-8px] right-[0px]">${rate}%</span>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    function openPatternLog(patternName) {
+        const logs = engineStats.signalLog.filter(s => s.patternName === patternName);
+        logs.sort((a, b) => a.spinIndex - b.spinIndex);
+        
+        let runningROI = 0;
+        let lastIndex = -1;
+        
+        let displayLogs = logs.map((log, i) => {
+            runningROI += log.units;
+            let gap = (i === 0) ? 0 : (log.spinIndex - lastIndex);
+            lastIndex = log.spinIndex;
+            return { ...log, gap, roi: runningROI };
+        });
+        
+        displayLogs.sort((a, b) => b.spinIndex - a.spinIndex);
+        
+        const tbody = document.getElementById('patternDetailBody');
+        tbody.innerHTML = '';
+
+        if (displayLogs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-[#8E8E93] italic">No signals recorded yet</td></tr>';
+        } else {
+            displayLogs.forEach(log => {
+                let badgeClass = '';
+                if (log.spinNum === 0) badgeClass = 'bg-[#30d158]/20 text-[#30d158] border-[#30d158]/30'; 
+                else if (RED_NUMS.includes(log.spinNum)) badgeClass = 'bg-[#ff453a]/20 text-[#ff453a] border-[#ff453a]/30'; 
+                else badgeClass = 'bg-[#3a3a3c] text-gray-200 border-white/10'; 
+                
+                const isWin = log.result === 'WIN';
+                const resClass = isWin ? 'text-[#30D158]' : 'text-[#FF453A]';
+                const unitClass = log.units > 0 ? 'text-[#30D158]' : 'text-[#FF453A]';
+                const roiClass = log.roi >= 0 ? 'text-[#30D158]' : 'text-[#FF453A]';
+                const unitSign = log.units > 0 ? '+' : '';
+                const roiSign = log.roi > 0 ? '+' : '';
+                
+                tbody.innerHTML += `
+                    <tr class="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 text-xs">
+                        <td class="p-3 text-[#8E8E93] font-mono">#${log.spinIndex + 1}</td>
+                        <td class="p-3 text-center">
+                            <span class="inline-block w-8 h-6 flex items-center justify-center rounded-md border ${badgeClass} font-bold mx-auto border-opacity-50">
+                                ${log.spinNum}
+                            </span>
+                        </td>
+                        <td class="p-3 text-center text-gray-400 font-mono">${log.gap}</td>
+                        <td class="p-3 text-center font-bold ${resClass}">${log.result}</td>
+                        <td class="p-3 text-right font-mono font-bold ${unitClass}">${unitSign}${log.units}</td>
+                        <td class="p-3 text-right font-mono font-bold ${roiClass}">${roiSign}${log.roi}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        document.getElementById('patternDetailTitle').innerText = `LOG: ${patternName}`;
+        const modal = document.getElementById('patternDetailModal');
+        modal.classList.remove('hidden');
+    }
+
+    function updateUserBetLog() {
+        const tbody = document.getElementById('userBetsBody');
+        tbody.innerHTML = '';
+        
+        if(userStats.betLog.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-[#8E8E93] italic">No confirmed bets yet</td></tr>';
+            return;
+        }
+
+        userStats.betLog.forEach(log => {
+            const resClass = log.result === 'WIN' ? 'text-[#30D158]' : 'text-[#FF453A]';
+            const unitsText = log.units > 0 ? `+${log.units}` : log.units;
+            tbody.innerHTML += `
+                <tr class="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
+                    <td class="p-3 text-[#8E8E93] font-mono text-xs">#${log.id}</td>
+                    <td class="p-3 font-bold text-gray-200 tracking-wide">${log.pattern}</td>
+                    <td class="p-3 text-center font-bold text-white"><span class="bg-white/10 px-2 py-0.5 rounded-md border border-white/10 shadow-sm text-xs">F${log.target.replace('F','')}</span></td>
+                    <td class="p-3 text-right">
+                        <span class="text-[9px] text-[#8E8E93] mr-2">Spin ${log.spinNum}</span>
+                        <span class="font-bold ${resClass} text-sm drop-shadow-sm">${log.result} (${unitsText})</span>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    function toggleBetConfirmation(index) {
+        if (activeBets[index]) {
+            activeBets[index].confirmed = !activeBets[index].confirmed;
+            renderDashboard(null); 
+        }
+    }
+
+    function scanAllStrategies() {
+        let allNotifications = [];
+        let allNextBets = [];
+
+        const tcs = runTripleCsEngine(history, strategies['TripleCs'].resets);
+        allNotifications.push(...tcs.notifications);
+        allNextBets.push(...tcs.nextBets);
+
+        const seqs = runSequenceEngine(history);
+        allNotifications.push(...seqs.notifications);
+        allNextBets.push(...seqs.nextBets);
+
+        activeBets = allNextBets;
+        return allNotifications;
+    }
+
+    function runSequenceEngine(historyData) {
+        if (historyData.length < 2) return { notifications: [], nextBets: [] };
+        
+        let notifications = [];
+        let nextBets = [];
+        
+        const latest = historyData[historyData.length - 1];
+        const prev = historyData[historyData.length - 2];
+        
+        // Critical Null Check (Fixed: Check for faces array, not singular face)
+        if (!latest.faces || !prev.faces) return { notifications: [], nextBets: [] }; 
+
+        const seqKey = `${prev.faces[0]}-${latest.faces[0]}`; 
+        
+        SEQUENCES.forEach(seq => {
+            if (prev.faces.includes(seq.a) && latest.faces.includes(seq.b)) {
+                notifications.push({
+                    type: 'ACTIVE', 
+                    fA: seq.a, 
+                    fB: seq.target, 
+                    count: 1, 
+                    strategy: 'Sequence',
+                    patternName: `(${seq.name.replace(/-/g, '')})`
+                });
+                
+                nextBets.push({
+                    targetFace: seq.target,
+                    originPairKey: seqKey, 
+                    strategy: 'Sequence',
+                    highlightIds: [prev.id, latest.id],
+                    patternName: `(${seq.name.replace(/-/g, '')})`,
+                    confirmed: false
+                });
+            }
+        });
+
+        return { notifications, nextBets };
+    }
+
+    function runTripleCsEngine(historyData, resetMap) {
+        const SCAN_DEPTH = 14; 
+        
+        let startIndex = Math.max(0, historyData.length - SCAN_DEPTH);
+        const scanWindow = historyData.slice(startIndex);
+        
+        if(scanWindow.length < 2) return { notifications: [], nextBets: [] };
+
+        let notifications = [];
+        let nextBets = [];
+        
+        const latestSpin = historyData[historyData.length - 1];
+
+        for (let startFace = 1; startFace <= 5; startFace++) {
+            for (let targetFace = 1; targetFace <= 5; targetFace++) {
+                
+                let pairKey = `${startFace}-${targetFace}`;
+                let lastResetIndex = resetMap[pairKey] || -1;
+                
+                let count = 0;
+                let lastCompletionIndex = -1;
+                let ids = [];
+
+                let i = 0;
+                while (i < scanWindow.length - 1) {
+                    let spinA = scanWindow[i];
+                    let spinB = scanWindow[i+1];
+                    
+                    if (!spinA.faces || !spinB.faces) { i++; continue; }
+
+                    if (spinA.faces.includes(startFace) && spinB.faces.includes(targetFace)) {
+                        if (spinB.index > lastResetIndex) {
+                            count++;
+                            ids.push(spinA.id, spinB.id);
+                            lastCompletionIndex = spinB.index;
+                            
+                            i += 2;
+                            continue;
+                        }
+                    }
+                    i++;
+                }
+
+                if (count >= 2) {
+                    let isSignal = false;
+                    
+                    if (latestSpin && latestSpin.faces) {
+                        const isStartFace = latestSpin.faces.includes(startFace);
+                        const isFreshStart = (latestSpin.index > lastCompletionIndex);
+                        
+                        if (isStartFace && isFreshStart) {
+                            isSignal = true;
+                        }
+                    }
+
+                    if (isSignal) {
+                        notifications.push({ 
+                            type: 'ACTIVE', 
+                            fA: startFace, 
+                            fB: targetFace, 
+                            count: count, 
+                            strategy: 'TripleCs', 
+                            patternName: `(F${startFace}➜F${targetFace})` 
+                        });
+                        
+                        nextBets.push({ 
+                            targetFace: targetFace, 
+                            originPairKey: pairKey, 
+                            strategy: 'TripleCs', 
+                            highlightIds: ids,
+                            patternName: `(F${startFace}➜F${targetFace})`,
+                            confirmed: false 
+                        });
+                    } else {
+                        notifications.push({ 
+                            type: 'LOCKED', 
+                            fA: startFace, 
+                            fB: targetFace, 
+                            count: count, 
+                            strategy: 'TripleCs' 
+                        });
+                    }
+                }
+            }
+        }
+
+        return { notifications, nextBets };
+    }
+
+    function renderRow(spin) {
+        const tbody = document.getElementById('historyBody');
+        const tr = document.createElement('tr');
+        tr.className = "history-row";
+        tr.id = 'row-' + spin.id;
+
+        let bgClass = spin.num === 0 ? 'bg-green' : (RED_NUMS.includes(spin.num) ? 'bg-red' : 'bg-black');
+        
+        let faceHTML = '';
+        if (spin.faces && spin.faces.length > 0) {
+             let faceTags = spin.faces.map(fId => {
+                 let fStyle = FACES[fId];
+                 return `<span class="face-tag mb-1 mr-1" data-spin-id="${spin.id}" style="color:${fStyle.color}; border:1px solid ${fStyle.border}; background:${fStyle.bg};">F${fId}</span>`;
+             }).join('');
+             faceHTML = `<div class="flex flex-wrap justify-center">${faceTags}</div>`;
+        } else {
+             faceHTML = `<span class="text-gray-600">-</span>`;
+        }
+        
+        let predHTMLParts = [];
+        
+        if (spin.resolvedBets && spin.resolvedBets.length > 0) {
+            spin.resolvedBets.forEach(bet => {
+                if (patternConfig[bet.filterKey]) {
+                    let pat = `<span class="text-[9px] text-gray-400 font-normal ml-1">${bet.patternName}</span>`;
+                    if (bet.isWin) {
+                        predHTMLParts.push(`<span class="text-[#30D158] font-bold drop-shadow-sm">${bet.label} (WIN)</span>${pat}`);
+                    } else {
+                        predHTMLParts.push(`<span class="text-[#FF453A] font-bold drop-shadow-sm">${bet.label} (LOSS)</span>${pat}`);
+                    }
+                }
+            });
+        }
+
+        if (spin.newSignals && spin.newSignals.length > 0) {
+            let activeStrings = [];
+            spin.newSignals.forEach(sig => {
+                if (patternConfig[sig.filterKey]) {
+                    activeStrings.push(`BET F${sig.targetFace} <span class="text-[9px] text-gray-400 font-normal">${sig.patternName}</span>`);
+                }
+            });
+            
+            if (activeStrings.length > 0) {
+                let uniqueBets = [...new Set(activeStrings)];
+                let betText = `<span class="text-[#0A84FF] font-black animate-pulse drop-shadow-[0_0_8px_rgba(10,132,255,0.6)]">${uniqueBets.join(' | ')}</span>`;
+                
+                if (predHTMLParts.length > 0) {
+                    predHTMLParts.push(`<span class="text-gray-600 mx-2">|</span> ${betText}`);
+                } else {
+                    predHTMLParts.push(betText);
+                }
+            }
+        }
+
+        let finalHTML = predHTMLParts.length > 0 ? predHTMLParts.join(" ") : `<span class="text-gray-600">-</span>`;
+
+        tr.innerHTML = `
+            <td class="text-center font-mono text-xs text-gray-400">#${spin.index + 1}</td>
+            <td class="text-center"><div class="num-box ${bgClass}">${spin.num}</div></td>
+            <td class="text-center">${faceHTML}</td>
+            <td class="pl-4">${finalHTML}</td>
+        `;
+        
+        tbody.appendChild(tr);
+        const sc = document.getElementById('scrollContainer').firstElementChild; 
+        if(sc) setTimeout(() => sc.scrollTop = sc.scrollHeight, 10);
+    }
+
+    function renderDashboard(alerts) {
+        const dash = document.getElementById('dashboard');
+        dash.innerHTML = '';
+
+        if (alerts) window.currentAlerts = alerts;
+        const displayList = window.currentAlerts || [];
+
+        const visibleList = displayList.filter(a => {
+            if (a.type !== 'ACTIVE' && a.type !== 'LOCKED') return false; 
+            let key = a.strategy === 'TripleCs' ? 'TripleCs' : a.patternName;
+            return patternConfig[key] === true;
+        });
+
+        if (visibleList.length === 0) {
+            dash.innerHTML = `<div class="w-full text-center text-xs font-medium text-[#8E8E93]/70 border border-dashed border-white/5 rounded-2xl p-4 select-none tracking-wide flex items-center justify-center h-[60px]"><span>GHOST MODE ACTIVE • SCANNING...</span></div>`;
+            return;
+        }
+
+        visibleList.sort((a,b) => (a.type === 'ACTIVE' ? -1 : 1));
+
+        // NEW: Calculate Win Rates to find Hot Patterns
+        let maxWinRate = 0;
+        visibleList.forEach(a => {
+            if (a.type === 'ACTIVE') {
+                 let key = a.strategy === 'TripleCs' ? 'Triple Cs Pattern' : a.patternName;
+                 let s = engineStats.patternStats[key];
+                 if(s && (s.wins + s.losses) > 0) {
+                     let rate = (s.wins / (s.wins + s.losses)) * 100;
+                     if(rate > maxWinRate) maxWinRate = rate;
+                 }
+            }
+        });
+
+        const targetCounts = {};
+        visibleList.forEach(a => {
+            if(a.type === 'ACTIVE') {
+                targetCounts[a.fB] = (targetCounts[a.fB] || 0) + 1;
+            }
+        });
+
+        visibleList.forEach((a, i) => {
+            let div = document.createElement('div');
+            div.style.animationDelay = `${i * 0.05}s`;
+            
+            if(a.type === 'ACTIVE') {
+                let betIndex = activeBets.findIndex(b => b.originPairKey === `F${a.fA}-F${a.fB}` || (b.strategy === 'TripleCs' && a.strategy === 'TripleCs' && b.targetFace === a.fB));
+                
+                if (betIndex === -1 && a.strategy === 'Sequence') {
+                     betIndex = activeBets.findIndex(b => b.targetFace === a.fB && b.strategy === 'Sequence');
+                }
+
+                let isConfirmed = (betIndex !== -1 && activeBets[betIndex] && activeBets[betIndex].confirmed);
+                let isPower = (targetCounts[a.fB] > 1);
+                let isFatigued = checkFatigue(a.patternName);
+
+                // NEW: Hot Check
+                let isHot = false;
+                let key = a.strategy === 'TripleCs' ? 'Triple Cs Pattern' : a.patternName;
+                let s = engineStats.patternStats[key];
+                if(s && (s.wins + s.losses) > 0) {
+                     let rate = (s.wins / (s.wins + s.losses)) * 100;
+                     if(rate === maxWinRate && maxWinRate >= 50) isHot = true;
+                }
+
+                // Elemental Classes
+                let specialClass = '';
+                if(isHot) specialClass = 'card-fire';
+                else if(isFatigued) specialClass = 'card-ice';
+                else if(isPower) specialClass = 'card-power';
+
+                div.className = `card-active ${isConfirmed ? 'card-confirmed' : ''} ${specialClass} p-2 px-3 rounded-xl min-w-[110px] flex flex-col justify-center relative`;
+                
+                div.ondblclick = () => toggleBetConfirmation(betIndex);
+
+                div.innerHTML = `
+                    <div class="card-content">
+                        <div class="absolute top-1 right-1">
+                            <input type="checkbox" class="bet-checkbox" ${isConfirmed ? 'checked' : ''} onclick="event.stopPropagation(); toggleBetConfirmation(${betIndex})">
+                        </div>
+                        <div class="text-[8px] font-bold ${isConfirmed ? 'text-white' : 'text-[#30D158]'} uppercase tracking-widest mb-0.5 opacity-90">${isPower ? 'POWER BET' : 'TRIGGERED'}</div>
+                        <div class="text-xl font-black text-white mt-0.5 mb-0.5">BET F${a.fB}</div>
+                        <div class="text-[8px] ${isConfirmed ? 'text-white/80' : 'text-gray-400'} font-bold truncate">
+                            ${a.patternName}
+                        </div>
+                    </div>
+                `;
+            } else {
+                div.className = "card-lock px-3 py-2 rounded-xl min-w-[90px] flex flex-col items-center justify-center opacity-70 select-none border border-white/5 transition-all hover:bg-white/5";
+                div.innerHTML = `
+                    <div class="text-[8px] font-bold text-[#8E8E93] uppercase tracking-widest mb-0.5">LOCKED</div>
+                    <div class="text-[10px] font-bold text-gray-300 flex items-center gap-1">F${a.fA} <i class="fas fa-arrow-right text-[8px] text-gray-500"></i> F${a.fB}</div>
+                `;
+            }
+            dash.appendChild(div);
+        });
+    }
+
+    function refreshHighlights() {
+        document.querySelectorAll('.highlight-pair').forEach(el => el.classList.remove('highlight-pair'));
+        if (activeBets.length > 0) {
+            activeBets.forEach(bet => {
+                if (bet.strategy === 'TripleCs' && bet.highlightIds) {
+                    bet.highlightIds.forEach(id => {
+                        const tag = document.querySelector(`.face-tag[data-spin-id="${id}"]`);
+                        if (tag) tag.classList.add('highlight-pair');
+                    });
+                }
+            });
+        }
+    }
+
+    function resetData(skipConfirm = false) {
+        if(skipConfirm || confirm("Reset all session data?")) {
+            history = [];
+            activeBets = [];
+            strategies['TripleCs'].resets = {};
+            engineStats = { 
+                totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, 
+                bankrollHistory: [0], patternStats: {}, signalLog: [] 
+            };
+            userStats = { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
+            faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+            document.getElementById('historyBody').innerHTML = '';
+            renderDashboard([]);
+            renderAnalytics();
+            renderUserAnalytics();
+            renderGapStats();
+            // Close Analytics modal if it was open (unless importing)
+            if(!skipConfirm) {
+                 const am = document.getElementById('analyticsModal');
+                 if(!am.classList.contains('hidden')) am.classList.add('hidden');
+            }
+            saveLocal();
+        }
+    }
+
+    function undoSpin() {
+        if(history.length === 0) return;
+        
+        // 1. Remove last spin from history
+        history.pop(); 
+        
+        // 2. Clone the remaining history
+        let oldHist = [...history]; 
+        
+        // 3. Reset ALL State
+        history = [];
+        activeBets = [];
+        strategies['TripleCs'].resets = {};
+        engineStats = { 
+            totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, 
+            bankrollHistory: [0], patternStats: {}, signalLog: [] 
+        };
+        userStats = { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
+        faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+        // 4. Clear UI Table
+        document.getElementById('historyBody').innerHTML = '';
+        
+        // 5. Replay History EFFICIENTLY (isReplay = true)
+        oldHist.forEach(h => {
+             document.getElementById('spinInput').value = h.num;
+             addSpin(true); // Pass true to skip UI updates during loop
+        });
+        
+        // 6. Final UI Update (Once)
+        reRenderHistory();
+        renderDashboard(window.currentAlerts);
+        renderAnalytics();
+        renderUserAnalytics();
+        renderGapStats();
+        refreshHighlights();
+        
+        saveLocal();
+        
+        // Clear input
+        document.getElementById('spinInput').value = '';
+    }
+
+    function toggleModal(id) {
+        document.getElementById(id).classList.toggle('hidden');
+    }
+    
+    // --- DATA MANAGER FUNCTIONS ---
+    
+    function toggleDataMenu() {
+        document.getElementById('dataMenu').classList.toggle('hidden');
+    }
+    
+    function exportSpins() {
+        if(history.length === 0) {
+            alert("No spins to export!");
+            toggleDataMenu();
+            return;
+        }
+        
+        const spins = history.map(h => h.num);
+        const data = {
+            timestamp: Date.now(),
+            spins: spins
+        };
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const dateStr = new Date().toISOString().slice(0,10);
+        a.download = `Roulette_Spins_${dateStr}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toggleDataMenu();
+    }
+    
+    function importSpins(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (Array.isArray(data.spins)) {
+                    // Step 1: Wipe current state without asking
+                    resetData(true);
+                    
+                    // Step 2: Replay spins EFFICIENTLY
+                    const inputField = document.getElementById('spinInput');
+                    
+                    // Use optimized replay mode
+                    data.spins.forEach(num => {
+                        inputField.value = num;
+                        addSpin(true); // isReplay = true
+                    });
+                    
+                    // Step 3: Final Update
+                    reRenderHistory();
+                    renderDashboard(window.currentAlerts);
+                    renderAnalytics();
+                    renderUserAnalytics();
+                    renderGapStats();
+                    
+                    inputField.value = '';
+                    inputField.focus();
+                    
+                    // Optional: Show success message
+                    // alert(`Imported ${data.spins.length} spins successfully.`);
+                } else {
+                    alert("Invalid file format: 'spins' array missing.");
+                }
+            } catch (err) {
+                alert("Error reading file: " + err.message);
+            }
+        };
+        reader.readAsText(file);
+        toggleDataMenu();
+        input.value = ''; // Reset input to allow re-uploading same file
+    }
+
+</script>
+</body>
+</html>

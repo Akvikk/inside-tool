@@ -23,17 +23,25 @@ const SEQUENCE_COLORS = [
 ];
 
 // Pattern filter metadata — used by the hamburger filter menu
-const PATTERN_FILTER_META_SERIES = Object.fromEntries(
-    SEQUENCES.map((seq, i) => {
-        const key = `(${seq.name.replace(/-/g, '')})`;
-        return [key, {
-            label: key,
-            hint: `Track sequence ${seq.name}: F${seq.a} → F${seq.b} → F${seq.target}`,
-            icon: 'fa-stream',
-            accent: SEQUENCE_COLORS[i % SEQUENCE_COLORS.length]
-        }];
-    })
-);
+const PATTERN_FILTER_META_SERIES = {
+    'TripleCs': {
+        label: 'Triple Cs Pattern',
+        hint: 'Shadow-tracks repeating face pairs in the last 14 spins and triggers bets on subsequent starts.',
+        icon: 'fa-link',
+        accent: '#30D158'
+    },
+    ...Object.fromEntries(
+        SEQUENCES.map((seq, i) => {
+            const key = `(${seq.name.replace(/-/g, '')})`;
+            return [key, {
+                label: key,
+                hint: `Track sequence ${seq.name}: F${seq.a} → F${seq.b} → F${seq.target}`,
+                icon: 'fa-stream',
+                accent: SEQUENCE_COLORS[i % SEQUENCE_COLORS.length]
+            }];
+        })
+    )
+};
 
 // StrategyRegistry entry for Series
 if (typeof window.StrategyRegistry === 'undefined') {
@@ -51,9 +59,11 @@ window.StrategyRegistry.series = {
      * Returns an object: { "(123)": bool, "(234)": bool, ... }
      */
     buildPatternConfig(enabled = true) {
-        return Object.fromEntries(
+        const config = Object.fromEntries(
             SEQUENCES.map(seq => [`(${seq.name.replace(/-/g, '')})`, enabled])
         );
+        config['TripleCs'] = enabled;
+        return config;
     },
 
     /**
@@ -64,42 +74,139 @@ window.StrategyRegistry.series = {
      * @param {*}      _snapshot    - unused in series mode (for API compat)
      * @param {Object} patternConfig - the global patternConfig
      */
-    run(historyData, _snapshot, patternConfig) {
+    run(historyData, _snapshot, patternConfig, options = {}) {
         if (historyData.length < 2) return { notifications: [], nextBets: [] };
 
         const notifications = [];
         const nextBets = [];
+        const resetMap = options.tripleCsResets || {};
 
+        // 1. Run Triple Cs Engine (Series sub-strategy)
+        if (patternConfig['TripleCs'] !== false) {
+            const tcs = this.runTripleCs(historyData, resetMap);
+            notifications.push(...tcs.notifications);
+            nextBets.push(...tcs.nextBets);
+        }
+
+        // 2. Run Sequence Engine
         const latest = historyData[historyData.length - 1];
         const prev   = historyData[historyData.length - 2];
 
-        if (!latest.faces || !prev.faces) return { notifications: [], nextBets: [] };
+        if (latest.faces && prev.faces) {
+            SEQUENCES.forEach(seq => {
+                if (prev.faces.includes(seq.a) && latest.faces.includes(seq.b)) {
+                    const patternName = `(${seq.name.replace(/-/g, '')})`;
+                    const seqKey = `${seq.a}-${seq.b}`;
 
-        SEQUENCES.forEach(seq => {
-            if (prev.faces.includes(seq.a) && latest.faces.includes(seq.b)) {
-                const patternName = `(${seq.name.replace(/-/g, '')})`;
-                const seqKey = `${seq.a}-${seq.b}`;
+                    if (patternConfig[patternName] !== false) {
+                        notifications.push({
+                            type: 'ACTIVE',
+                            fA: seq.a,
+                            fB: seq.target,
+                            count: 1,
+                            strategy: 'Sequence',
+                            patternName
+                        });
+                        nextBets.push({
+                            targetFace: seq.target,
+                            originPairKey: seqKey,
+                            strategy: 'Sequence',
+                            highlightIds: [prev.id, latest.id],
+                            patternName,
+                            confirmed: false
+                        });
+                    }
+                }
+            });
+        }
 
-                if (patternConfig[patternName] !== false) {
-                    notifications.push({
-                        type: 'ACTIVE',
-                        fA: seq.a,
-                        fB: seq.target,
-                        count: 1,
-                        strategy: 'Sequence',
-                        patternName
-                    });
-                    nextBets.push({
-                        targetFace: seq.target,
-                        originPairKey: seqKey,
-                        strategy: 'Sequence',
-                        highlightIds: [prev.id, latest.id],
-                        patternName,
-                        confirmed: false
-                    });
+        return { notifications, nextBets };
+    },
+
+    /**
+     * Logic for Triple Cs sub-strategy:
+     * Scan last 14 spins for repeating face pairs F(A) -> F(B) (count >= 2).
+     * If latest spin is F(A), bet on F(B).
+     */
+    runTripleCs(historyData, resetMap) {
+        const SCAN_DEPTH = 14;
+        let startIndex = Math.max(0, historyData.length - SCAN_DEPTH);
+        const scanWindow = historyData.slice(startIndex);
+
+        if (scanWindow.length < 2) return { notifications: [], nextBets: [] };
+
+        const notifications = [];
+        const nextBets = [];
+        const latestSpin = historyData[historyData.length - 1];
+
+        // Scan for ALL possible face pairs F1..F5 -> F1..F5
+        for (let startFace = 1; startFace <= 5; startFace++) {
+            for (let targetFace = 1; targetFace <= 5; targetFace++) {
+                const pairKey = `${startFace}-${targetFace}`;
+                const lastResetIndex = resetMap[pairKey] || -1;
+
+                let count = 0;
+                let lastCompletionIndex = -1;
+                let ids = [];
+
+                let i = 0;
+                while (i < scanWindow.length - 1) {
+                    const spinA = scanWindow[i];
+                    const spinB = scanWindow[i + 1];
+
+                    if (!spinA.faces || !spinB.faces) { i++; continue; }
+
+                    if (spinA.faces.includes(startFace) && spinB.faces.includes(targetFace)) {
+                        if (spinB.index > lastResetIndex) {
+                            count++;
+                            ids.push(spinA.id, spinB.id);
+                            lastCompletionIndex = spinB.index;
+                            i += 2; // Jump past this pair
+                            continue;
+                        }
+                    }
+                    i++;
+                }
+
+                if (count >= 2) {
+                    let isSignal = false;
+                    if (latestSpin && latestSpin.faces) {
+                        const isStartFace = latestSpin.faces.includes(startFace);
+                        const isFreshStart = (latestSpin.index > lastCompletionIndex);
+                        if (isStartFace && isFreshStart) {
+                            isSignal = true;
+                        }
+                    }
+
+                    if (isSignal) {
+                        notifications.push({
+                            type: 'ACTIVE',
+                            fA: startFace,
+                            fB: targetFace,
+                            count: count,
+                            strategy: 'TripleCs',
+                            patternName: `(F${startFace}➜F${targetFace})`
+                        });
+                        nextBets.push({
+                            targetFace: targetFace,
+                            originPairKey: pairKey,
+                            strategy: 'TripleCs',
+                            highlightIds: ids,
+                            patternName: `(F${startFace}➜F${targetFace})`,
+                            confirmed: false
+                        });
+                    } else {
+                        notifications.push({
+                            type: 'LOCKED',
+                            fA: startFace,
+                            fB: targetFace,
+                            count: count,
+                            strategy: 'TripleCs'
+                        });
+                    }
                 }
             }
-        });
+        }
 
         return { notifications, nextBets };
     },
