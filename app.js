@@ -9,13 +9,35 @@ const HUD_RECENT_WINDOW = 14;
 const GEMINI_MODEL = 'gemini-2.5-flash';
 const INTELLIGENCE_VIEW_KEY = 'insideTool.intelligenceViewMode';
 const INTELLIGENCE_VIEWS = ['brief', 'diagnostic', 'minimal'];
-const PATTERN_FILTER_META = Object.fromEntries(
+const SEQUENCES = [
+    { name: "1-2-3", a: 1, b: 2, target: 3 },
+    { name: "2-3-4", a: 2, b: 3, target: 4 },
+    { name: "3-4-5", a: 3, b: 4, target: 5 },
+    { name: "5-4-3", a: 5, b: 4, target: 3 },
+    { name: "4-3-2", a: 4, b: 3, target: 2 },
+    { name: "3-2-1", a: 3, b: 2, target: 1 },
+    { name: "1-3-5", a: 1, b: 3, target: 5 },
+    { name: "5-3-1", a: 5, b: 3, target: 1 }
+];
+const SEQUENCE_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'];
+const PATTERN_FILTER_META_COMBO = Object.fromEntries(
     PERIMETER_COMBOS.map(combo => [combo.label, {
         label: combo.label,
         hint: `Track ${combo.label} inside the prediction engine and dashboard flow.`,
         icon: 'fa-link',
         accent: combo.color
     }])
+);
+const PATTERN_FILTER_META_SERIES = Object.fromEntries(
+    SEQUENCES.map((seq, i) => {
+        const key = `(${seq.name.replace(/-/g, '')})`;
+        return [key, {
+            label: key,
+            hint: `Track sequence ${seq.name}: F${seq.a} → F${seq.b} → F${seq.target}`,
+            icon: 'fa-stream',
+            accent: SEQUENCE_COLORS[i % SEQUENCE_COLORS.length]
+        }];
+    })
 );
 
 // --- STATE MANAGEMENT ---
@@ -56,9 +78,10 @@ let aiRuntimeState = {
 // Removing duplicate declarations to prevent SyntaxError
 
 // Global Pattern Configuration - The Source of Truth
-let patternConfig = {
-    ...Object.fromEntries(PERIMETER_COMBOS.map(combo => [combo.label, true]))
-};
+// Built dynamically based on active strategy via rebuildPatternConfig()
+let patternConfig = Object.fromEntries(
+    SEQUENCES.map(seq => [`(${seq.name.replace(/-/g, '')})`, true])
+);
 
 let engineStats = {
     totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0,
@@ -76,24 +99,39 @@ let currentPredictionStrategy = 'series';
 let currentGameplayStrategy = 'series'; // 'series' or 'combo'
 let strategies = {};
 
-const SEQUENCES = [
-    { name: "1-2-3", a: 1, b: 2, target: 3 },
-    { name: "2-3-4", a: 2, b: 3, target: 4 },
-    { name: "3-4-5", a: 3, b: 4, target: 5 },
-    { name: "5-4-3", a: 5, b: 4, target: 3 },
-    { name: "4-3-2", a: 4, b: 3, target: 2 },
-    { name: "3-2-1", a: 3, b: 2, target: 1 },
-    { name: "1-3-5", a: 1, b: 3, target: 5 },
-    { name: "5-3-1", a: 5, b: 3, target: 1 }
-];
-
 function changePredictionStrategy(val) {
     currentGameplayStrategy = val;
     const labelEl = document.getElementById('activeAnalyticsStrategyLabel');
     if (labelEl) {
         labelEl.innerText = val === 'series' ? 'Series Strategy' : 'Combo Strategy';
     }
+    // Update HUD strategy label
+    const hudLabel = document.getElementById('hudStrategyLabel');
+    if (hudLabel) hudLabel.innerText = val === 'series' ? 'Series' : 'Combo';
+    // Sync hamburger dropdown
+    const hamburgerSelect = document.getElementById('hamburgerStrategySelect');
+    if (hamburgerSelect) hamburgerSelect.value = val;
+    // Rebuild patternConfig for the new strategy
+    rebuildPatternConfig();
+    renderFilterMenu();
     updateVisibility();
+    void refreshPredictionEngineUI();
+}
+
+function rebuildPatternConfig() {
+    const newConfig = {};
+    if (currentGameplayStrategy === 'series') {
+        SEQUENCES.forEach(seq => {
+            const key = `(${seq.name.replace(/-/g, '')})`;
+            // Preserve old setting if it exists, default to true
+            newConfig[key] = patternConfig[key] !== undefined ? patternConfig[key] : true;
+        });
+    } else {
+        PERIMETER_COMBOS.forEach(combo => {
+            newConfig[combo.label] = patternConfig[combo.label] !== undefined ? patternConfig[combo.label] : true;
+        });
+    }
+    patternConfig = newConfig;
 }
 
 // --- PERSISTENCE ---
@@ -354,6 +392,8 @@ window.onload = async () => {
     updateAiUiState();
 
     if (hasSession) {
+        // Rebuild pattern config based on saved strategy
+        rebuildPatternConfig();
         updateStopwatchDisplay();
         await syncPredictionEngine();
         reRenderHistory();
@@ -377,12 +417,8 @@ window.onload = async () => {
     }
 
     document.getElementById('spinInput').focus();
-    document.getElementById('spinInput').addEventListener("keypress", (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            void addSpin();
-        }
-    });
+
+    // Enter key listener is set once in HTML via onkeydown attribute
 
     document.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
@@ -603,6 +639,7 @@ function toggleAnalyticsHUD() {
         hud.classList.remove('hidden');
         hud.classList.add('flex');
         btn.classList.add('bg-white/10');
+        initAnalyticsHUD();  // ensure drag/resize is wired up
         updateAnalyticsHUD();
         fitAnalyticsHUD();
     } else {
@@ -1316,57 +1353,115 @@ function updateAnalyticsHUD() {
     const content = document.getElementById('hudStats');
     if (!content) return;
 
-    const stats = calculatePerimeterStats(history, getHudWindowSetting());
-    if (!stats || !stats.counts) return;
-    const comboStats = getComboCoverageStats(stats);
-    const sampleSize = comboStats.length > 0 ? comboStats[0].sampleSize : 0;
+    const windowSize = getHudWindowSetting();
+    const isSeries = currentGameplayStrategy === 'series';
 
-    // Sort Combos based on Mode
-    let displayCombos = comboStats.slice();
-    if (isHudColdMode) {
-        displayCombos.sort((a, b) => b.coldPercent - a.coldPercent || b.sampleMisses - a.sampleMisses || a.hits - b.hits);
-    } else {
-        displayCombos.sort((a, b) => b.hotPercent - a.hotPercent || b.hits - a.hits || a.sampleMisses - b.sampleMisses);
-    }
+    if (isSeries) {
+        // --- SERIES MODE: show sequence hit stats ---
+        const window_ = hudHistoryScope === 'recent' ? history.slice(-windowSize) : history;
+        const sampleSize = window_.length;
+        const colLabel = 'Seq';
+        const col3Title = isHudColdMode ? 'Miss%' : 'Hit%';
 
-    const col2Title = 'H / S';
-    const col3Title = isHudColdMode ? 'C%' : 'H%';
-
-    let html = `
-        <div class="space-y-0.5">
-            <div class="grid grid-cols-[34px_minmax(0,1fr)_32px] items-center gap-1.5 px-0.5 pb-1 text-[8px] uppercase tracking-[0.12em] text-white/28 border-b border-white/10">
-                <div class="font-bold">Combo</div>
-                <div class="text-center font-bold">${col2Title}</div>
-                <div class="text-right font-bold">${col3Title}</div>
-            </div>
-    `;
-
-    if (sampleSize === 0) {
-        html += `
-            <div class="py-4 text-center text-white/35 italic">Awaiting spins...</div>
-        `;
-    }
-
-    if (sampleSize > 0) {
-        displayCombos.forEach(c => {
-            const ratioSampleSize = Number.isFinite(c.sampleSize) ? c.sampleSize : sampleSize;
-            const val1 = `${c.hits}/${ratioSampleSize}`;
-            const val2 = isHudColdMode ? c.coldPercent : c.hotPercent;
-            const opacity = (isHudColdMode ? val2 > 80 : val2 > 20) ? '1' : '0.5';
-            const valColor = (isHudColdMode ? val2 > 80 : val2 > 20) ? themeColor : '#8E8E93';
-
-            html += `
-                <div class="grid grid-cols-[34px_minmax(0,1fr)_32px] items-center gap-1.5 px-0.5 py-1">
-                    <div class="text-[12px] font-black tracking-[0.08em]" style="color:${c.color}; opacity:${opacity}">${c.label}</div>
-                    <div class="text-center font-mono text-[10px] text-gray-200" style="opacity:${opacity}">${val1}</div>
-                    <div class="text-right font-mono text-[10px] font-bold" style="color:${valColor}; opacity:${opacity}">${val2}%</div>
-                </div>
-            `;
+        // Count how many times each sequence's target face appeared after the trigger pair
+        const seqStats = SEQUENCES.map((seq, i) => {
+            let hits = 0;
+            for (let j = 2; j < window_.length; j++) {
+                const fA = window_[j - 2]?.faces?.includes(seq.a);
+                const fB = window_[j - 1]?.faces?.includes(seq.b);
+                const fT = window_[j]?.faces?.includes(seq.target);
+                if (fA && fB && fT) hits++;
+            }
+            const pct = sampleSize < 3 ? 0 : Math.round((hits / Math.max(1, sampleSize - 2)) * 100);
+            return {
+                label: seq.name,
+                color: SEQUENCE_COLORS[i % SEQUENCE_COLORS.length],
+                hits,
+                pct
+            };
         });
+
+        if (isHudColdMode) {
+            seqStats.sort((a, b) => a.pct - b.pct);
+        } else {
+            seqStats.sort((a, b) => b.pct - a.pct || b.hits - a.hits);
+        }
+
+        let html = `
+            <div class="space-y-0.5">
+                <div class="grid grid-cols-[50px_minmax(0,1fr)_32px] items-center gap-1.5 px-0.5 pb-1 text-[8px] uppercase tracking-[0.12em] text-white/28 border-b border-white/10">
+                    <div class="font-bold">${colLabel}</div>
+                    <div class="text-center font-bold">Hits</div>
+                    <div class="text-right font-bold">${col3Title}</div>
+                </div>
+        `;
+
+        if (sampleSize === 0) {
+            html += `<div class="py-4 text-center text-white/35 italic">Awaiting spins...</div>`;
+        } else {
+            seqStats.forEach(s => {
+                const val2 = isHudColdMode ? (100 - s.pct) : s.pct;
+                const highlight = val2 > 20;
+                const opacity = highlight ? '1' : '0.5';
+                const valColor = highlight ? themeColor : '#8E8E93';
+                html += `
+                    <div class="grid grid-cols-[50px_minmax(0,1fr)_32px] items-center gap-1.5 px-0.5 py-1">
+                        <div class="text-[10px] font-black tracking-[0.08em]" style="color:${s.color}; opacity:${opacity}">${s.label}</div>
+                        <div class="text-center font-mono text-[10px] text-gray-200" style="opacity:${opacity}">${s.hits}</div>
+                        <div class="text-right font-mono text-[10px] font-bold" style="color:${valColor}; opacity:${opacity}">${val2}%</div>
+                    </div>
+                `;
+            });
+        }
+        html += `</div>`;
+        content.innerHTML = html;
+    } else {
+        // --- COMBO MODE: original perimeter combo logic ---
+        const stats = calculatePerimeterStats(history, windowSize);
+        if (!stats || !stats.counts) return;
+        const comboStats = getComboCoverageStats(stats);
+        const sampleSize = comboStats.length > 0 ? comboStats[0].sampleSize : 0;
+
+        let displayCombos = comboStats.slice();
+        if (isHudColdMode) {
+            displayCombos.sort((a, b) => b.coldPercent - a.coldPercent || b.sampleMisses - a.sampleMisses || a.hits - b.hits);
+        } else {
+            displayCombos.sort((a, b) => b.hotPercent - a.hotPercent || b.hits - a.hits || a.sampleMisses - b.sampleMisses);
+        }
+
+        const col3Title = isHudColdMode ? 'C%' : 'H%';
+
+        let html = `
+            <div class="space-y-0.5">
+                <div class="grid grid-cols-[34px_minmax(0,1fr)_32px] items-center gap-1.5 px-0.5 pb-1 text-[8px] uppercase tracking-[0.12em] text-white/28 border-b border-white/10">
+                    <div class="font-bold">Combo</div>
+                    <div class="text-center font-bold">H / S</div>
+                    <div class="text-right font-bold">${col3Title}</div>
+                </div>
+        `;
+
+        if (sampleSize === 0) {
+            html += `<div class="py-4 text-center text-white/35 italic">Awaiting spins...</div>`;
+        } else {
+            displayCombos.forEach(c => {
+                const ratioSampleSize = Number.isFinite(c.sampleSize) ? c.sampleSize : sampleSize;
+                const val1 = `${c.hits}/${ratioSampleSize}`;
+                const val2 = isHudColdMode ? c.coldPercent : c.hotPercent;
+                const opacity = (isHudColdMode ? val2 > 80 : val2 > 20) ? '1' : '0.5';
+                const valColor = (isHudColdMode ? val2 > 80 : val2 > 20) ? themeColor : '#8E8E93';
+                html += `
+                    <div class="grid grid-cols-[34px_minmax(0,1fr)_32px] items-center gap-1.5 px-0.5 py-1">
+                        <div class="text-[12px] font-black tracking-[0.08em]" style="color:${c.color}; opacity:${opacity}">${c.label}</div>
+                        <div class="text-center font-mono text-[10px] text-gray-200" style="opacity:${opacity}">${val1}</div>
+                        <div class="text-right font-mono text-[10px] font-bold" style="color:${valColor}; opacity:${opacity}">${val2}%</div>
+                    </div>
+                `;
+            });
+        }
+        html += `</div>`;
+        content.innerHTML = html;
     }
 
-    html += `</div>`;
-    content.innerHTML = html;
     fitAnalyticsHUD();
 }
 
@@ -2207,6 +2302,7 @@ function renderFilterMenu() {
     const list = document.getElementById('patternsList');
     if (!list) return;
 
+    const PATTERN_FILTER_META = currentGameplayStrategy === 'series' ? PATTERN_FILTER_META_SERIES : PATTERN_FILTER_META_COMBO;
     const entries = Object.keys(patternConfig).map(key => {
         const meta = PATTERN_FILTER_META[key] || {
             label: key,
@@ -2283,7 +2379,24 @@ function enqueueSpin(spinValue, options = {}) {
 
 function addSpin() {
     const input = document.getElementById('spinInput');
-    return enqueueSpin(input ? input.value : NaN);
+    if (!input) return;
+    const raw = input.value.trim();
+    const val = parseInt(raw, 10);
+
+    // Validate range 0-36
+    if (raw === '' || Number.isNaN(val) || val < 0 || val > 36) {
+        // Shake and clear
+        input.value = '';
+        input.classList.remove('input-shake');
+        void input.offsetWidth; // reflow
+        input.classList.add('input-shake');
+        input.focus();
+        return;
+    }
+
+    input.value = '';
+    input.focus();
+    return enqueueSpin(val);
 }
 
 async function processSpinValue(val, options = {}) {
@@ -2862,107 +2975,7 @@ function drawAdvancedGraph(historyArray, winCount, lossCount, containerId) {
     }, 50);
 }
 
-function updatePatternHeatmap(patternData) {
-    const tbody = document.getElementById('heatmapBody');
-    tbody.innerHTML = '';
-    const patterns = Object.entries(patternData || {});
-
-    if (patterns.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-[#8E8E93] italic">No patterns recorded yet</td></tr>';
-        return;
-    }
-
-    patterns.sort((a, b) => {
-        const rA = a[1].wins / (a[1].wins + a[1].losses);
-        const rB = b[1].wins / (b[1].wins + b[1].losses);
-        return rB - rA;
-    });
-
-    patterns.forEach(([name, s]) => {
-        const total = s.wins + s.losses;
-        const rate = total === 0 ? 0 : Math.round((s.wins / total) * 100);
-        const color = rate >= 50 ? 'text-[#30D158]' : 'text-[#FF453A]';
-        const bar = rate >= 50 ? 'bg-[#30D158]' : 'bg-[#FF453A]';
-
-        tbody.innerHTML += `
-                <tr class="hover:bg-white/5 transition-colors">
-                    <td class="p-3 font-semibold text-gray-200">
-                        <div class="flex items-center justify-between">
-                            <span class="tracking-wide">${name}</span>
-                            <button onclick="event.stopPropagation(); openPatternLog('${name}')" class="text-[#8E8E93] hover:text-white cursor-pointer px-2 py-1 rounded-full hover:bg-white/10 transition-colors" title="View Log">
-                                <i class="fas fa-list-ul"></i>
-                            </button>
-                        </div>
-                    </td>
-                    <td class="p-3 text-right text-[#30D158] font-mono font-bold drop-shadow-sm">${s.wins}</td>
-                    <td class="p-3 text-right text-[#FF453A] font-mono font-bold drop-shadow-sm">${s.losses}</td>
-                    <td class="p-3 text-right w-24 relative">
-                        <div class="absolute inset-y-4 left-2 right-2 bg-[#3a3a3c] rounded-full overflow-hidden h-1.5 mt-2 shadow-inner">
-                            <div class="h-full ${bar}" style="width: ${rate}%"></div>
-                        </div>
-                        <span class="relative z-10 ${color} font-bold text-[10px] top-[-8px] right-[0px]">${rate}%</span>
-                    </td>
-                </tr>
-            `;
-    });
-}
-
-function openPatternLog(patternName) {
-    const logs = engineStats.signalLog.filter(s => s.patternName === patternName);
-    logs.sort((a, b) => a.spinIndex - b.spinIndex);
-
-    let runningROI = 0;
-    let lastIndex = -1;
-
-    let displayLogs = logs.map((log, i) => {
-        runningROI += log.units;
-        let gap = (i === 0) ? 0 : (log.spinIndex - lastIndex);
-        lastIndex = log.spinIndex;
-        return { ...log, gap, roi: runningROI };
-    });
-
-    displayLogs.sort((a, b) => b.spinIndex - a.spinIndex);
-
-    const tbody = document.getElementById('patternDetailBody');
-    tbody.innerHTML = '';
-
-    if (displayLogs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-[#8E8E93] italic">No signals recorded yet</td></tr>';
-    } else {
-        displayLogs.forEach(log => {
-            let badgeClass = '';
-            if (log.spinNum === 0) badgeClass = 'bg-[#30d158]/20 text-[#30d158] border-[#30d158]/30';
-            else if (RED_NUMS.includes(log.spinNum)) badgeClass = 'bg-[#ff453a]/20 text-[#ff453a] border-[#ff453a]/30';
-            else badgeClass = 'bg-[#3a3a3c] text-gray-200 border-white/10';
-
-            const isWin = log.result === 'WIN';
-            const resClass = isWin ? 'text-[#30D158]' : 'text-[#FF453A]';
-            const unitClass = log.units > 0 ? 'text-[#30D158]' : 'text-[#FF453A]';
-            const roiClass = log.roi >= 0 ? 'text-[#30D158]' : 'text-[#FF453A]';
-            const unitSign = log.units > 0 ? '+' : '';
-            const roiSign = log.roi > 0 ? '+' : '';
-
-            tbody.innerHTML += `
-                    <tr class="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 text-xs">
-                        <td class="p-3 text-[#8E8E93] font-mono">#${log.spinIndex + 1}</td>
-                        <td class="p-3 text-center">
-                            <span class="inline-block w-8 h-6 flex items-center justify-center rounded-md border ${badgeClass} font-bold mx-auto border-opacity-50">
-                                ${log.spinNum}
-                            </span>
-                        </td>
-                        <td class="p-3 text-center text-gray-400 font-mono">${log.gap}</td>
-                        <td class="p-3 text-center font-bold ${resClass}">${log.result}</td>
-                        <td class="p-3 text-right font-mono font-bold ${unitClass}">${unitSign}${log.units}</td>
-                        <td class="p-3 text-right font-mono font-bold ${roiClass}">${roiSign}${log.roi}</td>
-                    </tr>
-                `;
-        });
-    }
-
-    document.getElementById('patternDetailTitle').innerText = `LOG: ${patternName}`;
-    const modal = document.getElementById('patternDetailModal');
-    modal.classList.remove('hidden');
-}
+// Duplicate updatePatternHeatmap and openPatternLog removed - using definitions from lines ~2579-2682
 
 function updateUserBetLog() {
     const tbody = document.getElementById('userBetsBody');

@@ -1326,3 +1326,30 @@ body.hud-no-select * {
         grid-column: span 12;
     }
 }
+
+/* Input shake animation for invalid spin values */
+@keyframes input-shake {
+    0%   { transform: translateX(0); border-color: rgba(255,69,58,0.4); }
+    15%  { transform: translateX(-6px); border-color: rgba(255,69,58,0.9); }
+    30%  { transform: translateX(6px); }
+    45%  { transform: translateX(-4px); }
+    60%  { transform: translateX(4px); }
+    75%  { transform: translateX(-2px); }
+    90%  { transform: translateX(2px); }
+    100% { transform: translateX(0); border-color: rgba(255,255,255,0.1); }
+}
+
+.input-shake {
+    animation: input-shake 0.4s ease-out forwards;
+}
+
+/* Hide browser number input arrows */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+input[type=number] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
