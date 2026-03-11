@@ -108,7 +108,14 @@ function changePredictionStrategy(val) {
         rebuildPatternConfig();
         renderFilterMenu();
         updateVisibility();
+
+        // Re-render the whole history table so bridges redraw for the new strategy
+        reRenderHistory();
+        requestAnimationFrame(layoutAllComboBridges);
+        refreshHighlights();
+
         void refreshPredictionEngineUI();
+        saveSessionData();
     }, 200);
 }
 
@@ -3583,6 +3590,7 @@ function resetData(skipConfirm = false) {
         lastActionableTargetFace = null;
         lastActionableCheckpointSpin = 0;
         strategies = {};
+        backgroundBets = {};
         engineStats = {
             totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0,
             bankrollHistory: [0], patternStats: {}, signalLog: []
