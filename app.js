@@ -46,6 +46,7 @@ const RACETRACK_ORDER = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11,
 
 let history = [];
 let activeBets = [];
+let globalSpinIdCounter = 0;
 let spinProcessingQueue = Promise.resolve();
 let faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
 let predictionPerimeterWindow = 14;
@@ -99,6 +100,9 @@ let currentPredictionStrategy = 'series';
 let currentGameplayStrategy = 'series'; // 'series' or 'combo'
 let strategies = {};
 
+let changeStrategyTimeout = null;
+let cachedAddSpinBtn = null;
+
 function changePredictionStrategy(val) {
     currentGameplayStrategy = val;
     const labelEl = document.getElementById('activeAnalyticsStrategyLabel');
@@ -111,11 +115,15 @@ function changePredictionStrategy(val) {
     // Sync hamburger dropdown
     const hamburgerSelect = document.getElementById('hamburgerStrategySelect');
     if (hamburgerSelect) hamburgerSelect.value = val;
-    // Rebuild patternConfig for the new strategy
-    rebuildPatternConfig();
-    renderFilterMenu();
-    updateVisibility();
-    void refreshPredictionEngineUI();
+    
+    if (changeStrategyTimeout) clearTimeout(changeStrategyTimeout);
+    changeStrategyTimeout = setTimeout(() => {
+        // Rebuild patternConfig for the new strategy
+        rebuildPatternConfig();
+        renderFilterMenu();
+        updateVisibility();
+        void refreshPredictionEngineUI();
+    }, 200);
 }
 
 function rebuildPatternConfig() {
@@ -158,7 +166,9 @@ function saveSessionData() {
         neuralPredictionEnabled,
         aiSignalLedger,
         aiRuntimeState,
-        currentPredictionStrategy
+        currentPredictionStrategy,
+        currentGameplayStrategy,
+        globalSpinIdCounter
     };
     try {
         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(data));
@@ -168,6 +178,9 @@ function saveSessionData() {
 }
 
 function buildDefaultPatternConfig(enabled = true) {
+    if (typeof currentGameplayStrategy !== 'undefined' && currentGameplayStrategy === 'series') {
+        return Object.fromEntries(SEQUENCES.map(seq => [`(${seq.name.replace(/-/g, '')})`, enabled]));
+    }
     return Object.fromEntries(PERIMETER_COMBOS.map(combo => [combo.label, enabled]));
 }
 
@@ -206,6 +219,8 @@ function loadSessionData() {
         if (data.currentInputLayout) currentInputLayout = data.currentInputLayout;
         if (data.isHudColdMode !== undefined) isHudColdMode = data.isHudColdMode;
         if (data.hudHistoryScope) hudHistoryScope = data.hudHistoryScope;
+        if (data.currentGameplayStrategy) currentGameplayStrategy = data.currentGameplayStrategy;
+        if (data.globalSpinIdCounter !== undefined) globalSpinIdCounter = data.globalSpinIdCounter;
         if (data.aiEnabled !== undefined) aiEnabled = data.aiEnabled;
         if (typeof data.aiProvider === 'string' && data.aiProvider) aiProvider = data.aiProvider;
         if (typeof data.aiApiKey === 'string') aiApiKey = data.aiApiKey;
@@ -382,6 +397,7 @@ function performReset() {
 // --- INIT ---
 window.onload = async () => {
     const hasSession = loadSessionData();
+    cachedAddSpinBtn = document.getElementById('addSpinBtn');
 
     initDesktopGrid();
     renderFilterMenu();
@@ -450,6 +466,7 @@ window.onload = async () => {
 
     // Init HUD
     initAnalyticsHUD();
+    initPatternFilterDrag();
     syncPatternFilterButton();
 
     window.addEventListener('beforeunload', () => {
@@ -672,6 +689,66 @@ function toggleHudColdMode() {
 
 function getPatternFilterEnabledCount() {
     return Object.keys(patternConfig).reduce((count, key) => count + (patternConfig[key] !== false ? 1 : 0), 0);
+}
+
+function initPatternFilterDrag() {
+    const popover = document.getElementById('patternFilterPopover');
+    const header = popover ? popover.querySelector('.pattern-popover-head') : null;
+
+    if (!popover || !header) return;
+    if (popover.dataset.dragInitialized === 'true') return;
+    popover.dataset.dragInitialized = 'true';
+
+    let isDragging = false;
+    let startX = 0, startY = 0;
+    let initialLeft = 0, initialTop = 0;
+
+    header.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        
+        // Convert from absolute to fixed to allow dragging outside parent boundaries
+        if (getComputedStyle(popover).position !== 'fixed') {
+            const rect = popover.getBoundingClientRect();
+            document.body.appendChild(popover);
+            popover.style.position = 'fixed';
+            popover.style.zIndex = '9999';
+            popover.style.top = `${rect.top}px`;
+            popover.style.left = `${rect.left}px`;
+            popover.style.right = 'auto'; 
+        }
+
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        initialLeft = popover.offsetLeft;
+        initialTop = popover.offsetTop;
+        
+        header.setPointerCapture(e.pointerId);
+        document.body.classList.add('hud-no-select');
+    });
+
+    window.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        
+        const maxLeft = Math.max(8, window.innerWidth - popover.offsetWidth - 8);
+        const maxTop = Math.max(8, window.innerHeight - popover.offsetHeight - 8);
+        
+        let newLeft = initialLeft + dx;
+        let newTop = initialTop + dy;
+        
+        popover.style.left = `${Math.min(maxLeft, Math.max(8, newLeft))}px`;
+        popover.style.top = `${Math.min(maxTop, Math.max(8, newTop))}px`;
+    });
+
+    window.addEventListener('pointerup', (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        header.releasePointerCapture(e.pointerId);
+        document.body.classList.remove('hud-no-select');
+    });
 }
 
 function closePatternFilterPopover() {
@@ -1002,18 +1079,36 @@ async function syncPredictionEngine() {
     activeBets = [];
     window.currentAlerts = [];
     
-    // NEW: Modular Strategy Selection
+    // Build the background snapshot for the heatmap/HUD first
+    const snapshot = await buildPredictionEngineSnapshot();
+    engineSnapshot = snapshot;
+
+    // Modular Strategy Selection
     if (currentGameplayStrategy === 'series') {
         const { notifications, nextBets } = runSequenceEngine(history);
         window.currentAlerts = notifications;
         activeBets = nextBets;
     } else if (currentGameplayStrategy === 'combo') {
-        // Reserved for future Combo strategy implementation
+        if (snapshot && snapshot.engineState !== 'NO_SIGNAL' && snapshot.engineState !== 'BUILDING' && snapshot.currentPrediction) {
+            const pred = snapshot.currentPrediction;
+            if (pred.action !== 'SIT_OUT' && pred.action !== 'WAIT') {
+                window.currentAlerts = [{
+                    type: 'ACTIVE', 
+                    fA: pred.triggerFace || pred.targetFace, 
+                    fB: pred.targetFace, 
+                    count: 1, 
+                    strategy: 'Combo',
+                    patternName: pred.comboLabel
+                }];
+                activeBets = [{
+                    targetFace: pred.targetFace,
+                    strategy: 'Combo',
+                    patternName: pred.comboLabel,
+                    confirmed: false
+                }];
+            }
+        }
     }
-
-    // Still build the background snapshot for the heatmap/HUD
-    const snapshot = await buildPredictionEngineSnapshot();
-    engineSnapshot = snapshot;
 
     return window.currentAlerts;
 }
@@ -1029,12 +1124,11 @@ function runSequenceEngine(historyData) {
     const prev = historyData[historyData.length - 2];
     
     if (!latest.faces || !prev.faces) return { notifications: [], nextBets: [] }; 
-
-    const seqKey = `${prev.faces[0]}-${latest.faces[0]}`; 
     
     SEQUENCES.forEach(seq => {
         if (prev.faces.includes(seq.a) && latest.faces.includes(seq.b)) {
             const patternName = `(${seq.name.replace(/-/g, '')})`;
+            const seqKey = `${seq.a}-${seq.b}`;
             
             // Only add the bet if its pattern is enabled in the global config
             if (patternConfig[patternName] !== false) {
@@ -1049,7 +1143,7 @@ function runSequenceEngine(historyData) {
                 
                 nextBets.push({
                     targetFace: seq.target,
-                    originPairKey: seqKey, 
+                    originPairKey: seqKey,  
                     strategy: 'Sequence',
                     highlightIds: [prev.id, latest.id],
                     patternName: patternName,
@@ -2399,11 +2493,64 @@ function addSpin() {
     return enqueueSpin(val);
 }
 
+async function undoSpin() {
+    if (history.length === 0) return;
+    
+    // 1. Remove the last spin
+    history.pop();
+    
+    // 2. Clone the remaining spins to rebuild state
+    const remainingSpins = history.map(s => s.num);
+    
+    // 3. Reset the core state
+    resetData(true);
+    
+    // 4. Re-run all remaining spins silently
+    const inputField = document.getElementById('spinInput');
+    if (inputField) inputField.disabled = true;
+
+    for (let i = 0; i < remainingSpins.length; i++) {
+        await processSpinValue(remainingSpins[i], { silent: true, preserveInput: true });
+    }
+
+    if (inputField) inputField.disabled = false;
+
+    // 5. Re-render everything
+    const historyBody = document.getElementById('historyBody');
+    if (historyBody) {
+        historyBody.innerHTML = '';
+        const fragment = document.createDocumentFragment();
+        for (let i = 0; i < history.length; i++) {
+            renderRow(history[i], fragment);
+        }
+        historyBody.appendChild(fragment);
+        requestAnimationFrame(layoutAllComboBridges);
+    }
+
+    renderGapStats();
+    await syncPredictionEngine();
+    await scanAllStrategies();
+    renderDashboard(window.currentAlerts || []);
+    renderAnalytics();
+    updatePerimeterAnalytics();
+    updateAnalyticsHUD();
+    updateVisibility();
+    refreshHighlights();
+    saveSessionData();
+}
+
+// Global Ctrl+Z / Cmd+Z Support
+document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        undoSpin();
+    }
+});
+
 async function processSpinValue(val, options = {}) {
-    const input = document.getElementById('spinInput');
     // Animate the Plus Icon on Add
-    const btn = document.getElementById('addSpinBtn');
-    if (btn) {
+    const btn = cachedAddSpinBtn || document.getElementById('addSpinBtn');
+    if (btn && !options.silent) {
         const icon = btn.querySelector('.fa-plus');
         if (icon) {
             icon.classList.remove('animate-spin-pop');
@@ -2477,7 +2624,7 @@ async function processSpinValue(val, options = {}) {
         index: currentSpinIndex,
         resolvedBets: resolvedBets, // Store results
         newSignals: [],             // Placeholder for signals generated this turn
-        id: Date.now() + Math.random()
+        id: ++globalSpinIdCounter
     };
     history.push(spinObj);
     settleAiSignalLedger();
@@ -2509,23 +2656,28 @@ async function processSpinValue(val, options = {}) {
         }));
     }
 
-    renderRow(spinObj);
-    renderDashboard(alerts);
+    if (!options.silent) {
+        renderRow(spinObj);
+        renderDashboard(alerts);
 
-    if (!document.getElementById('analyticsModal').classList.contains('hidden')) renderAnalytics();
-    if (!document.getElementById('betsModal').classList.contains('hidden')) renderUserAnalytics();
+        if (!document.getElementById('analyticsModal').classList.contains('hidden')) renderAnalytics();
+        if (!document.getElementById('betsModal').classList.contains('hidden')) renderUserAnalytics();
 
-    // Update FON tracker in Patterns modal
-    updatePerimeterAnalytics();
-    updateAnalyticsHUD();
+        // Update FON tracker in Patterns modal
+        updatePerimeterAnalytics();
+        updateAnalyticsHUD();
 
-    refreshHighlights();
+        refreshHighlights();
+    }
 
     if (!options.preserveInput && input) {
         input.value = '';
         input.focus();
     }
-    saveSessionData();
+    
+    if (!options.silent) {
+        saveSessionData();
+    }
 
     return alerts;
 }
@@ -2750,7 +2902,7 @@ function openPatternLog(patternName) {
     }
 
     const titleEl = document.getElementById('patternDetailTitle');
-    if (titleEl) titleEl.innerText = `LOG: ${patternName}`;
+    if (titleEl) titleEl.innerText = `LOG: ${escapeAiMarkup(patternName)}`;
     const modal = document.getElementById('patternDetailModal');
     if (modal) modal.classList.remove('hidden');
 }
@@ -2992,7 +3144,7 @@ function updateUserBetLog() {
         tbody.innerHTML += `
                 <tr class="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
                     <td class="p-3 text-[#8E8E93] font-mono text-xs">#${log.id}</td>
-                    <td class="p-3 font-bold text-gray-200 tracking-wide">${log.pattern}</td>
+                    <td class="p-3 font-bold text-gray-200 tracking-wide">${escapeAiMarkup(log.pattern)}</td>
                     <td class="p-3 text-center font-bold text-white"><span class="bg-white/10 px-2 py-0.5 rounded-md border border-white/10 shadow-sm text-xs">F${log.target.replace('F', '')}</span></td>
                     <td class="p-3 text-right">
                         <span class="text-[9px] text-[#8E8E93] mr-2">Spin ${log.spinNum}</span>
@@ -3029,8 +3181,7 @@ async function scanAllStrategies() {
     return syncPredictionEngine();
 }
 
-function renderRow(spin) {
-    const tbody = document.getElementById('historyBody');
+function renderRow(spin, container = null) {
     const tr = document.createElement('tr');
     tr.className = "history-row relative hover:bg-white/[0.02] transition-colors";
     tr.id = 'row-' + spin.id;
@@ -3149,15 +3300,21 @@ function renderRow(spin) {
         <td class="text-center relative overflow-visible z-[1]">${comboHTML}</td>
         <td class="pl-4">${finalHTML}</td>
     `;
-    tbody.appendChild(tr);
-    requestAnimationFrame(() => layoutComboBridge(spin.id));
+    
+    if (container) {
+        container.appendChild(tr);
+    } else {
+        const tbody = document.getElementById('historyBody');
+        if (tbody) tbody.appendChild(tr);
+        requestAnimationFrame(() => layoutComboBridge(spin.id));
 
-    // Auto-scroll to bottom of the correct container
-    const sc = document.querySelector('#scrollContainer > div');
-    if (sc) {
-        setTimeout(() => {
-            sc.scrollTop = sc.scrollHeight;
-        }, 50);
+        // Auto-scroll to bottom of the correct container
+        const sc = document.querySelector('#scrollContainer > div');
+        if (sc) {
+            setTimeout(() => {
+                sc.scrollTop = sc.scrollHeight;
+            }, 50);
+        }
     }
 }
 
@@ -3218,7 +3375,14 @@ function layoutComboBridge(spinId) {
 }
 
 function layoutAllComboBridges() {
-    history.forEach(spin => layoutComboBridge(spin.id));
+    // Only layout bridges that are currently visible on screen to save massive reflows
+    if (history.length === 0) return;
+    
+    // Fallback: Just layout the last 50 to guarantee they appear without massive lag
+    const startIndex = Math.max(0, history.length - 50);
+    for (let i = startIndex; i < history.length; i++) {
+        layoutComboBridge(history[i].id);
+    }
 }
 
 function ensureComboBridgeElements(layer) {
@@ -3914,47 +4078,39 @@ function importSpins(input) {
                 for (let i = 0; i < bulkSpins.length; i++) {
                     const val = bulkSpins[i];
                     if (val < 0 || val > 36) continue;
-
-                    // 1. Silent History Push
-                    const matchedFaces = [];
-                    const matchedFaceMask = Object.prototype.hasOwnProperty.call(FON_MASK_MAP, val) ? FON_MASK_MAP[val] : 0;
                     
-                    for (let f = 1; f <= 5; f++) {
-                        if ((matchedFaceMask & FACE_MASKS[f]) !== 0) {
-                            matchedFaces.push(f);
-                        }
-                    }
-
-                    // 2. Silent Stats Increment
-                    for (let f = 1; f <= 5; f++) {
-                        if (matchedFaces.includes(f)) faceGaps[f] = 0;
-                        else faceGaps[f]++;
-                    }
-
-                    const spinObj = {
-                        num: val,
-                        faces: matchedFaces,
-                        index: history.length,
-                        resolvedBets: [], // Predictions are disabled
-                        newSignals: [],
-                        id: Date.now() + Math.random()
-                    };
-                    
-                    history.push(spinObj);
+                    // Call the full logic pipeline silently (bypasses layout rendering)
+                    await processSpinValue(val, { silent: true, preserveInput: true });
                 }
 
-                // --- SINGLE DOM RENDER ---
+                // --- BATCH DOM RENDER ---
                 const historyBody = document.getElementById('historyBody');
-                if (historyBody) historyBody.innerHTML = '';
-                
-                for (let i = 0; i < history.length; i++) {
-                    renderRow(history[i]);
+                if (historyBody) {
+                    historyBody.innerHTML = '';
+                    const fragment = document.createDocumentFragment();
+                    
+                    for (let i = 0; i < history.length; i++) {
+                        renderRow(history[i], fragment);
+                    }
+                    
+                    historyBody.appendChild(fragment);
+                    requestAnimationFrame(layoutAllComboBridges);
+                    
+                    const sc = document.querySelector('#scrollContainer > div');
+                    if (sc) sc.scrollTop = sc.scrollHeight;
                 }
 
+                // --- FULL RECALCULATION PIPELINE ---
+                renderGapStats();
+                await syncPredictionEngine();
+                await scanAllStrategies();
+                renderDashboard(window.currentAlerts || []);
                 renderAnalytics();
                 updatePerimeterAnalytics();
                 updateAnalyticsHUD();
+                updateVisibility();
                 refreshHighlights();
+                renderIntelligencePanel();
                 saveSessionData();
 
                 if (inputField) {

@@ -595,10 +595,24 @@ button.bg-gradient-to-b:hover {
     animation: rowEnter 0.4s var(--ease-strike) forwards;
     position: relative;
     overflow: visible;
+    content-visibility: auto;
+    contain-intrinsic-size: 50px;
+    transform: translateZ(0);
+    will-change: transform, opacity;
 }
 
 .history-row:hover {
     background-color: rgba(255, 255, 255, 0.02);
+}
+
+.combo-link-layer, .combo-badge {
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+.combo-link-layer svg {
+    pointer-events: none;
+    will-change: transform;
 }
 
 /* Table Number Boxes */
