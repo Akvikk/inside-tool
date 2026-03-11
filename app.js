@@ -9,17 +9,6 @@ const HUD_RECENT_WINDOW = 14;
 const GEMINI_MODEL = 'gemini-2.5-flash';
 const INTELLIGENCE_VIEW_KEY = 'insideTool.intelligenceViewMode';
 const INTELLIGENCE_VIEWS = ['brief', 'diagnostic', 'minimal'];
-const SEQUENCES = [
-    { name: "1-2-3", a: 1, b: 2, target: 3 },
-    { name: "2-3-4", a: 2, b: 3, target: 4 },
-    { name: "3-4-5", a: 3, b: 4, target: 5 },
-    { name: "5-4-3", a: 5, b: 4, target: 3 },
-    { name: "4-3-2", a: 4, b: 3, target: 2 },
-    { name: "3-2-1", a: 3, b: 2, target: 1 },
-    { name: "1-3-5", a: 1, b: 3, target: 5 },
-    { name: "5-3-1", a: 5, b: 3, target: 1 }
-];
-const SEQUENCE_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'];
 const PATTERN_FILTER_META_COMBO = Object.fromEntries(
     PERIMETER_COMBOS.map(combo => [combo.label, {
         label: combo.label,
@@ -28,17 +17,8 @@ const PATTERN_FILTER_META_COMBO = Object.fromEntries(
         accent: combo.color
     }])
 );
-const PATTERN_FILTER_META_SERIES = Object.fromEntries(
-    SEQUENCES.map((seq, i) => {
-        const key = `(${seq.name.replace(/-/g, '')})`;
-        return [key, {
-            label: key,
-            hint: `Track sequence ${seq.name}: F${seq.a} → F${seq.b} → F${seq.target}`,
-            icon: 'fa-stream',
-            accent: SEQUENCE_COLORS[i % SEQUENCE_COLORS.length]
-        }];
-    })
-);
+// NOTE: PATTERN_FILTER_META_SERIES is now owned by strategies/strategy.series.js
+// and accessible via window.StrategyRegistry.series.PATTERN_FILTER_META
 
 // --- STATE MANAGEMENT ---
 let currentInputLayout = 'grid'; // 'grid' or 'racetrack'
@@ -80,9 +60,12 @@ let aiRuntimeState = {
 
 // Global Pattern Configuration - The Source of Truth
 // Built dynamically based on active strategy via rebuildPatternConfig()
-let patternConfig = Object.fromEntries(
-    SEQUENCES.map(seq => [`(${seq.name.replace(/-/g, '')})`, true])
-);
+// Uses StrategyRegistry so that each strategy owns its own key definitions
+let patternConfig = {};
+
+// Background bets: shadow tracking for ALL strategies regardless of active one
+// { 'series': [...bets], 'combo': [...bets] }
+let backgroundBets = {};
 
 let engineStats = {
     totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0,
@@ -130,19 +113,16 @@ function changePredictionStrategy(val) {
 }
 
 function rebuildPatternConfig() {
-    const newConfig = {};
-    if (currentGameplayStrategy === 'series') {
-        SEQUENCES.forEach(seq => {
-            const key = `(${seq.name.replace(/-/g, '')})`;
-            // Preserve old setting if it exists, default to true
-            newConfig[key] = patternConfig[key] !== undefined ? patternConfig[key] : true;
-        });
-    } else {
-        PERIMETER_COMBOS.forEach(combo => {
-            newConfig[combo.label] = patternConfig[combo.label] !== undefined ? patternConfig[combo.label] : true;
-        });
+    // Delegate to the active strategy module's buildPatternConfig
+    const strat = window.StrategyRegistry && window.StrategyRegistry[currentGameplayStrategy];
+    if (strat && typeof strat.buildPatternConfig === 'function') {
+        const newConfig = strat.buildPatternConfig(true);
+        // Preserve previously set values
+        for (const key of Object.keys(newConfig)) {
+            if (patternConfig[key] !== undefined) newConfig[key] = patternConfig[key];
+        }
+        patternConfig = newConfig;
     }
-    patternConfig = newConfig;
 }
 
 // --- PERSISTENCE ---
@@ -181,10 +161,13 @@ function saveSessionData() {
 }
 
 function buildDefaultPatternConfig(enabled = true) {
-    if (typeof currentGameplayStrategy !== 'undefined' && currentGameplayStrategy === 'series') {
-        return Object.fromEntries(SEQUENCES.map(seq => [`(${seq.name.replace(/-/g, '')})`, enabled]));
+    // Delegate to the active strategy module's buildPatternConfig
+    const strat = window.StrategyRegistry && window.StrategyRegistry[currentGameplayStrategy];
+    if (strat && typeof strat.buildPatternConfig === 'function') {
+        return strat.buildPatternConfig(enabled);
     }
-    return Object.fromEntries(PERIMETER_COMBOS.map(combo => [combo.label, enabled]));
+    // Fallback: use PERIMETER_COMBOS if StrategyRegistry not ready yet
+    return Object.fromEntries((window.PERIMETER_COMBOS || []).map(combo => [combo.label, enabled]));
 }
 
 function normalizePatternConfig(rawConfig, fallbackEnabled = true) {
@@ -430,6 +413,7 @@ window.onload = async () => {
             if (sc) sc.scrollTop = sc.scrollHeight;
         }, 100);
     } else {
+        rebuildPatternConfig();
         engineSnapshot = createEmptyEngineSnapshot(0);
     }
 
@@ -1090,83 +1074,37 @@ async function buildPredictionEngineSnapshot(allSpins = history) {
 async function syncPredictionEngine() {
     activeBets = [];
     window.currentAlerts = [];
-    
+
     // Build the background snapshot for the heatmap/HUD first
     const snapshot = await buildPredictionEngineSnapshot();
     engineSnapshot = snapshot;
 
-    // Modular Strategy Selection
-    if (currentGameplayStrategy === 'series') {
-        const { notifications, nextBets } = runSequenceEngine(history);
-        window.currentAlerts = notifications;
-        activeBets = nextBets;
-    } else if (currentGameplayStrategy === 'combo') {
-        if (snapshot && snapshot.engineState !== 'NO_SIGNAL' && snapshot.engineState !== 'BUILDING' && snapshot.currentPrediction) {
-            const pred = snapshot.currentPrediction;
-            if (pred.action !== 'SIT_OUT' && pred.action !== 'WAIT') {
-                window.currentAlerts = [{
-                    type: 'ACTIVE', 
-                    fA: pred.triggerFace || pred.targetFace, 
-                    fB: pred.targetFace, 
-                    count: 1, 
-                    strategy: 'Combo',
-                    patternName: pred.comboLabel
-                }];
-                activeBets = [{
-                    targetFace: pred.targetFace,
-                    strategy: 'Combo',
-                    patternName: pred.comboLabel,
-                    confirmed: false
-                }];
-            }
+    // Run ALL registered strategies in the background simultaneously
+    const registry = window.StrategyRegistry || {};
+    for (const stratKey of Object.keys(registry)) {
+        const strat = registry[stratKey];
+        if (!strat || typeof strat.run !== 'function') continue;
+
+        // Each strategy can have its own patternConfig; for bg strategies use their full config (all enabled)
+        const stratPatternConfig = stratKey === currentGameplayStrategy
+            ? patternConfig
+            : (strat.buildPatternConfig ? strat.buildPatternConfig(true) : {});
+
+        const result = strat.run(history, snapshot, stratPatternConfig);
+        backgroundBets[stratKey] = result.nextBets || [];
+
+        // Only the active strategy drives the live dashboard & alerts
+        if (stratKey === currentGameplayStrategy) {
+            window.currentAlerts = result.notifications || [];
+            activeBets = result.nextBets || [];
         }
     }
 
     return window.currentAlerts;
 }
 
-// --- SERIES ENGINE LOGIC ---
-function runSequenceEngine(historyData) {
-    if (historyData.length < 2) return { notifications: [], nextBets: [] };
-    
-    let notifications = [];
-    let nextBets = [];
-    
-    const latest = historyData[historyData.length - 1];
-    const prev = historyData[historyData.length - 2];
-    
-    if (!latest.faces || !prev.faces) return { notifications: [], nextBets: [] }; 
-    
-    SEQUENCES.forEach(seq => {
-        if (prev.faces.includes(seq.a) && latest.faces.includes(seq.b)) {
-            const patternName = `(${seq.name.replace(/-/g, '')})`;
-            const seqKey = `${seq.a}-${seq.b}`;
-            
-            // Only add the bet if its pattern is enabled in the global config
-            if (patternConfig[patternName] !== false) {
-                notifications.push({
-                    type: 'ACTIVE', 
-                    fA: seq.a, 
-                    fB: seq.target, 
-                    count: 1, 
-                    strategy: 'Sequence',
-                    patternName: patternName
-                });
-                
-                nextBets.push({
-                    targetFace: seq.target,
-                    originPairKey: seqKey,  
-                    strategy: 'Sequence',
-                    highlightIds: [prev.id, latest.id],
-                    patternName: patternName,
-                    confirmed: false
-                });
-            }
-        }
-    });
-
-    return { notifications, nextBets };
-}
+// runSequenceEngine is now owned by strategies/strategy.series.js
+// Access it as: window.StrategyRegistry.series.run(history, null, patternConfig)
 
 function refreshHighlights() {
     document.querySelectorAll('.highlight-pair').forEach(el => el.classList.remove('highlight-pair'));
@@ -1470,7 +1408,10 @@ function updateAnalyticsHUD() {
         const col3Title = isHudColdMode ? 'Miss%' : 'Hit%';
 
         // Count how many times each sequence's target face appeared after the trigger pair
-        const seqStats = SEQUENCES.map((seq, i) => {
+        const seriesStrat = window.StrategyRegistry && window.StrategyRegistry.series;
+        const SEQ_LIST   = seriesStrat ? SEQUENCES : [];
+        const SEQ_COLORS = seriesStrat ? SEQUENCE_COLORS : [];
+        const seqStats = SEQ_LIST.map((seq, i) => {
             let hits = 0;
             for (let j = 2; j < window_.length; j++) {
                 const fA = window_[j - 2]?.faces?.includes(seq.a);
@@ -1481,7 +1422,7 @@ function updateAnalyticsHUD() {
             const pct = sampleSize < 3 ? 0 : Math.round((hits / Math.max(1, sampleSize - 2)) * 100);
             return {
                 label: seq.name,
-                color: SEQUENCE_COLORS[i % SEQUENCE_COLORS.length],
+                color: SEQ_COLORS[i % SEQ_COLORS.length],
                 hits,
                 pct
             };
@@ -2408,7 +2349,8 @@ function renderFilterMenu() {
     const list = document.getElementById('patternsList');
     if (!list) return;
 
-    const PATTERN_FILTER_META = currentGameplayStrategy === 'series' ? PATTERN_FILTER_META_SERIES : PATTERN_FILTER_META_COMBO;
+    const activeStrat = window.StrategyRegistry && window.StrategyRegistry[currentGameplayStrategy];
+    const PATTERN_FILTER_META = (activeStrat && activeStrat.PATTERN_FILTER_META) || PATTERN_FILTER_META_COMBO;
     const entries = Object.keys(patternConfig).map(key => {
         const meta = PATTERN_FILTER_META[key] || {
             label: key,
@@ -2627,6 +2569,22 @@ async function processSpinValue(val, options = {}) {
             });
         });
         activeBets = [];
+    }
+
+    // 1b. RESOLVE BACKGROUND BETS (non-active strategies: stats only, no UI)
+    const registry = window.StrategyRegistry || {};
+    for (const stratKey of Object.keys(registry)) {
+        if (stratKey === currentGameplayStrategy) continue; // already handled above
+        const bgBets = backgroundBets[stratKey] || [];
+        if (bgBets.length === 0) continue;
+        bgBets.forEach(bet => {
+            const isWin = (matchedFaceMask & FACE_MASKS[bet.targetFace]) !== 0;
+            const count = FACES[bet.targetFace] ? FACES[bet.targetFace].nums.length : 0;
+            const unitChange = isWin ? (35 - count) : -count;
+            // Record in engineStats silently — no user stats, no display
+            updateEngineStats(isWin, bet.patternName, unitChange, bet.strategy, bet.patternName, currentSpinIndex, val);
+        });
+        backgroundBets[stratKey] = [];
     }
 
     // 2. ADD TO HISTORY
@@ -3246,43 +3204,14 @@ function renderRow(spin, container = null) {
             const prevMask = Object.prototype.hasOwnProperty.call(FON_MASK_MAP, prevSpin.num) ? FON_MASK_MAP[prevSpin.num] : 0;
             const currMask = Object.prototype.hasOwnProperty.call(FON_MASK_MAP, spin.num) ? FON_MASK_MAP[spin.num] : 0;
 
-            if (currentGameplayStrategy === 'combo') {
-                for (let comboIndex = 0; comboIndex < PERIMETER_COMBOS.length; comboIndex++) {
-                    const trackedCombo = PERIMETER_COMBOS[comboIndex];
-                    const prevHasA = (prevMask & FACE_MASKS[trackedCombo.a]) !== 0;
-                    const prevHasB = (prevMask & FACE_MASKS[trackedCombo.b]) !== 0;
-                    const currHasA = (currMask & FACE_MASKS[trackedCombo.a]) !== 0;
-                    const currHasB = (currMask & FACE_MASKS[trackedCombo.b]) !== 0;
-
-                    if (prevHasA && currHasB) {
-                        detectedCombo = trackedCombo;
-                        matchedPrevFace = trackedCombo.a;
-                        matchedCurrFace = trackedCombo.b;
-                        break;
-                    }
-
-                    if (prevHasB && currHasA) {
-                        detectedCombo = trackedCombo;
-                        matchedPrevFace = trackedCombo.b;
-                        matchedCurrFace = trackedCombo.a;
-                        break;
-                    }
-                }
-            } else if (currentGameplayStrategy === 'series') {
-                for (let seqIndex = 0; seqIndex < SEQUENCES.length; seqIndex++) {
-                    const seq = SEQUENCES[seqIndex];
-                    const prevHasA = (prevMask & FACE_MASKS[seq.a]) !== 0;
-                    const currHasB = (currMask & FACE_MASKS[seq.b]) !== 0;
-
-                    if (prevHasA && currHasB) {
-                        detectedCombo = {
-                            label: `${seq.a}-${seq.b}`,
-                            color: SEQUENCE_COLORS[seqIndex % SEQUENCE_COLORS.length]
-                        };
-                        matchedPrevFace = seq.a;
-                        matchedCurrFace = seq.b;
-                        break;
-                    }
+            // Use active strategy's detectBridge via StrategyRegistry
+            const activeStrategy = window.StrategyRegistry && window.StrategyRegistry[currentGameplayStrategy];
+            if (activeStrategy && typeof activeStrategy.detectBridge === 'function') {
+                const bridgeResult = activeStrategy.detectBridge(prevMask, currMask, FACE_MASKS);
+                if (bridgeResult) {
+                    detectedCombo = bridgeResult;
+                    matchedPrevFace = bridgeResult.matchedPrevFace;
+                    matchedCurrFace = bridgeResult.matchedCurrFace;
                 }
             }
 
