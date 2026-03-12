@@ -218,6 +218,7 @@ function loadSessionData() {
         if (Array.isArray(data.aiSignalLedger)) aiSignalLedger = data.aiSignalLedger;
         if (data.aiRuntimeState && typeof data.aiRuntimeState === 'object') aiRuntimeState = { ...aiRuntimeState, ...data.aiRuntimeState };
         updateAiUiState();
+        updateNeuralPredictionUi();
         return true;
     } catch (e) {
         console.error("Session load failed", e);
@@ -2339,6 +2340,33 @@ async function requestNeuralPrediction(options = {}) {
     };
 
     return predictionPromise;
+}
+
+function toggleNeuralPrediction() {
+    neuralPredictionEnabled = !neuralPredictionEnabled;
+    updateNeuralPredictionUi();
+    
+    if (neuralPredictionEnabled && aiEnabled && aiApiKey) {
+        void requestNeuralPrediction();
+    } else {
+        currentNeuralSignal = null;
+        renderDashboard(window.currentAlerts || []);
+    }
+    
+    saveSessionData();
+}
+
+function updateNeuralPredictionUi() {
+    const toggle = document.getElementById('aiHindsightToggle');
+    if (toggle) {
+        if (neuralPredictionEnabled) {
+            toggle.classList.add('active');
+            toggle.classList.add('animate-glow-green');
+        } else {
+            toggle.classList.remove('active');
+            toggle.classList.remove('animate-glow-green');
+        }
+    }
 }
 
 function adjustPredictionPerimeterWindow(delta) {
