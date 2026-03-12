@@ -88,6 +88,7 @@ let strategies = {};
 
 let changeStrategyTimeout = null;
 let cachedAddSpinBtn = null;
+let perimeterStatsCache = {};
 
 function changePredictionStrategy(val) {
     currentGameplayStrategy = val;
@@ -1704,84 +1705,94 @@ function updatePerimeterAnalytics() {
 }
 
 function calculatePerimeterStats(history, windowSize = 14) {
-    if (typeof PredictionEngine !== 'undefined' && typeof PredictionEngine.calculatePerimeterStats === 'function') {
-        return PredictionEngine.calculatePerimeterStats(history, windowSize);
+    // Memoization Cache: check if we already have stats for this history state and window
+    const cacheKey = `${history.length}-${windowSize}`;
+    if (perimeterStatsCache[cacheKey]) {
+        return perimeterStatsCache[cacheKey];
     }
 
-    const historyArray = Array.isArray(history) ? history : [];
-    const parsedWindow = parseInt(windowSize, 10);
-    const useAllHistory = windowSize === 'all' || windowSize === Infinity || windowSize === null;
-    const safeWindow = useAllHistory
-        ? Math.max(2, historyArray.length)
-        : (Number.isNaN(parsedWindow) ? 14 : Math.max(2, Math.min(60, parsedWindow)));
-    const recentSpins = historyArray.slice(-safeWindow);
-    const sampleSize = recentSpins.length;
-    const transitionCount = Math.max(0, recentSpins.length - 1);
+    const result = (function() {
+        if (typeof PredictionEngine !== 'undefined' && typeof PredictionEngine.calculatePerimeterStats === 'function') {
+            return PredictionEngine.calculatePerimeterStats(history, windowSize);
+        }
 
-    let counts = { '5-2': 0, '5-3': 0, '1-3': 0, '2-4': 0 };
+        const historyArray = Array.isArray(history) ? history : [];
+        const parsedWindow = parseInt(windowSize, 10);
+        const useAllHistory = windowSize === 'all' || windowSize === Infinity || windowSize === null;
+        const safeWindow = useAllHistory
+            ? Math.max(2, historyArray.length)
+            : (Number.isNaN(parsedWindow) ? 14 : Math.max(2, Math.min(60, parsedWindow)));
+        const recentSpins = historyArray.slice(-safeWindow);
+        const sampleSize = recentSpins.length;
+        const transitionCount = Math.max(0, recentSpins.length - 1);
 
-    for (let i = 1; i < recentSpins.length; i++) {
-        const prevSpin = recentSpins[i - 1];
-        const currSpin = recentSpins[i];
-        if (!prevSpin || !currSpin) continue;
+        let counts = { '5-2': 0, '5-3': 0, '1-3': 0, '2-4': 0 };
 
-        const prevMask = Object.prototype.hasOwnProperty.call(FON_MASK_MAP, prevSpin.num) ? FON_MASK_MAP[prevSpin.num] : 0;
-        const currMask = Object.prototype.hasOwnProperty.call(FON_MASK_MAP, currSpin.num) ? FON_MASK_MAP[currSpin.num] : 0;
+        for (let i = 1; i < recentSpins.length; i++) {
+            const prevSpin = recentSpins[i - 1];
+            const currSpin = recentSpins[i];
+            if (!prevSpin || !currSpin) continue;
 
+            const prevMask = Object.prototype.hasOwnProperty.call(FON_MASK_MAP, prevSpin.num) ? FON_MASK_MAP[prevSpin.num] : 0;
+            const currMask = Object.prototype.hasOwnProperty.call(FON_MASK_MAP, currSpin.num) ? FON_MASK_MAP[currSpin.num] : 0;
+
+            PERIMETER_COMBOS.forEach(combo => {
+                const matched = (((prevMask & FACE_MASKS[combo.a]) !== 0) && ((currMask & FACE_MASKS[combo.b]) !== 0)) ||
+                    (((prevMask & FACE_MASKS[combo.b]) !== 0) && ((currMask & FACE_MASKS[combo.a]) !== 0));
+                if (matched) counts[combo.label]++;
+            });
+        }
+
+        let dominantCombo = null;
+        let highestCount = -1;
         PERIMETER_COMBOS.forEach(combo => {
-            const matched = (((prevMask & FACE_MASKS[combo.a]) !== 0) && ((currMask & FACE_MASKS[combo.b]) !== 0)) ||
-                (((prevMask & FACE_MASKS[combo.b]) !== 0) && ((currMask & FACE_MASKS[combo.a]) !== 0));
-            if (matched) counts[combo.label]++;
+            const count = counts[combo.label] || 0;
+            if (count > highestCount) {
+                highestCount = count;
+                dominantCombo = combo;
+            }
         });
-    }
 
-    let dominantCombo = null;
-    let highestCount = -1;
-    PERIMETER_COMBOS.forEach(combo => {
-        const count = counts[combo.label] || 0;
-        if (count > highestCount) {
-            highestCount = count;
-            dominantCombo = combo;
-        }
-    });
+        if (highestCount <= 0) dominantCombo = null;
 
-    if (highestCount <= 0) dominantCombo = null;
-
-    const comboStats = PERIMETER_COMBOS.map(combo => {
-        const hits = counts[combo.label] || 0;
-        const sampleMisses = Math.max(0, sampleSize - hits);
-        const hotPercent = sampleSize > 0 ? Math.round((hits / sampleSize) * 100) : 0;
-        const coldPercent = sampleSize > 0 ? Math.round((sampleMisses / sampleSize) * 100) : 0;
-        let state = 'idle';
-        if (sampleSize > 0) {
-            if (hits === 0) state = 'cold';
-            else if (hotPercent >= 25) state = 'hot';
-            else if (coldPercent >= 75) state = 'cold';
-            else state = 'neutral';
-        }
+        const comboStats = PERIMETER_COMBOS.map(combo => {
+            const hits = counts[combo.label] || 0;
+            const sampleMisses = Math.max(0, sampleSize - hits);
+            const hotPercent = sampleSize > 0 ? Math.round((hits / sampleSize) * 100) : 0;
+            const coldPercent = sampleSize > 0 ? Math.round((sampleMisses / sampleSize) * 100) : 0;
+            let state = 'idle';
+            if (sampleSize > 0) {
+                if (hits === 0) state = 'cold';
+                else if (hotPercent >= 25) state = 'hot';
+                else if (coldPercent >= 75) state = 'cold';
+                else state = state = 'neutral';
+            }
+            return {
+                ...combo,
+                hits,
+                sampleMisses,
+                sampleSize,
+                hotPercent,
+                coldPercent,
+                state
+            };
+        });
 
         return {
-            ...combo,
-            hits,
-            sampleMisses,
-            hotPercent,
-            coldPercent,
+            counts,
+            comboStats,
             sampleSize,
-            state
+            dominantCombo,
+            windowSize: sampleSize,
+            sequence: recentSpins.map(s => s.num)
         };
-    });
+    })();
 
-    return {
-        windowSize: safeWindow,
-        recentSpins: recentSpins,
-        sampleSize: sampleSize,
-        transitionCount: transitionCount,
-        sequence: recentSpins.map(s => (s.faces && s.faces.length > 0 ? s.faces[0] : '?')),
-        counts: counts,
-        dominantCombo: dominantCombo,
-        comboStats: comboStats
-    };
+    perimeterStatsCache[cacheKey] = result;
+    return result;
 }
+
+
 
 async function refreshPredictionEngineUI() {
     await scanAllStrategies();
@@ -3601,6 +3612,7 @@ function resetData(skipConfirm = false) {
         strategies = {};
         backgroundBets = {};
         tripleCsResets = {};
+        perimeterStatsCache = {};
         engineStats = {
             totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0,
             bankrollHistory: [0], patternStats: {}, signalLog: []
