@@ -181,37 +181,45 @@ body::after {
 
 /* --- THE NUMBERS (Grid Buttons) --- */
 .grid-btn {
-    background: var(--theme-grey);
-    border: 1px solid rgba(255, 255, 255, 0.03);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    /* Sharp top edge */
-    border-radius: 6px;
-    /* Sharper corners */
+    position: relative;
+    background: linear-gradient(145deg, rgba(28, 28, 30, 0.85), rgba(8, 8, 10, 0.95));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
     font-weight: 800;
-    font-size: 1.1rem;
-    transition: all 0.2s var(--ease-strike);
+    font-size: 1.15rem;
+    transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
     color: var(--text-tertiary);
-    /* Very dim by default */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
 }
 
-/* The aggressive RED hover state */
+.grid-btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.08) 0%, transparent 75%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
 .grid-btn:hover {
     transform: translateY(-2px);
     color: #ffffff;
-    background: rgba(255, 26, 51, 0.15);
-    border-color: rgba(255, 26, 51, 0.6);
-    box-shadow:
-        0 8px 25px rgba(0, 0, 0, 0.9),
-        0 0 20px var(--theme-crimson-glow),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-    text-shadow: 0 0 12px var(--theme-crimson);
-    z-index: 10;
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.grid-btn:hover::after {
+    opacity: 1;
 }
 
 .grid-btn:active {
-    transform: scale(0.96) translateY(0);
-    background: rgba(255, 26, 51, 0.25);
+    transform: scale(0.94);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
 
@@ -514,16 +522,25 @@ body::after {
 
 /* The mighty ADD button - The only dominant color block in the nav */
 button.bg-gradient-to-b {
-    background: var(--theme-crimson) !important;
-    border: 1px solid rgba(255, 100, 100, 0.5) !important;
+    background: linear-gradient(to bottom, #ff1a33, #b3001b) !important;
+    border: 1px solid rgba(255, 100, 100, 0.4) !important;
     color: white !important;
-    box-shadow: 0 4px 15px var(--theme-crimson-glow) !important;
-    font-weight: 800 !important;
+    box-shadow: 0 0 25px rgba(255, 26, 51, 0.45) !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.12em !important;
+    text-transform: uppercase !important;
+    transition: all 0.2s var(--ease-strike) !important;
 }
 
 button.bg-gradient-to-b:hover {
     background: #ff334b !important;
-    box-shadow: 0 6px 20px rgba(255, 26, 51, 0.6) !important;
+    box-shadow: 0 0 40px rgba(255, 26, 51, 0.7) !important;
+    transform: translateY(-1px);
+}
+
+button.bg-gradient-to-b:active {
+    transform: scale(0.95);
+    box-shadow: 0 0 15px rgba(255, 26, 51, 0.8) !important;
 }
 
 /* Ghost Mode Active Scanning Pulse - "The Pinch of Green" */
@@ -590,29 +607,39 @@ button.bg-gradient-to-b:hover {
 @keyframes rowEnter {
     from {
         opacity: 0;
-        transform: translateX(10px);
-        background: var(--theme-crimson-dim);
+        transform: scale(0.98) translateY(5px);
+        background: rgba(255, 26, 51, 0.05);
     }
-
     to {
         opacity: 1;
-        transform: translateX(0);
+        transform: scale(1) translateY(0);
         background: transparent;
     }
 }
 
 .history-row {
-    animation: rowEnter 0.4s var(--ease-strike) forwards;
+    animation: rowEnter 0.35s cubic-bezier(0.19, 1, 0.22, 1) forwards;
     position: relative;
-    overflow: visible;
-    content-visibility: auto;
-    contain-intrinsic-size: 50px;
-    transform: translateZ(0);
-    will-change: transform, opacity;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.015) !important;
 }
 
 .history-row:hover {
-    background-color: rgba(255, 255, 255, 0.02);
+    background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+.history-row::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 10%;
+    bottom: 10%;
+    width: 2px;
+    background: transparent;
+    transition: background 0.3s;
+}
+
+.history-row:hover::before {
+    background: var(--theme-crimson);
 }
 
 .combo-link-layer, .combo-badge {

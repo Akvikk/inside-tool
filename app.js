@@ -129,37 +129,41 @@ function rebuildPatternConfig() {
 // --- PERSISTENCE ---
 const SESSION_STORAGE_KEY = 'insideTool_session_v1';
 
+let saveSessionTimeout = null;
 function saveSessionData() {
-    const data = {
-        history,
-        activeBets,
-        faceGaps,
-        predictionPerimeterWindow,
-        perimeterRuleEnabled,
-        patternConfig,
-        engineStats: window.EngineCore.stats,
-        tripleCsResets: window.EngineCore.tripleCsResets,
-        userStats,
-        stopwatchSeconds,
-        currentInputLayout,
-        isHudColdMode,
-        hudHistoryScope,
-        aiEnabled,
-        aiProvider,
-        aiApiKey,
-        advancementLog,
-        neuralPredictionEnabled,
-        aiSignalLedger,
-        aiRuntimeState,
-        currentPredictionStrategy,
-        currentGameplayStrategy,
-        globalSpinIdCounter
-    };
-    try {
-        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(data));
-    } catch (e) {
-        console.warn("Session save failed", e);
-    }
+    if (saveSessionTimeout) clearTimeout(saveSessionTimeout);
+    saveSessionTimeout = setTimeout(() => {
+        const data = {
+            history,
+            activeBets,
+            faceGaps,
+            predictionPerimeterWindow,
+            perimeterRuleEnabled,
+            patternConfig,
+            engineStats: window.EngineCore.stats,
+            tripleCsResets: window.EngineCore.tripleCsResets,
+            userStats,
+            stopwatchSeconds,
+            currentInputLayout,
+            isHudColdMode,
+            hudHistoryScope,
+            aiEnabled,
+            aiProvider,
+            aiApiKey,
+            advancementLog,
+            neuralPredictionEnabled,
+            aiSignalLedger,
+            aiRuntimeState,
+            currentPredictionStrategy,
+            currentGameplayStrategy,
+            globalSpinIdCounter
+        };
+        try {
+            localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(data));
+        } catch (e) {
+            console.warn("Session save failed", e);
+        }
+    }, 500); 
 }
 
 function buildDefaultPatternConfig(enabled = true) {
@@ -1964,6 +1968,9 @@ async function requestAiText(promptText, options = {}) {
     try {
         let responseText = '';
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s safety timeout
+
         if (aiProvider === 'gemini') {
             const generationConfig = {
                 temperature,
@@ -1982,8 +1989,10 @@ async function requestAiText(promptText, options = {}) {
                 body: JSON.stringify({
                     contents: [{ parts: [{ text: promptText }] }],
                     generationConfig
-                })
+                }),
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
             const data = await res.json();
             if (!res.ok || data.error) throw new Error((data.error && data.error.message) || `Gemini request failed (${res.status})`);
             responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -2002,12 +2011,15 @@ async function requestAiText(promptText, options = {}) {
                     ...(responseMimeType === 'application/json'
                         ? { response_format: { type: 'json_object' } }
                         : {})
-                })
+                }),
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
             const data = await res.json();
             if (!res.ok || data.error) throw new Error((data.error && data.error.message) || `OpenAI request failed (${res.status})`);
             responseText = data?.choices?.[0]?.message?.content || '';
         } else {
+            clearTimeout(timeoutId);
             throw new Error("Provider not fully implemented yet.");
         }
 
@@ -2589,7 +2601,8 @@ async function processSpinValue(val, options = {}) {
     let alerts = await scanAllStrategies();
 
     if (neuralPredictionEnabled) {
-        await requestNeuralPrediction({ renderDashboardNow: false });
+        // Run AI in background to keep math engine fast & responsive
+        void requestNeuralPrediction({ renderDashboardNow: true });
         alerts = window.currentAlerts || [];
     }
 
@@ -2614,15 +2627,7 @@ async function processSpinValue(val, options = {}) {
     if (!options.silent) {
         renderRow(spinObj);
         renderDashboard(alerts);
-
-        if (!document.getElementById('analyticsModal').classList.contains('hidden')) renderAnalytics();
-        if (!document.getElementById('betsModal').classList.contains('hidden')) renderUserAnalytics();
-
-        // Update FON tracker in Patterns modal
-        updatePerimeterAnalytics();
-        updateAnalyticsHUD();
-
-        refreshHighlights();
+        debounceHeavyUIUpdates();
     }
 
     if (!options.preserveInput) {
@@ -2638,6 +2643,20 @@ async function processSpinValue(val, options = {}) {
     }
 
     return alerts;
+}
+
+let heavyUIUpdateTimeout = null;
+function debounceHeavyUIUpdates() {
+    if (heavyUIUpdateTimeout) clearTimeout(heavyUIUpdateTimeout);
+    heavyUIUpdateTimeout = setTimeout(() => {
+        if (!document.getElementById('analyticsModal').classList.contains('hidden')) renderAnalytics();
+        if (!document.getElementById('betsModal').classList.contains('hidden')) renderUserAnalytics();
+        
+        updatePerimeterAnalytics();
+        updateAnalyticsHUD();
+        refreshHighlights();
+        renderIntelligencePanel();
+    }, 150); // Faster turnaround for fluid feel
 }
 
 // Engine logic moved to EngineCore.js
