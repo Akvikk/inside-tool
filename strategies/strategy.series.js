@@ -32,9 +32,9 @@ const PATTERN_FILTER_META_SERIES = {
     },
     ...Object.fromEntries(
         SEQUENCES.map((seq, i) => {
-            const key = `(${seq.name.replace(/-/g, '')})`;
+            const key = seq.name.replace(/-/g, '');
             return [key, {
-                label: key,
+                label: `(${key})`, // Keep the label clear in the menu
                 hint: `Track sequence ${seq.name}: F${seq.a} → F${seq.b} → F${seq.target}`,
                 icon: 'fa-stream',
                 accent: SEQUENCE_COLORS[i % SEQUENCE_COLORS.length]
@@ -56,11 +56,11 @@ window.StrategyRegistry.series = {
 
     /**
      * Build the default patternConfig keys for this strategy.
-     * Returns an object: { "(123)": bool, "(234)": bool, ... }
+     * Returns an object: { "123": bool, "234": bool, ... }
      */
     buildPatternConfig(enabled = true) {
         const config = Object.fromEntries(
-            SEQUENCES.map(seq => [`(${seq.name.replace(/-/g, '')})`, enabled])
+            SEQUENCES.map(seq => [seq.name.replace(/-/g, ''), enabled])
         );
         config['TripleCs'] = enabled;
         return config;
@@ -94,8 +94,8 @@ window.StrategyRegistry.series = {
 
         if (latest.faces && prev.faces) {
             SEQUENCES.forEach(seq => {
+                const patternName = seq.name.replace(/-/g, '');
                 if (prev.faces.includes(seq.a) && latest.faces.includes(seq.b)) {
-                    const patternName = `(${seq.name.replace(/-/g, '')})`;
                     const seqKey = `${seq.a}-${seq.b}`;
 
                     if (patternConfig[patternName] !== false) {
@@ -179,20 +179,21 @@ window.StrategyRegistry.series = {
                     }
 
                     if (isSignal) {
+                        const patternName = `TripleCs: F${startFace}➜F${targetFace}`;
                         notifications.push({
                             type: 'ACTIVE',
                             fA: startFace,
                             fB: targetFace,
                             count: count,
                             strategy: 'TripleCs',
-                            patternName: `(F${startFace}➜F${targetFace})`
+                            patternName
                         });
                         nextBets.push({
                             targetFace: targetFace,
                             originPairKey: pairKey,
                             strategy: 'TripleCs',
                             highlightIds: ids,
-                            patternName: `(F${startFace}➜F${targetFace})`,
+                            patternName,
                             confirmed: false
                         });
                     } else {

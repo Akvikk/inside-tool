@@ -2747,11 +2747,13 @@ function renderAnalytics() {
 
     // Map display strategy key to the rawStrategy value stored in engineStats.signalLog
     // Series uses 'Sequence', Combo uses 'Combo' (as set by strategy.combo.js)
-    const targetStrategy = analyticsDisplayStrategy === 'series' ? 'Sequence' : 'Combo';
-
     // Only count stats for the currently active analytics strategy
     engineStats.signalLog.forEach(log => {
-        if (log.rawStrategy === targetStrategy) {
+        const isMatch = (analyticsDisplayStrategy === 'series')
+            ? (log.rawStrategy === 'Sequence' || log.rawStrategy === 'TripleCs')
+            : (log.rawStrategy === 'Combo');
+
+        if (isMatch) {
             if (log.result === 'WIN') {
                 displayStats.wins++;
                 displayStats.streak = displayStats.streak >= 0 ? displayStats.streak + 1 : 1;
@@ -3273,7 +3275,7 @@ function renderRow(spin, container = null) {
             let colorClass = win ? 'text-[#30D158]' : 'text-[#FF453A]';
             const summary = bet.signalSource === 'ai'
                 ? `${status}: ${bet.comboLabel || 'AI'}${bet.targetFace ? ` -> F${bet.targetFace}` : ''}${Number.isFinite(bet.confidence) ? ` • ${bet.confidence}%` : ''}`
-                : `${status}: F${bet.targetFace} (${bet.patternName})`;
+                : `${status}: F${bet.targetFace} ${bet.patternName}`;
             predHTMLParts.push(`<div class="flex items-center text-[10px] font-bold ${colorClass}">${icon}${escapeAiMarkup(summary)}</div>`);
             if (bet.signalSource === 'ai' && bet.reason) {
                 predHTMLParts.push(`<div class="ml-5 text-[9px] leading-relaxed text-white/45">${escapeAiMarkup(bet.reason)}</div>`);
