@@ -32,9 +32,9 @@ const PATTERN_FILTER_META_SERIES = {
     },
     ...Object.fromEntries(
         SEQUENCES.map((seq, i) => {
-            const key = seq.name.replace(/-/g, '');
-            return [key, {
-                label: `(${key})`, // Keep the label clear in the menu
+            const patternName = `(${seq.name.replace(/-/g, '')})`;
+            return [patternName, {
+                label: patternName,
                 hint: `Track sequence ${seq.name}: F${seq.a} → F${seq.b} → F${seq.target}`,
                 icon: 'fa-stream',
                 accent: SEQUENCE_COLORS[i % SEQUENCE_COLORS.length]
@@ -56,11 +56,11 @@ window.StrategyRegistry.series = {
 
     /**
      * Build the default patternConfig keys for this strategy.
-     * Returns an object: { "123": bool, "234": bool, ... }
+     * Returns an object: { "(123)": bool, "(234)": bool, ... }
      */
     buildPatternConfig(enabled = true) {
         const config = Object.fromEntries(
-            SEQUENCES.map(seq => [seq.name.replace(/-/g, ''), enabled])
+            SEQUENCES.map(seq => [`(${seq.name.replace(/-/g, '')})`, enabled])
         );
         config['TripleCs'] = enabled;
         return config;
@@ -94,7 +94,7 @@ window.StrategyRegistry.series = {
 
         if (latest.faces && prev.faces) {
             SEQUENCES.forEach(seq => {
-                const patternName = seq.name.replace(/-/g, '');
+                const patternName = `(${seq.name.replace(/-/g, '')})`;
                 if (prev.faces.includes(seq.a) && latest.faces.includes(seq.b)) {
                     const seqKey = `${seq.a}-${seq.b}`;
 

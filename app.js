@@ -2978,7 +2978,8 @@ function drawAdvancedGraph(historyArray, winCount, lossCount, containerId) {
     if (!container) return;
 
     container.innerHTML = '';
-    container.className = "flex flex-col h-full w-full rounded-b-xl overflow-hidden relative";
+    // Use classList.add instead of overwriting className to preserve h-36/w-full from index.html
+    container.classList.add("flex", "flex-col", "relative", "overflow-hidden", "rounded-b-xl");
 
     const chartDiv = document.createElement('div');
     chartDiv.className = "relative h-[80%] w-full bg-black/20 group";
