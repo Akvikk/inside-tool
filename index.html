@@ -13,10 +13,10 @@
 <body class="h-screen flex flex-col text-sm selection:bg-blue-500/30">
 
     <!-- AMBIENT ORBS (LIVING BACKGROUND) -->
-    <div class="ambient-orb orb-1"></div>
-    <div class="ambient-orb orb-2"></div>
-    <div class="ambient-orb orb-3"></div>
-    <div class="ambient-frost-layer"></div>
+    <div class="ambient-orb orb-1 pointer-events-none"></div>
+    <div class="ambient-orb orb-2 pointer-events-none"></div>
+    <div class="ambient-orb orb-3 pointer-events-none"></div>
+    <div class="ambient-frost-layer pointer-events-none"></div>
 
     <!-- HAMBURGER MENU BACKDROP (FULL SCREEN BLUR) -->
     <div id="hamburgerBackdrop"
@@ -46,7 +46,8 @@
 
         <div class="flex gap-2 items-center">
 
-            <button onclick="openAiChat()" id="headerAiBtn" class="ios-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-[#bf5af2]/10 hover:bg-[#bf5af2]/20 text-[#bf5af2] font-semibold rounded-lg border border-[#bf5af2]/30 flex items-center justify-center gap-0 sm:gap-2 text-xs shadow-[0_0_10px_rgba(191,90,242,0.15)] transition-all">
+            <button onclick="openAiChat()" id="headerAiBtn"
+                class="ios-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-[#bf5af2]/10 hover:bg-[#bf5af2]/20 text-[#bf5af2] font-semibold rounded-lg border border-[#bf5af2]/30 flex items-center justify-center gap-0 sm:gap-2 text-xs shadow-[0_0_10px_rgba(191,90,242,0.15)] transition-all">
                 <i class="fas fa-brain"></i> <span class="hidden sm:inline">AI CHAT</span>
             </button>
 
@@ -62,7 +63,8 @@
                             <div class="pattern-popover-title">Pattern Filters</div>
                             <div id="patternFilterSummary" class="pattern-popover-meta">0 of 0 active</div>
                         </div>
-                        <button onclick="event.stopPropagation(); closePatternFilterPopover()" class="pattern-popover-close">
+                        <button onclick="event.stopPropagation(); closePatternFilterPopover()"
+                            class="pattern-popover-close">
                             <i class="fas fa-times text-[10px]"></i>
                         </button>
                     </div>
@@ -92,10 +94,10 @@
                     <i class="fas fa-bars"></i>
                 </button>
             </div>
-        </div> <!-- Close second header flex group -->
-    </div> <!-- CLOSE THE GLASS-HEADER CONTAINER -->
+        </div>
+    </div>
 
-    <!-- HAMBURGER DROPDOWN MENU (Moved explicitly out of header to fix z-index clipping) -->
+    <!-- HAMBURGER DROPDOWN MENU -->
     <div id="hamburgerMenu"
         class="hidden fixed top-[64px] right-4 w-64 rounded-xl border border-white/10 bg-[#0A0A0C]/95 backdrop-blur-[40px] shadow-[0_20px_50px_rgba(0,0,0,0.9)] z-50 overflow-hidden transform origin-top-right transition-all duration-200">
 
@@ -183,41 +185,6 @@
             </div>
         </div>
 
-        <!-- AI HINDSIGHT -->
-        <div class="px-4 py-3 border-b border-white/5 bg-white/5 flex justify-between items-center cursor-pointer hover:bg-white/10 transition-colors"
-            onclick="toggleAccordion('aiHindsightSubMenu')">
-            <span class="text-[10px] font-bold text-gray-300 uppercase tracking-wider">AI Hindsight</span>
-            <i class="fas fa-chevron-down text-gray-500 text-xs transition-transform duration-200"
-                id="aiHindsightSubMenuIcon"></i>
-        </div>
-        <div id="aiHindsightSubMenu" class="hidden bg-black/40 overflow-hidden transition-all duration-200">
-            <div class="px-4 py-3 border-b border-white/5 hover:bg-white/10 transition-colors">
-                <div class="flex items-center justify-between gap-3">
-                    <div class="min-w-0">
-                        <div class="text-xs text-gray-200 flex items-center">
-                            <i class="fas fa-brain mr-2 text-[#bf5af2]"></i>
-                            AI Takeover
-                        </div>
-                        <div class="text-[9px] text-white/35 mt-1 leading-snug">AI replaces the prediction cards and writes the reasoning into the log.</div>
-                    </div>
-                    <div class="flex items-center gap-2 shrink-0">
-                        <span id="aiTakeoverStatus" class="text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner">MATH</span>
-                        <button id="aiTakeoverSwitch" onclick="event.stopPropagation(); toggleAiPredictionTakeover()" class="w-10 h-5 rounded-full bg-white/10 border border-white/20 relative transition-all duration-300">
-                            <div id="aiTakeoverKnob" class="absolute left-1 top-1 w-3 h-3 rounded-full bg-gray-400 transition-transform duration-300"></div>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="px-4 py-3 border-b border-white/5 hover:bg-white/10 transition-colors flex items-center justify-between cursor-pointer group" onclick="toggleModal('aiConfigModal')">
-                <div class="text-xs text-gray-300 group-hover:text-white flex items-center">
-                    <i class="fas fa-robot mr-3 text-[#30D158] w-4 text-center group-hover:scale-110 transition-transform"></i>
-                    AI Engine Configuration
-                </div>
-                <span id="aiStatusBadge" class="text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner">OFF</span>
-            </div>
-        </div>
-
-        <!-- SYSTEM -->
         <button onclick="resetSession()"
             class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:bg-[#ff1a33]/20 hover:text-[#ff1a33] transition-colors flex items-center group">
             <i
@@ -226,10 +193,9 @@
         </button>
     </div>
 
-    <!-- 2. DASHBOARD (Sleek, Slim, Effective) -->
+    <!-- 2. DASHBOARD -->
     <div id="dashboard"
         class="px-4 py-1.5 flex gap-2 overflow-x-auto h-[80px] shrink-0 items-center glass-strip shadow-inner">
-        <!-- Content filled via JS -->
         <div
             class="dashboard-empty w-full text-center text-[10px] font-medium text-[#8E8E93]/60 border border-dashed border-white/5 rounded-xl p-2 select-none tracking-wide flex items-center justify-center h-[60px]">
         </div>
@@ -237,15 +203,12 @@
 
     <!-- 3. MAIN CONTENT -->
     <div class="flex-1 flex overflow-hidden">
-        <!-- Desktop Grid (Number Pad) - NOW MESMERISING -->
         <div class="hidden md:block w-[240px] shrink-0 mesmer-grid p-3 overflow-y-auto custom-scroll" id="desktopGrid">
             <div class="grid grid-cols-3 gap-2">
                 <button class="grid-btn grid-green col-span-3 py-4 shadow-sm" onclick="handleGridClick(0)">0</button>
-                <!-- JS Fills 1-36 -->
             </div>
         </div>
 
-        <!-- History Table -->
         <div class="flex-1 flex flex-col relative w-full bg-transparent overflow-hidden" id="scrollContainer">
             <div class="flex-1 overflow-y-auto custom-scroll">
                 <table class="history-table">
@@ -258,9 +221,7 @@
                             <th class="w-[45%] text-center">PREDICTION</th>
                         </tr>
                     </thead>
-                    <tbody id="historyBody">
-                        <!-- Content Injected Here -->
-                    </tbody>
+                    <tbody id="historyBody"></tbody>
                 </table>
                 <div class="h-16"></div>
             </div>
@@ -268,16 +229,13 @@
     </div>
 
     <!-- MODAL TEMPLATES -->
-
-    <!-- ACTUAL BETS MODAL -->
     <div id="betsModal"
         class="fixed inset-0 bg-black/60 backdrop-blur-md hidden z-50 flex items-center justify-center p-4"
         onclick="toggleModal('betsModal')">
         <div class="glass-menu w-full max-w-3xl h-[80vh] flex flex-col overflow-hidden"
             onclick="event.stopPropagation()">
             <div class="p-4 glass-header flex justify-between items-center">
-                <h2 class="font-bold text-sm tracking-wide uppercase" style="color: var(--text-primary);">Bet History
-                </h2>
+                <h2 class="font-bold text-sm tracking-wide uppercase text-white">Bet History</h2>
                 <button onclick="toggleModal('betsModal')" class="text-gray-400 hover:text-white transition-colors"><i
                         class="fas fa-times"></i></button>
             </div>
@@ -285,27 +243,23 @@
                 <div class="grid grid-cols-3 gap-4">
                     <div class="frosted-plate p-4 text-center">
                         <div class="text-white/50 text-[10px] font-bold uppercase tracking-wider mb-1">Net Units</div>
-                        <div id="userNet" class="text-4xl font-bold text-white tracking-tight">0</div>
+                        <div id="userNet" class="text-4xl font-bold text-white">0</div>
                     </div>
                     <div class="frosted-plate p-4 text-center">
                         <div class="text-white/50 text-[10px] font-bold uppercase tracking-wider mb-1">Hit Rate</div>
-                        <div id="userHitRate" class="text-4xl font-bold tracking-tight"
-                            style="color: var(--theme-emerald);">0%
-                        </div>
+                        <div id="userHitRate" class="text-4xl font-bold text-[#30D158]">0%</div>
                     </div>
                     <div class="frosted-plate p-4 text-center">
                         <div class="text-white/50 text-[10px] font-bold uppercase tracking-wider mb-1">Total Bets</div>
-                        <div id="userTotal" class="text-4xl font-bold text-white tracking-tight">0</div>
+                        <div id="userTotal" class="text-4xl font-bold text-white">0</div>
                     </div>
                 </div>
-                <div class="frosted-plate border-none p-4">
-                    <div class="text-[#8E8E93] text-[10px] font-bold uppercase tracking-wide mb-2">Trend</div>
-                    <!-- REPLACED: New container ID -->
-                    <div class="h-36 w-full relative" id="userGraphContainer"></div>
+                <div class="frosted-plate p-4">
+                    <div id="userGraphContainer" class="h-36 w-full relative"></div>
                 </div>
-                <div class="bg-white/5 border border-white/5 rounded-xl overflow-hidden shadow-lg">
+                <div class="bg-white/5 border border-white/5 rounded-xl overflow-hidden">
                     <table class="w-full text-left text-xs">
-                        <thead class="bg-black/30 text-[#8E8E93] border-b border-white/5">
+                        <thead class="bg-black/30 text-white/50 border-b border-white/5">
                             <tr>
                                 <th class="p-3 font-bold uppercase">#</th>
                                 <th class="p-3 font-bold uppercase">Pattern</th>
@@ -313,11 +267,7 @@
                                 <th class="p-3 font-bold uppercase text-right">Result</th>
                             </tr>
                         </thead>
-                        <tbody id="userBetsBody" class="divide-y divide-white/5">
-                            <tr>
-                                <td colspan="4" class="p-6 text-center text-[#8E8E93] italic">No confirmed bets yet</td>
-                            </tr>
-                        </tbody>
+                        <tbody id="userBetsBody" class="divide-y divide-white/5"></tbody>
                     </table>
                 </div>
             </div>
@@ -330,41 +280,44 @@
         onclick="toggleModal('analyticsModal')">
         <div class="glass-menu w-full max-w-3xl h-[85vh] flex flex-col overflow-hidden"
             onclick="event.stopPropagation()">
-            <!-- TOP CONTROLS: Strategy View and Tabs -->
-            <!-- TOP CONTROLS: Strategy View and Tabs -->
             <div class="border-b border-white/5 bg-black/20">
-                <!-- Strategy View at the very top -->
                 <div class="px-6 py-3 border-b border-white/5 flex justify-center items-center gap-3">
                     <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Strategy View:</span>
                     <div class="flex bg-black/40 rounded-lg p-0.5 border border-white/5 w-48 relative">
-                        <div id="analyticsTogglePillBg" class="absolute w-1/2 h-[calc(100%-4px)] bg-[#30D158]/20 border border-[#30D158]/50 rounded-md top-[2px] left-[2px] transition-all duration-300 pointer-events-none"></div>
-                        <button onclick="setAnalyticsDisplayStrategy('series')" id="analyticsBtnSeries" class="flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 text-[#30D158] transition-colors relative z-10">SERIES</button>
-                        <button onclick="setAnalyticsDisplayStrategy('combo')" id="analyticsBtnCombo" class="flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 text-gray-400 transition-colors relative z-10">COMBOS</button>
+                        <div id="analyticsTogglePillBg"
+                            class="absolute w-1/2 h-[calc(100%-4px)] bg-[#30D158]/20 border border-[#30D158]/50 rounded-md top-[2px] left-[2px] transition-all duration-300 pointer-events-none">
+                        </div>
+                        <button onclick="setAnalyticsDisplayStrategy('series')" id="analyticsBtnSeries"
+                            class="flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 text-[#30D158] transition-colors relative z-10">SERIES</button>
+                        <button onclick="setAnalyticsDisplayStrategy('combo')" id="analyticsBtnCombo"
+                            class="flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 text-gray-400 transition-colors relative z-10">COMBOS</button>
                     </div>
                 </div>
-
-                <!-- Main Section Tabs -->
                 <div class="px-6 pt-3 flex gap-6">
-                    <button onclick="switchAnalyticsTab('strategy')" id="tabBtnStrategy" class="pb-2 text-xs font-bold uppercase tracking-widest text-[#30D158] border-b-2 border-[#30D158] transition-all">Metrics</button>
-                    <button onclick="switchAnalyticsTab('intelligence')" id="tabBtnIntelligence" class="pb-2 text-xs font-bold uppercase tracking-widest text-gray-400 border-b-2 border-transparent hover:text-white transition-all">Intelligence</button>
-                    <button onclick="switchAnalyticsTab('advancements')" id="tabBtnAdvancements" class="pb-2 text-xs font-bold uppercase tracking-widest text-gray-400 border-b-2 border-transparent hover:text-white transition-all">Advancements</button>
+                    <button onclick="switchAnalyticsTab('strategy')" id="tabBtnStrategy"
+                        class="pb-2 text-xs font-bold uppercase tracking-widest text-[#30D158] border-b-2 border-[#30D158] transition-all">Metrics</button>
+                    <button onclick="switchAnalyticsTab('intelligence')" id="tabBtnIntelligence"
+                        class="pb-2 text-xs font-bold uppercase tracking-widest text-gray-400 border-b-2 border-transparent transition-all">Intelligence</button>
+                    <button onclick="switchAnalyticsTab('advancements')" id="tabBtnAdvancements"
+                        class="pb-2 text-xs font-bold uppercase tracking-widest text-gray-400 border-b-2 border-transparent transition-all">Advancements</button>
                 </div>
             </div>
-
             <div class="flex-1 overflow-y-auto p-6 space-y-5 custom-scroll">
-                <!-- METRICS PANEL (formerly Strategy) -->
                 <div id="strategyAnalyticsPanel" class="space-y-5">
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <div class="frosted-plate p-3 text-center">
-                            <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1"><span id="labelHitRate">Global Hit Rate</span></div>
+                            <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1">Global Hit
+                                Rate</div>
                             <div id="kpiHitRate" class="text-2xl font-bold text-white">0%</div>
                         </div>
                         <div class="frosted-plate p-3 text-center">
-                            <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1"><span id="labelNet">Theoretical Net</span></div>
+                            <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1">Theoretical
+                                Net</div>
                             <div id="kpiNet" class="text-2xl font-bold text-white">0</div>
                         </div>
                         <div class="frosted-plate p-3 text-center">
-                            <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1">Total Signals</div>
+                            <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1">Total Signals
+                            </div>
                             <div id="kpiSignals" class="text-2xl font-bold text-white">0</div>
                         </div>
                         <div class="frosted-plate p-3 text-center">
@@ -372,14 +325,10 @@
                             <div id="kpiForm" class="text-2xl font-bold text-gray-400">-</div>
                         </div>
                     </div>
-                    <div class="frosted-plate border-none p-4 relative z-10">
-                        <div class="flex justify-between items-center mb-3">
-                            <div class="text-white/50 text-[10px] font-bold uppercase tracking-wider" id="graphTitle">Theoretical Bankroll</div>
-                        </div>
-                        <div class="h-36 w-full relative" id="graphContainer"></div>
+                    <div class="frosted-plate p-4 relative z-10">
+                        <div id="graphContainer" class="h-36 w-full relative"></div>
                     </div>
                     <div class="frosted-plate overflow-hidden">
-                        <div class="p-3 border-b border-white/5 text-white/50 text-[10px] font-bold uppercase tracking-wider">Pattern Efficiency</div>
                         <table class="w-full text-left text-xs">
                             <thead class="text-white/50 border-b border-white/5">
                                 <tr>
@@ -389,9 +338,7 @@
                                     <th class="p-3 font-semibold text-right w-24">Eff %</th>
                                 </tr>
                             </thead>
-                            <tbody id="heatmapBody" class="divide-y divide-white/5">
-                                <tr><td colspan="4" class="p-6 text-center text-white/40 italic">No data</td></tr>
-                            </tbody>
+                            <tbody id="heatmapBody" class="divide-y divide-white/5"></tbody>
                         </table>
                     </div>
                 </div>
@@ -400,218 +347,86 @@
                 <div id="intelligencePanel" class="hidden space-y-5">
                     <div class="frosted-plate p-4 flex justify-between items-center gap-4">
                         <div class="flex-1">
-                            <div class="text-white/40 text-[9px] font-bold uppercase tracking-wider mb-0.5">Engine Status</div>
+                            <div class="text-white/40 text-[9px] font-bold uppercase tracking-wider mb-0.5">Engine
+                                Status</div>
                             <div id="intelStateChip" class="intel-state-chip">IDLE</div>
                         </div>
                         <div class="flex-1 text-center border-l border-white/5">
-                            <div class="text-white/40 text-[9px] font-bold uppercase tracking-wider mb-0.5">Checkpoint</div>
+                            <div class="text-white/40 text-[9px] font-bold uppercase tracking-wider mb-0.5">Checkpoint
+                            </div>
                             <div id="intelCheckpointSummary" class="intel-toolbar-title">Sample Incomplete</div>
                         </div>
                         <div class="flex-1 text-right border-l border-white/5">
-                            <div class="text-white/40 text-[9px] font-bold uppercase tracking-wider mb-0.5">Next Window</div>
+                            <div class="text-white/40 text-[9px] font-bold uppercase tracking-wider mb-0.5">Next Window
+                            </div>
                             <div id="intelNextCheckpoint" class="intel-next-value">14</div>
                         </div>
                     </div>
-
                     <div class="flex justify-center items-center gap-3">
-                        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Intelligence Mode:</span>
+                        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Intelligence
+                            Mode:</span>
                         <div class="flex bg-black/40 rounded-lg p-0.5 border border-white/5 w-64 relative">
-                            <button onclick="changeIntelMode('brief')" class="flex-1 text-[9px] font-bold uppercase tracking-wider py-1.5 text-white transition-colors relative z-10">Brief</button>
-                            <button onclick="changeIntelMode('diagnostic')" class="flex-1 text-[9px] font-bold uppercase tracking-wider py-1.5 text-gray-400 transition-colors relative z-10">Diagnostic</button>
-                            <button onclick="changeIntelMode('minimal')" class="flex-1 text-[9px] font-bold uppercase tracking-wider py-1.5 text-gray-400 transition-colors relative z-10">Minimal</button>
+                            <button onclick="changeIntelMode('brief')"
+                                class="flex-1 text-[9px] font-bold uppercase tracking-wider py-1.5 text-white transition-colors relative z-10">Brief</button>
+                            <button onclick="changeIntelMode('diagnostic')"
+                                class="flex-1 text-[9px] font-bold uppercase tracking-wider py-1.5 text-gray-400 transition-colors relative z-10">Diagnostic</button>
+                            <button onclick="changeIntelMode('minimal')"
+                                class="flex-1 text-[9px] font-bold uppercase tracking-wider py-1.5 text-gray-400 transition-colors relative z-10">Minimal</button>
                         </div>
                     </div>
-                    
-                    <div id="intelligenceContent" class="space-y-5">
-                        <div class="p-10 text-center text-white/30 italic text-sm">Awaiting spin data to initialize intelligence engine...</div>
-                    </div>
+                    <div id="intelligenceContent" class="space-y-5"></div>
                 </div>
 
                 <!-- ADVANCEMENTS PANEL -->
                 <div id="advancementsPanel" class="hidden space-y-4">
-                    <div class="flex justify-between items-center px-1">
-                        <div class="text-white/50 text-[10px] font-bold uppercase tracking-wider">Strategic Event Log</div>
-                        <div id="advancementCount" class="text-[10px] text-white/30">0 Events</div>
-                    </div>
-                    <div id="advancementLogContainer" class="space-y-2">
-                        <div class="frosted-plate p-8 text-center text-white/20 italic text-xs">No strategic advancements recorded in this session.</div>
-                    </div>
+                    <div id="advancementLogContainer" class="space-y-2"></div>
                 </div>
 
                 <div class="text-center pt-2">
-                    <button onclick="resetData()" class="text-[10px] font-bold uppercase tracking-widest border px-4 py-2 rounded-lg transition-colors hover:bg-[#ff1a33]/10" style="color: var(--theme-crimson); border-color: var(--theme-crimson-dim);">RESET SESSION</button>
+                    <button onclick="resetData()"
+                        class="text-[10px] font-bold uppercase tracking-widest border px-4 py-2 rounded-lg transition-colors hover:bg-[#ff1a33]/10 text-[#ff1a33] border-[#ff1a33]/30">RESET
+                        SESSION</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- PATTERN DETAIL MODAL -->
+    <!-- OTHER MODALS (SUMMARY) -->
     <div id="patternDetailModal"
         class="fixed inset-0 z-[60] bg-black/60 backdrop-blur-md hidden flex items-center justify-center p-4"
         onclick="toggleModal('patternDetailModal')">
         <div class="glass-menu w-full max-w-xl flex flex-col overflow-hidden" onclick="event.stopPropagation()">
-            <div class="p-4 glass-header flex justify-between items-center">
-                <h2 id="patternDetailTitle" class="font-bold text-sm tracking-wide uppercase"
-                    style="color: var(--text-primary);">
-                    Pattern Log
-                </h2>
-                <button onclick="toggleModal('patternDetailModal')"
-                    class="text-gray-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="flex-1 overflow-y-auto p-0 max-h-[60vh] custom-scroll">
-                <table class="w-full text-left text-xs">
-                    <thead class="text-white/50 border-b border-white/5 sticky top-0 z-10 glass-header">
-                        <tr>
-                            <th class="p-3 font-bold uppercase">Spin #</th>
-                            <th class="p-3 font-bold uppercase text-center">Spin</th>
-                            <th class="p-3 font-bold uppercase text-center">Gap</th>
-                            <th class="p-3 font-bold uppercase text-center">Result</th>
-                            <th class="p-3 font-bold uppercase text-right">Units</th>
-                            <th class="p-3 font-bold uppercase text-right">ROI</th>
-                        </tr>
-                    </thead>
-                    <tbody id="patternDetailBody" class="divide-y divide-white/5"></tbody>
-                </table>
-            </div>
+            <div id="patternDetailBody"></div>
         </div>
     </div>
 
-    <!-- CONFIRMATION MODAL -->
+    <div id="aiConfigModal"
+        class="fixed inset-0 z-[80] bg-black/60 backdrop-blur-md hidden flex items-center justify-center p-4"
+        onclick="toggleModal('aiConfigModal')">
+        <div class="glass-menu w-full max-w-md p-6" onclick="event.stopPropagation()">
+            <h2 class="text-white font-bold mb-4">AI Configuration</h2>
+            <input type="password" id="aiApiKeyInput"
+                class="w-full bg-black/50 border border-white/10 rounded-lg text-white p-3 mb-4" placeholder="API Key">
+            <button onclick="saveAiConfig()"
+                class="w-full py-3 bg-[#30D158]/20 text-[#30D158] font-bold rounded-lg border border-[#30D158]/30">Save
+                Configuration</button>
+        </div>
+    </div>
+
     <div id="confirmModal"
-        class="fixed inset-0 z-[70] bg-black/60 backdrop-blur-md hidden flex items-center justify-center p-4"
-        onclick="toggleModal('confirmModal')">
-        <div class="glass-menu w-full max-w-sm flex flex-col overflow-hidden" onclick="event.stopPropagation()">
-            <div class="p-4 glass-header flex justify-between items-center">
-                <h2 class="font-bold text-sm tracking-wide uppercase" style="color: var(--text-primary);">Confirmation</h2>
-                <button onclick="toggleModal('confirmModal')" class="text-gray-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="p-6 text-center">
-                <div class="w-12 h-12 rounded-full bg-[#ff1a33]/20 flex items-center justify-center mx-auto mb-4 border border-[#ff1a33]/30">
-                    <i class="fas fa-exclamation-triangle text-[#ff1a33] text-xl"></i>
-                </div>
-                <h3 class="text-white font-bold text-lg mb-2">Reset Session?</h3>
-                <p class="text-gray-400 text-xs leading-relaxed mb-6">
-                    This will wipe all spin history, active bets, and bankroll statistics. This action cannot be undone.
-                </p>
-                <div class="flex gap-3">
-                    <button onclick="toggleModal('confirmModal')" class="flex-1 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 transition-colors">Cancel</button>
-                    <button id="confirmResetBtn" class="flex-1 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider bg-[#ff1a33]/20 hover:bg-[#ff1a33]/30 text-[#ff1a33] border border-[#ff1a33]/30 transition-colors shadow-[0_0_15px_rgba(255,26,51,0.2)]">Reset</button>
-                </div>
+        class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="glass-menu p-6 text-center max-w-sm">
+            <h3 class="text-white font-bold text-lg mb-4">Reset Session?</h3>
+            <div class="flex gap-3">
+                <button onclick="toggleModal('confirmModal')"
+                    class="flex-1 py-2 rounded-lg bg-white/5 text-gray-300">Cancel</button>
+                <button id="confirmResetBtn"
+                    class="flex-1 py-2 rounded-lg bg-[#ff1a33]/20 text-[#ff1a33]">Reset</button>
             </div>
         </div>
     </div>
 
-    <div id="aiConfigModal" class="fixed inset-0 z-[80] bg-black/60 backdrop-blur-md hidden flex items-center justify-center p-4" onclick="toggleModal('aiConfigModal')">
-        <div class="glass-menu w-full max-w-md flex flex-col overflow-hidden" onclick="event.stopPropagation()">
-            <div class="p-4 glass-header flex justify-between items-center">
-                <h2 class="font-bold text-sm tracking-wide uppercase text-white"><i class="fas fa-brain mr-2 text-[#30D158]"></i> AI Prediction Engine</h2>
-                <button onclick="toggleModal('aiConfigModal')" class="text-gray-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="p-6 space-y-5">
-                <div class="flex items-center justify-between p-4 rounded-xl border border-white/10 bg-white/5">
-                    <div>
-                        <div class="text-sm font-bold text-white tracking-wide">Enable AI Analysis</div>
-                        <div class="text-[10px] text-gray-400 mt-1">Unlock session insights using advanced LLMs.</div>
-                    </div>
-                    <button id="aiMasterSwitch" onclick="toggleAiMasterSwitch()" class="w-12 h-6 rounded-full bg-white/10 border border-white/20 relative transition-colors duration-300">
-                        <div id="aiSwitchKnob" class="absolute left-1 top-1 w-4 h-4 rounded-full bg-gray-400 transition-transform duration-300"></div>
-                    </button>
-                </div>
-
-                <div id="aiVaultSection" class="hidden space-y-4 transition-all duration-300">
-                    <div>
-                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 block">AI Provider</label>
-                        <select id="aiProviderSelect" class="w-full bg-black/50 border border-white/10 rounded-lg text-white text-xs p-3 outline-none focus:border-[#30D158]">
-                            <option value="gemini">Google Gemini (Recommended)</option>
-                            <option value="openai">ChatGPT (OpenAI)</option>
-                            <option value="deepseek">DeepSeek</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 block">Secure API Key (Local Storage Only)</label>
-                        <input type="password" id="aiApiKeyInput" class="w-full bg-black/50 border border-white/10 rounded-lg text-white text-xs p-3 outline-none focus:border-[#30D158]" placeholder="Paste your API key here...">
-                    </div>
-                    <div class="flex gap-3 pt-2">
-                        <button onclick="clearAiConfig()" class="flex-1 py-2.5 rounded-lg font-bold text-[10px] uppercase tracking-wider bg-[#ff1a33]/10 hover:bg-[#ff1a33]/20 text-[#ff1a33] border border-[#ff1a33]/30 transition-colors">Forget Key</button>
-                        <button id="saveAiBtn" onclick="saveAiConfig()" class="flex-[2] py-2.5 rounded-lg font-bold text-[10px] uppercase tracking-wider bg-[#30D158]/20 hover:bg-[#30D158]/30 text-[#30D158] border border-[#30D158]/30 transition-colors shadow-[0_0_15px_rgba(48,209,88,0.15)]">Secure & Connect</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="aiChatModal" class="fixed inset-0 z-[90] bg-black/60 backdrop-blur-md hidden flex items-center justify-center p-2 sm:p-4" onclick="toggleModal('aiChatModal')">
-        <div class="glass-menu w-full max-w-lg h-[85vh] flex flex-col overflow-hidden shadow-[0_0_40px_rgba(191,90,242,0.15)]" onclick="event.stopPropagation()">
-            <div class="p-4 glass-header flex justify-between items-center border-b border-[#bf5af2]/20">
-                <h2 class="font-bold text-sm tracking-wide uppercase text-white flex items-center"><i class="fas fa-robot mr-2 text-[#bf5af2] text-lg"></i> Session Analyst</h2>
-                <button onclick="toggleModal('aiChatModal')" class="text-gray-400 hover:text-white transition-colors w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10"><i class="fas fa-times"></i></button>
-            </div>
-
-            <div id="aiChatHistory" class="flex-1 overflow-y-auto p-4 space-y-5 custom-scroll text-xs bg-gradient-to-b from-transparent to-black/40">
-                <div class="flex items-start gap-3">
-                    <div class="w-8 h-8 rounded-full bg-[#bf5af2]/20 border border-[#bf5af2]/40 flex items-center justify-center text-[#bf5af2] shrink-0 shadow-[0_0_10px_rgba(191,90,242,0.2)]"><i class="fas fa-brain"></i></div>
-                    <div class="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm p-3.5 text-gray-200 leading-relaxed max-w-[85%] shadow-md">
-                        System online. I am monitoring your session data in real-time. Ask me about patterns, variance, or strategy recommendations.
-                    </div>
-                </div>
-            </div>
-
-            <div class="p-3 sm:p-4 glass-strip border-t border-white/5 bg-[#0a0a0c]/90">
-                <div class="flex gap-2 relative">
-                    <input type="text" id="aiChatInput" class="w-full bg-black/60 border border-white/10 rounded-xl text-white text-xs p-3.5 pr-12 outline-none focus:border-[#bf5af2]/50 focus:bg-black/80 transition-all shadow-inner" placeholder="Ask the AI about your session..." onkeypress="if(event.key === 'Enter') sendAiChatMessage()">
-                    <button id="aiSendBtn" onclick="sendAiChatMessage()" class="absolute right-1.5 top-1.5 bottom-1.5 w-10 rounded-lg bg-[#bf5af2]/20 hover:bg-[#bf5af2]/40 text-[#bf5af2] flex items-center justify-center transition-colors">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="analyticsHUD" class="hud-shell fixed hidden flex-col z-[100] bg-gradient-to-br from-[#1a1a1e]/95 to-[#050505]/95 backdrop-blur-2xl border border-white/10 rounded-xl shadow-2xl overflow-hidden transition-opacity duration-200"
-         style="top: 100px; left: 20px; width: 208px; min-width: 192px;">
-        
-        <!-- Drag Handle / Header -->
-        <div id="hudHeader" class="hud-drag-surface h-8 flex justify-between items-center px-2.5 cursor-move select-none transition-colors duration-300">
-            <span class="text-[9px] font-bold text-[#30D158] tracking-[0.18em] uppercase"><i class="fas fa-satellite-dish mr-1"></i> Live Feed</span>
-            <button onclick="toggleAnalyticsHUD()" class="text-gray-500 hover:text-white transition-colors"><i class="fas fa-times text-xs"></i></button>
-        </div>
-
-        <!-- Content Area -->
-        <div class="flex-1 flex flex-col overflow-hidden relative">
-            <!-- Settings Icon Toggle -->
-            <div class="px-2.5 pt-2 pb-1.5 shrink-0 flex items-center gap-1.5">
-                <button onclick="toggleHUDControls()" class="w-5 h-5 flex items-center justify-center rounded-md bg-white/10 hover:bg-white/20 text-[#30D158] text-[10px] transition-colors border border-[#30D158]/30">
-                    <i class="fas fa-sliders-h"></i>
-                </button>
-                <button onclick="toggleHudHistoryScope()" id="hudScopeBtn" class="min-width-[30px] h-5 px-1.5 flex items-center justify-center rounded-md bg-white/10 text-white/85 border border-white/20 text-[8px] font-black tracking-[0.12em] transition-colors" title="Viewing all history. Click to show only the last 14 spins.">ALL</button>
-                <button onclick="toggleHudColdMode()" id="hudColdBtn" class="w-5 h-5 flex items-center justify-center rounded-md hover:bg-white/10 text-gray-500 transition-colors" title="Toggle Cold Mode"><i class="fas fa-snowflake text-[9px]"></i></button>
-            </div>
-
-            <!-- Controls (Hidden by default) -->
-            <div id="hudControls" class="px-2.5 pb-1.5 shrink-0 hidden transition-all duration-200">
-                <div class="flex flex-col gap-1.5 bg-white/5 p-1.5 rounded-lg border border-white/5">
-                    <div class="flex justify-between items-center">
-                        <span class="text-[9px] text-gray-400 font-bold uppercase tracking-wider">History Scope</span>
-                        <span id="hudWindowValue" class="text-[10px] font-mono font-bold text-[#30D158]">All History</span>
-                    </div>
-                    <div class="text-[8px] text-white/45 leading-relaxed">HUD defaults to all history. Use the scope chip for the 14-spin view.</div>
-                </div>
-            </div>
-
-            <!-- Strategy label in HUD -->
-            <div class="px-2.5 pb-1 shrink-0">
-                <div class="text-[8px] font-black text-white/40 uppercase tracking-[0.12em]">Strategy: <span id="hudStrategyLabel" class="text-[#0A84FF]">Series</span></div>
-            </div>
-            <!-- Stats Table -->
-            <div id="hudStats" class="px-2.5 pb-2 shrink-0">
-                <!-- Injected via JS -->
-            </div>
-        </div>
-
-        <!-- Resize Handle -->
-        <div id="hudResizeHandle" class="hud-resize-handle absolute bottom-0 right-0 w-3.5 h-3.5 cursor-se-resize z-10 flex items-end justify-end p-0.5 opacity-40 hover:opacity-100"><div class="w-1.5 h-1.5 border-r border-b border-white/30 rounded-br-sm"></div></div>
-    </div>
-
+    <!-- SCRIPTS -->
     <script src="engine-core.js"></script>
     <script src="predictionEngine.js"></script>
     <script src="strategies/strategy.series.js"></script>

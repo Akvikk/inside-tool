@@ -2692,12 +2692,16 @@ function setAnalyticsDisplayStrategy(strategy) {
     
     if (seriesBtn && comboBtn) {
         if (strategy === 'series') {
-            seriesBtn.classList.replace('text-gray-400', 'text-[#30D158]');
-            comboBtn.classList.replace('text-[#30D158]', 'text-gray-400');
+            seriesBtn.classList.add('text-[#30D158]');
+            seriesBtn.classList.remove('text-gray-400');
+            comboBtn.classList.add('text-gray-400');
+            comboBtn.classList.remove('text-[#30D158]');
             if (bgPill) bgPill.style.transform = 'translateX(0)';
         } else {
-            comboBtn.classList.replace('text-gray-400', 'text-[#30D158]');
-            seriesBtn.classList.replace('text-[#30D158]', 'text-gray-400');
+            comboBtn.classList.add('text-[#30D158]');
+            comboBtn.classList.remove('text-gray-400');
+            seriesBtn.classList.add('text-gray-400');
+            seriesBtn.classList.remove('text-[#30D158]');
             if (bgPill) bgPill.style.transform = 'translateX(100%)';
         }
     }
@@ -4040,11 +4044,17 @@ function importSpins(input) {
                 if (inputField) inputField.disabled = true;
 
                 for (let i = 0; i < bulkSpins.length; i++) {
-                    const val = bulkSpins[i];
-                    if (val < 0 || val > 36) continue;
+                    let val = bulkSpins[i];
+                    // Handle objects {num: X} or direct numbers
+                    if (typeof val === 'object' && val !== null && 'num' in val) {
+                        val = val.num;
+                    }
+                    
+                    const parsed = parseInt(val, 10);
+                    if (isNaN(parsed) || parsed < 0 || parsed > 36) continue;
                     
                     // Call the full logic pipeline silently (bypasses layout rendering)
-                    await processSpinValue(val, { silent: true, preserveInput: true });
+                    await processSpinValue(parsed, { silent: true, preserveInput: true });
                 }
 
                 // --- BATCH DOM RENDER ---
