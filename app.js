@@ -4065,14 +4065,24 @@ function importSpins(input) {
     reader.onload = async function (e) {
         try {
             const data = JSON.parse(e.target.result);
+            let bulkSpins = [];
+            
             if (Array.isArray(data.spins)) {
+                bulkSpins = data.spins;
+            } else if (Array.isArray(data)) {
+                bulkSpins = data;
+            } else {
+                throw new Error("Invalid file format: Could not find 'spins' array or raw array.");
+            }
+
+            if (bulkSpins.length > 0) {
                 // Pause UI and reset core memory arrays
-                const bulkSpins = data.spins;
                 resetData(true);
                 
                 // --- BULK IMPORT LOOP ---
                 const inputField = document.getElementById('spinInput');
                 if (inputField) inputField.disabled = true;
+                
                 for (let i = 0; i < bulkSpins.length; i++) {
                     let val = bulkSpins[i];
                     // Handle objects {num: X} or direct numbers
@@ -4125,7 +4135,7 @@ function importSpins(input) {
 
                 alert(`Successfully imported ${history.length} spins.`);
             } else {
-                alert("Invalid file format: 'spins' array missing.");
+                alert("File is empty or contains no valid spins.");
             }
         } catch (err) {
             alert("Error reading file: " + err.message);

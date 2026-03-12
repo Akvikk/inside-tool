@@ -91,7 +91,7 @@ window.EngineCore = {
                     updateUserStats(isWin, bet, historyLength, unitChange);
                 }
 
-                if (isWin && bet.strategy === 'TripleCs' && bet.originPairKey) {
+                if (bet.strategy === 'TripleCs' && bet.originPairKey) {
                     this.tripleCsResets[bet.originPairKey] = historyLength;
                 }
 
@@ -124,7 +124,7 @@ window.EngineCore = {
 
                 this.updateStats(isWin, bet.patternName, unitChange, bet.strategy, bet.patternName, historyLength, val);
 
-                if (isWin && bet.strategy === 'TripleCs' && bet.originPairKey) {
+                if (bet.strategy === 'TripleCs' && bet.originPairKey) {
                     this.tripleCsResets[bet.originPairKey] = historyLength;
                 }
             });
