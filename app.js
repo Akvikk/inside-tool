@@ -2597,9 +2597,12 @@ async function processSpinValue(val, options = {}) {
         refreshHighlights();
     }
 
-    if (!options.preserveInput && input) {
-        input.value = '';
-        input.focus();
+    if (!options.preserveInput) {
+        const inputField = document.getElementById('spinInput');
+        if (inputField) {
+            inputField.value = '';
+            inputField.focus();
+        }
     }
     
     if (!options.silent) {
@@ -4042,7 +4045,6 @@ function importSpins(input) {
                 // --- BULK IMPORT LOOP ---
                 const inputField = document.getElementById('spinInput');
                 if (inputField) inputField.disabled = true;
-
                 for (let i = 0; i < bulkSpins.length; i++) {
                     let val = bulkSpins[i];
                     // Handle objects {num: X} or direct numbers

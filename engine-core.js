@@ -77,8 +77,12 @@ window.EngineCore = {
         // Resolve Active Bets
         if (activeBets && activeBets.length > 0) {
             activeBets.forEach(bet => {
-                const isWin = (matchedFaceMask & window.FACE_MASKS[bet.targetFace]) !== 0;
-                const count = window.FACES[bet.targetFace] ? window.FACES[bet.targetFace].nums.length : 0;
+                const faceMasks = window.FACE_MASKS || {};
+                const faces = window.FACES || {};
+                
+                const mask = faceMasks[bet.targetFace] || 0;
+                const isWin = (matchedFaceMask & mask) !== 0;
+                const count = faces[bet.targetFace] ? faces[bet.targetFace].nums.length : 0;
                 const unitChange = isWin ? (35 - count) : -count;
 
                 this.updateStats(isWin, bet.patternName, unitChange, bet.strategy, bet.patternName, historyLength, val);
