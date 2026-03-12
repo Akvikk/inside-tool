@@ -330,45 +330,41 @@
         onclick="toggleModal('analyticsModal')">
         <div class="glass-menu w-full max-w-3xl h-[85vh] flex flex-col overflow-hidden"
             onclick="event.stopPropagation()">
-            <div class="p-4 glass-header flex justify-between items-center">
-                <h2 class="font-bold text-sm tracking-wide uppercase" style="color: var(--text-primary);">Analytics
-                    Engine</h2>
-                <button onclick="toggleModal('analyticsModal')"
-                    class="text-gray-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="px-6 pt-3 border-b border-white/5 flex gap-6">
-                <button onclick="switchAnalyticsTab('strategy')" id="tabBtnStrategy" class="pb-2 text-xs font-bold uppercase tracking-widest text-[#30D158] border-b-2 border-[#30D158] transition-all">Strategy</button>
-                <button onclick="switchAnalyticsTab('intelligence')" id="tabBtnIntelligence" class="pb-2 text-xs font-bold uppercase tracking-widest text-gray-400 border-b-2 border-transparent hover:text-white transition-all">Intelligence</button>
-                <button onclick="switchAnalyticsTab('advancements')" id="tabBtnAdvancements" class="pb-2 text-xs font-bold uppercase tracking-widest text-gray-400 border-b-2 border-transparent hover:text-white transition-all">Advancements</button>
+            <!-- TOP CONTROLS: Strategy View and Tabs -->
+            <!-- TOP CONTROLS: Strategy View and Tabs -->
+            <div class="border-b border-white/5 bg-black/20">
+                <!-- Strategy View at the very top -->
+                <div class="px-6 py-3 border-b border-white/5 flex justify-center items-center gap-3">
+                    <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Strategy View:</span>
+                    <div class="flex bg-black/40 rounded-lg p-0.5 border border-white/5 w-48 relative">
+                        <div id="analyticsTogglePillBg" class="absolute w-1/2 h-[calc(100%-4px)] bg-[#30D158]/20 border border-[#30D158]/50 rounded-md top-[2px] left-[2px] transition-all duration-300 pointer-events-none"></div>
+                        <button onclick="setAnalyticsDisplayStrategy('series')" id="analyticsBtnSeries" class="flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 text-[#30D158] transition-colors relative z-10">SERIES</button>
+                        <button onclick="setAnalyticsDisplayStrategy('combo')" id="analyticsBtnCombo" class="flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 text-gray-400 transition-colors relative z-10">COMBOS</button>
+                    </div>
+                </div>
+
+                <!-- Main Section Tabs -->
+                <div class="px-6 pt-3 flex gap-6">
+                    <button onclick="switchAnalyticsTab('strategy')" id="tabBtnStrategy" class="pb-2 text-xs font-bold uppercase tracking-widest text-[#30D158] border-b-2 border-[#30D158] transition-all">Metrics</button>
+                    <button onclick="switchAnalyticsTab('intelligence')" id="tabBtnIntelligence" class="pb-2 text-xs font-bold uppercase tracking-widest text-gray-400 border-b-2 border-transparent hover:text-white transition-all">Intelligence</button>
+                    <button onclick="switchAnalyticsTab('advancements')" id="tabBtnAdvancements" class="pb-2 text-xs font-bold uppercase tracking-widest text-gray-400 border-b-2 border-transparent hover:text-white transition-all">Advancements</button>
+                </div>
             </div>
 
             <div class="flex-1 overflow-y-auto p-6 space-y-5 custom-scroll">
-                <!-- STRATEGY PANEL -->
-                <div id="strategyAnalyticsPanel" class="space-y-5">
-                    <div class="flex justify-center items-center gap-3 mb-2">
-                        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Metrics View:</span>
-                        <div class="flex bg-black/40 rounded-lg p-0.5 border border-white/5 w-40 relative">
-                            <div id="analyticsTogglePillBg" class="absolute w-1/2 h-[calc(100%-4px)] bg-[#30D158]/20 border border-[#30D158]/50 rounded-md top-[2px] left-[2px] transition-all duration-300 pointer-events-none"></div>
-                            <button onclick="setAnalyticsDisplayStrategy('series')" id="analyticsBtnSeries" class="flex-1 text-[10px] font-bold uppercase tracking-wider py-1 text-[#30D158] transition-colors relative z-10">SERIES</button>
-                            <button onclick="setAnalyticsDisplayStrategy('combo')" id="analyticsBtnCombo" class="flex-1 text-[10px] font-bold uppercase tracking-wider py-1 text-gray-400 transition-colors relative z-10">COMBOS</button>
-                        </div>
-                    </div>
-            <div class="flex-1 overflow-y-auto p-6 space-y-5 custom-scroll">
+                <!-- METRICS PANEL (formerly Strategy) -->
                 <div id="strategyAnalyticsPanel" class="space-y-5">
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <div class="frosted-plate p-3 text-center">
-                            <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1"><span
-                                    id="labelHitRate">Global Hit Rate</span></div>
+                            <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1"><span id="labelHitRate">Global Hit Rate</span></div>
                             <div id="kpiHitRate" class="text-2xl font-bold text-white">0%</div>
                         </div>
                         <div class="frosted-plate p-3 text-center">
-                            <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1"><span
-                                    id="labelNet">Theoretical Net</span></div>
+                            <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1"><span id="labelNet">Theoretical Net</span></div>
                             <div id="kpiNet" class="text-2xl font-bold text-white">0</div>
                         </div>
                         <div class="frosted-plate p-3 text-center">
-                            <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1">Total Signals
-                            </div>
+                            <div class="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1">Total Signals</div>
                             <div id="kpiSignals" class="text-2xl font-bold text-white">0</div>
                         </div>
                         <div class="frosted-plate p-3 text-center">
@@ -378,15 +374,12 @@
                     </div>
                     <div class="frosted-plate border-none p-4 relative z-10">
                         <div class="flex justify-between items-center mb-3">
-                            <div class="text-white/50 text-[10px] font-bold uppercase tracking-wider" id="graphTitle">
-                                Theoretical Bankroll</div>
+                            <div class="text-white/50 text-[10px] font-bold uppercase tracking-wider" id="graphTitle">Theoretical Bankroll</div>
                         </div>
                         <div class="h-36 w-full relative" id="graphContainer"></div>
                     </div>
                     <div class="frosted-plate overflow-hidden">
-                        <div
-                            class="p-3 border-b border-white/5 text-white/50 text-[10px] font-bold uppercase tracking-wider">
-                            Pattern Efficiency</div>
+                        <div class="p-3 border-b border-white/5 text-white/50 text-[10px] font-bold uppercase tracking-wider">Pattern Efficiency</div>
                         <table class="w-full text-left text-xs">
                             <thead class="text-white/50 border-b border-white/5">
                                 <tr>
@@ -397,13 +390,10 @@
                                 </tr>
                             </thead>
                             <tbody id="heatmapBody" class="divide-y divide-white/5">
-                                <tr>
-                                    <td colspan="4" class="p-6 text-center text-white/40 italic">No data</td>
-                                </tr>
+                                <tr><td colspan="4" class="p-6 text-center text-white/40 italic">No data</td></tr>
                             </tbody>
                         </table>
                     </div>
-                </div>
                 </div>
 
                 <!-- INTELLIGENCE PANEL -->
@@ -422,12 +412,18 @@
                             <div id="intelNextCheckpoint" class="intel-next-value">14</div>
                         </div>
                     </div>
+
+                    <div class="flex justify-center items-center gap-3">
+                        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Intelligence Mode:</span>
+                        <div class="flex bg-black/40 rounded-lg p-0.5 border border-white/5 w-64 relative">
+                            <button onclick="changeIntelMode('brief')" class="flex-1 text-[9px] font-bold uppercase tracking-wider py-1.5 text-white transition-colors relative z-10">Brief</button>
+                            <button onclick="changeIntelMode('diagnostic')" class="flex-1 text-[9px] font-bold uppercase tracking-wider py-1.5 text-gray-400 transition-colors relative z-10">Diagnostic</button>
+                            <button onclick="changeIntelMode('minimal')" class="flex-1 text-[9px] font-bold uppercase tracking-wider py-1.5 text-gray-400 transition-colors relative z-10">Minimal</button>
+                        </div>
+                    </div>
                     
                     <div id="intelligenceContent" class="space-y-5">
-                        <!-- Populated by app.js: renderIntelligencePanel -->
-                        <div class="p-10 text-center text-white/30 italic text-sm">
-                            Awaiting spin data to initialize intelligence engine...
-                        </div>
+                        <div class="p-10 text-center text-white/30 italic text-sm">Awaiting spin data to initialize intelligence engine...</div>
                     </div>
                 </div>
 
@@ -438,18 +434,12 @@
                         <div id="advancementCount" class="text-[10px] text-white/30">0 Events</div>
                     </div>
                     <div id="advancementLogContainer" class="space-y-2">
-                        <!-- Populated by app.js: renderAdvancementLog -->
-                        <div class="frosted-plate p-8 text-center text-white/20 italic text-xs">
-                            No strategic advancements recorded in this session.
-                        </div>
+                        <div class="frosted-plate p-8 text-center text-white/20 italic text-xs">No strategic advancements recorded in this session.</div>
                     </div>
                 </div>
+
                 <div class="text-center pt-2">
-                    <button onclick="resetData()"
-                        class="text-[10px] font-bold uppercase tracking-widest border px-4 py-2 rounded-lg transition-colors hover:bg-[#ff1a33]/10"
-                        style="color: var(--theme-crimson); border-color: var(--theme-crimson-dim);">
-                        RESET SESSION
-                    </button>
+                    <button onclick="resetData()" class="text-[10px] font-bold uppercase tracking-widest border px-4 py-2 rounded-lg transition-colors hover:bg-[#ff1a33]/10" style="color: var(--theme-crimson); border-color: var(--theme-crimson-dim);">RESET SESSION</button>
                 </div>
             </div>
         </div>

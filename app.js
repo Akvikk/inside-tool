@@ -257,6 +257,27 @@ function persistIntelligenceMode(mode) {
     }
 }
 
+function changeIntelMode(mode) {
+    persistIntelligenceMode(mode);
+    renderIntelligencePanel();
+    
+    // Update UI buttons active state
+    const intelligencePanel = document.getElementById('intelligencePanel');
+    if (intelligencePanel) {
+        const buttons = intelligencePanel.querySelectorAll('button[onclick^="changeIntelMode"]');
+        buttons.forEach(btn => {
+            const btnMode = btn.getAttribute('onclick').match(/'([^']+)'/)[1];
+            if (btnMode === mode) {
+                btn.classList.add('text-white');
+                btn.classList.remove('text-gray-400');
+            } else {
+                btn.classList.add('text-gray-400');
+                btn.classList.remove('text-white');
+            }
+        });
+    }
+}
+
 function getCheckpointMeta(spinCount) {
     if (spinCount < ENGINE_PRIMARY_WINDOW) {
         return {
@@ -2817,10 +2838,31 @@ function switchAnalyticsTab(tab) {
         }
     });
 
-    // Initial render for the selected tab
     if (tab === 'strategy') renderAnalytics();
-    if (tab === 'intelligence') renderIntelligencePanel();
+    if (tab === 'intelligence') changeIntelMode(currentIntelligenceMode);
     if (tab === 'advancements') renderAdvancementLog();
+}
+
+/**
+ * Syncs the visual state of the analytics tabs (active/inactive)
+ */
+function applyAnalyticsTabUI() {
+    const tab = currentAnalyticsTab || 'strategy';
+    const btns = {
+        strategy: document.getElementById('tabBtnStrategy'),
+        intelligence: document.getElementById('tabBtnIntelligence'),
+        advancements: document.getElementById('tabBtnAdvancements')
+    };
+    
+    Object.keys(btns).forEach(k => {
+        const btn = btns[k];
+        if (!btn) return;
+        const isActive = (k === tab);
+        btn.classList.toggle('text-[#30D158]', isActive);
+        btn.classList.toggle('border-[#30D158]', isActive);
+        btn.classList.toggle('text-gray-400', !isActive);
+        btn.classList.toggle('border-transparent', !isActive);
+    });
 }
 
 function renderAdvancementLog() {
