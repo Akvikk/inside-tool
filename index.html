@@ -336,14 +336,23 @@
                 <button onclick="toggleModal('analyticsModal')"
                     class="text-gray-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
             </div>
-            <div class="p-3 border-b border-white/5 flex justify-center items-center gap-3">
-                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Analytics Mode:</span>
-                <div class="flex bg-black/40 rounded-lg p-0.5 border border-white/5 w-48 relative">
-                    <div id="analyticsTogglePillBg" class="absolute w-1/2 h-[calc(100%-4px)] bg-[#30D158]/20 border border-[#30D158]/50 rounded-md top-[2px] left-[2px] transition-all duration-300 pointer-events-none"></div>
-                    <button onclick="setAnalyticsDisplayStrategy('series')" id="analyticsBtnSeries" class="flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 text-[#30D158] transition-colors relative z-10">SERIES</button>
-                    <button onclick="setAnalyticsDisplayStrategy('combo')" id="analyticsBtnCombo" class="flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 text-gray-400 transition-colors relative z-10">COMBOS</button>
-                </div>
+            <div class="px-6 pt-3 border-b border-white/5 flex gap-6">
+                <button onclick="switchAnalyticsTab('strategy')" id="tabBtnStrategy" class="pb-2 text-xs font-bold uppercase tracking-widest text-[#30D158] border-b-2 border-[#30D158] transition-all">Strategy</button>
+                <button onclick="switchAnalyticsTab('intelligence')" id="tabBtnIntelligence" class="pb-2 text-xs font-bold uppercase tracking-widest text-gray-400 border-b-2 border-transparent hover:text-white transition-all">Intelligence</button>
+                <button onclick="switchAnalyticsTab('advancements')" id="tabBtnAdvancements" class="pb-2 text-xs font-bold uppercase tracking-widest text-gray-400 border-b-2 border-transparent hover:text-white transition-all">Advancements</button>
             </div>
+
+            <div class="flex-1 overflow-y-auto p-6 space-y-5 custom-scroll">
+                <!-- STRATEGY PANEL -->
+                <div id="strategyAnalyticsPanel" class="space-y-5">
+                    <div class="flex justify-center items-center gap-3 mb-2">
+                        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Metrics View:</span>
+                        <div class="flex bg-black/40 rounded-lg p-0.5 border border-white/5 w-40 relative">
+                            <div id="analyticsTogglePillBg" class="absolute w-1/2 h-[calc(100%-4px)] bg-[#30D158]/20 border border-[#30D158]/50 rounded-md top-[2px] left-[2px] transition-all duration-300 pointer-events-none"></div>
+                            <button onclick="setAnalyticsDisplayStrategy('series')" id="analyticsBtnSeries" class="flex-1 text-[10px] font-bold uppercase tracking-wider py-1 text-[#30D158] transition-colors relative z-10">SERIES</button>
+                            <button onclick="setAnalyticsDisplayStrategy('combo')" id="analyticsBtnCombo" class="flex-1 text-[10px] font-bold uppercase tracking-wider py-1 text-gray-400 transition-colors relative z-10">COMBOS</button>
+                        </div>
+                    </div>
             <div class="flex-1 overflow-y-auto p-6 space-y-5 custom-scroll">
                 <div id="strategyAnalyticsPanel" class="space-y-5">
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -395,7 +404,46 @@
                         </table>
                     </div>
                 </div>
-                <!-- Intelligence and Advancements Panels Removed for Redesign -->
+                </div>
+
+                <!-- INTELLIGENCE PANEL -->
+                <div id="intelligencePanel" class="hidden space-y-5">
+                    <div class="frosted-plate p-4 flex justify-between items-center gap-4">
+                        <div class="flex-1">
+                            <div class="text-white/40 text-[9px] font-bold uppercase tracking-wider mb-0.5">Engine Status</div>
+                            <div id="intelStateChip" class="intel-state-chip">IDLE</div>
+                        </div>
+                        <div class="flex-1 text-center border-l border-white/5">
+                            <div class="text-white/40 text-[9px] font-bold uppercase tracking-wider mb-0.5">Checkpoint</div>
+                            <div id="intelCheckpointSummary" class="intel-toolbar-title">Sample Incomplete</div>
+                        </div>
+                        <div class="flex-1 text-right border-l border-white/5">
+                            <div class="text-white/40 text-[9px] font-bold uppercase tracking-wider mb-0.5">Next Window</div>
+                            <div id="intelNextCheckpoint" class="intel-next-value">14</div>
+                        </div>
+                    </div>
+                    
+                    <div id="intelligenceContent" class="space-y-5">
+                        <!-- Populated by app.js: renderIntelligencePanel -->
+                        <div class="p-10 text-center text-white/30 italic text-sm">
+                            Awaiting spin data to initialize intelligence engine...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ADVANCEMENTS PANEL -->
+                <div id="advancementsPanel" class="hidden space-y-4">
+                    <div class="flex justify-between items-center px-1">
+                        <div class="text-white/50 text-[10px] font-bold uppercase tracking-wider">Strategic Event Log</div>
+                        <div id="advancementCount" class="text-[10px] text-white/30">0 Events</div>
+                    </div>
+                    <div id="advancementLogContainer" class="space-y-2">
+                        <!-- Populated by app.js: renderAdvancementLog -->
+                        <div class="frosted-plate p-8 text-center text-white/20 italic text-xs">
+                            No strategic advancements recorded in this session.
+                        </div>
+                    </div>
+                </div>
                 <div class="text-center pt-2">
                     <button onclick="resetData()"
                         class="text-[10px] font-bold uppercase tracking-widest border px-4 py-2 rounded-lg transition-colors hover:bg-[#ff1a33]/10"
@@ -529,7 +577,6 @@
         </div>
     </div>
 
-    <!-- FLOATING ANALYTICS HUD -->
     <div id="analyticsHUD" class="hud-shell fixed hidden flex-col z-[100] bg-gradient-to-br from-[#1a1a1e]/95 to-[#050505]/95 backdrop-blur-2xl border border-white/10 rounded-xl shadow-2xl overflow-hidden transition-opacity duration-200"
          style="top: 100px; left: 20px; width: 208px; min-width: 192px;">
         
@@ -546,7 +593,7 @@
                 <button onclick="toggleHUDControls()" class="w-5 h-5 flex items-center justify-center rounded-md bg-white/10 hover:bg-white/20 text-[#30D158] text-[10px] transition-colors border border-[#30D158]/30">
                     <i class="fas fa-sliders-h"></i>
                 </button>
-                <button onclick="toggleHudHistoryScope()" id="hudScopeBtn" class="min-w-[30px] h-5 px-1.5 flex items-center justify-center rounded-md bg-white/10 text-white/85 border border-white/20 text-[8px] font-black tracking-[0.12em] transition-colors" title="Viewing all history. Click to show only the last 14 spins.">ALL</button>
+                <button onclick="toggleHudHistoryScope()" id="hudScopeBtn" class="min-width-[30px] h-5 px-1.5 flex items-center justify-center rounded-md bg-white/10 text-white/85 border border-white/20 text-[8px] font-black tracking-[0.12em] transition-colors" title="Viewing all history. Click to show only the last 14 spins.">ALL</button>
                 <button onclick="toggleHudColdMode()" id="hudColdBtn" class="w-5 h-5 flex items-center justify-center rounded-md hover:bg-white/10 text-gray-500 transition-colors" title="Toggle Cold Mode"><i class="fas fa-snowflake text-[9px]"></i></button>
             </div>
 
@@ -575,6 +622,7 @@
         <div id="hudResizeHandle" class="hud-resize-handle absolute bottom-0 right-0 w-3.5 h-3.5 cursor-se-resize z-10 flex items-end justify-end p-0.5 opacity-40 hover:opacity-100"><div class="w-1.5 h-1.5 border-r border-b border-white/30 rounded-br-sm"></div></div>
     </div>
 
+    <script src="engine-core.js"></script>
     <script src="predictionEngine.js"></script>
     <script src="strategies/strategy.series.js"></script>
     <script src="strategies/strategy.combo.js"></script>

@@ -78,12 +78,12 @@ body::after {
 
     0%,
     100% {
-        opacity: 0.20;
+        opacity: 0.40;
         transform: scale(1);
     }
 
     50% {
-        opacity: 0.30;
+        opacity: 0.50;
         transform: scale(1.05);
     }
 }
@@ -128,7 +128,7 @@ body::after {
     position: fixed;
     inset: 0;
     z-index: -1;
-    background: rgba(3, 3, 3, 0.4);
+    background: rgba(3, 3, 3, 0.5);
     backdrop-filter: blur(60px);
     pointer-events: none;
 }
@@ -656,6 +656,27 @@ button.bg-gradient-to-b:hover {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.05);
     color: var(--text-secondary);
+    transition: all 0.3s var(--ease-strike);
+}
+
+@keyframes tagGlow {
+    0%, 100% { 
+        box-shadow: 0 0 5px rgba(255, 255, 255, 0.1); 
+        transform: scale(1);
+    }
+    50% { 
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.3), inset 0 0 10px rgba(255, 255, 255, 0.2); 
+        transform: scale(1.05);
+        border-color: rgba(255, 255, 255, 0.4);
+    }
+}
+
+.highlight-pair {
+    animation: tagGlow 2s infinite ease-in-out;
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+    color: #ffffff !important;
+    z-index: 10;
 }
 
 /* --- DYNAMIC DASHBOARD CARDS (Predictions) --- */

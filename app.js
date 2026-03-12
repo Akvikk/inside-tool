@@ -63,18 +63,8 @@ let aiRuntimeState = {
 // Uses StrategyRegistry so that each strategy owns its own key definitions
 let patternConfig = {};
 
-// Background bets: shadow tracking for ALL strategies regardless of active one
-// { 'series': [...bets], 'combo': [...bets] }
-let backgroundBets = {};
-
-// Triple Cs Resets - persistent state for the Triple Cs sub-strategy
-let tripleCsResets = {};
-
-let engineStats = {
-    totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0,
-    bankrollHistory: [0], patternStats: {},
-    signalLog: []
-};
+// backgroundBets, tripleCsResets, and engineStats are now managed by EngineCore.js
+// Access via window.EngineCore.stats, window.EngineCore.tripleCsResets, etc.
 
 let userStats = {
     totalWins: 0, totalLosses: 0, netUnits: 0,
@@ -147,7 +137,8 @@ function saveSessionData() {
         predictionPerimeterWindow,
         perimeterRuleEnabled,
         patternConfig,
-        engineStats,
+        engineStats: window.EngineCore.stats,
+        tripleCsResets: window.EngineCore.tripleCsResets,
         userStats,
         stopwatchSeconds,
         currentInputLayout,
@@ -210,7 +201,8 @@ function loadSessionData() {
         if (data.predictionPerimeterWindow) predictionPerimeterWindow = data.predictionPerimeterWindow;
         if (data.perimeterRuleEnabled !== undefined) perimeterRuleEnabled = data.perimeterRuleEnabled;
         if (data.patternConfig) patternConfig = data.patternConfig;
-        if (data.engineStats) engineStats = data.engineStats;
+        if (data.engineStats) window.EngineCore.stats = data.engineStats;
+        if (data.tripleCsResets) window.EngineCore.tripleCsResets = data.tripleCsResets;
         if (data.userStats) userStats = data.userStats;
         if (data.stopwatchSeconds) stopwatchSeconds = data.stopwatchSeconds;
         if (data.currentInputLayout) currentInputLayout = data.currentInputLayout;
@@ -1090,27 +1082,11 @@ async function syncPredictionEngine() {
     const snapshot = await buildPredictionEngineSnapshot();
     engineSnapshot = snapshot;
 
-    // Run ALL registered strategies in the background simultaneously
-    const registry = window.StrategyRegistry || {};
-    for (const stratKey of Object.keys(registry)) {
-        const strat = registry[stratKey];
-        if (!strat || typeof strat.run !== 'function') continue;
-
-        // Each strategy can have its own patternConfig; for bg strategies use their full config (all enabled)
-        const stratPatternConfig = stratKey === currentGameplayStrategy
-            ? patternConfig
-            : (strat.buildPatternConfig ? strat.buildPatternConfig(true) : {});
-
-        // Pass tripleCsResets to the run function
-        const result = strat.run(history, snapshot, stratPatternConfig, { tripleCsResets });
-        backgroundBets[stratKey] = result.nextBets || [];
-
-        // Only the active strategy drives the live dashboard & alerts
-        if (stratKey === currentGameplayStrategy) {
-            window.currentAlerts = result.notifications || [];
-            activeBets = result.nextBets || [];
-        }
-    }
+    // Delegate execution to EngineCore
+    const result = await window.EngineCore.scanAll(history, snapshot, currentGameplayStrategy, patternConfig);
+    
+    window.currentAlerts = result.notifications || [];
+    activeBets = result.nextBets || [];
 
     return window.currentAlerts;
 }
@@ -2543,74 +2519,9 @@ async function processSpinValue(val, options = {}) {
     const currentSpinIndex = history.length;
 
     // 1. RESOLVE PREVIOUS BETS
-    // We calculate results here and store them as raw data, NOT HTML
-    let resolvedBets = [];
-
-    if (activeBets.length > 0) {
-        activeBets.forEach(bet => {
-            const isWin = (matchedFaceMask & FACE_MASKS[bet.targetFace]) !== 0;
-            let label = `BET F${bet.targetFace}`;
-
-            let count = 0;
-            if (FACES[bet.targetFace]) {
-                count = FACES[bet.targetFace].nums.length;
-            }
-
-            let unitChange = isWin ? (35 - count) : -count;
-
-            let statsName = bet.patternName;
-            let stratKey = bet.filterKey || bet.patternName;
-
-            // Update Engine Stats
-            updateEngineStats(isWin, statsName, unitChange, bet.strategy, bet.patternName, currentSpinIndex, val);
-
-            if (bet.confirmed) {
-                updateUserStats(isWin, bet, currentSpinIndex, unitChange);
-            }
-
-            // Triple Cs Reset logic: if a TripleCs bet wins, record the reset index
-            if (isWin && bet.strategy === 'TripleCs' && bet.originPairKey) {
-                tripleCsResets[bet.originPairKey] = currentSpinIndex;
-            }
-
-            // Store Data Object
-            resolvedBets.push({
-                patternName: bet.patternName, // Display Name
-                filterKey: stratKey,          // Key for patternConfig
-                targetFace: bet.targetFace,
-                isWin: isWin,
-                label: label,
-                comboLabel: bet.comboLabel || null,
-                confidence: Number.isFinite(bet.confidence) ? bet.confidence : null,
-                reason: bet.reason || bet.subtitle || '',
-                mode: bet.mode || null,
-                status: bet.status || 'GO',
-                signalSource: bet.signalSource || 'math'
-            });
-        });
-        activeBets = [];
-    }
-
-    // 1b. RESOLVE BACKGROUND BETS (non-active strategies: stats only, no UI)
-    const registry = window.StrategyRegistry || {};
-    for (const stratKey of Object.keys(registry)) {
-        if (stratKey === currentGameplayStrategy) continue; // already handled above
-        const bgBets = backgroundBets[stratKey] || [];
-        if (bgBets.length === 0) continue;
-        bgBets.forEach(bet => {
-            const isWin = (matchedFaceMask & FACE_MASKS[bet.targetFace]) !== 0;
-            const count = FACES[bet.targetFace] ? FACES[bet.targetFace].nums.length : 0;
-            const unitChange = isWin ? (35 - count) : -count;
-            // Record in engineStats silently — no user stats, no display
-            updateEngineStats(isWin, bet.patternName, unitChange, bet.strategy, bet.patternName, currentSpinIndex, val);
-
-            // Triple Cs Reset logic for background bets
-            if (isWin && bet.strategy === 'TripleCs' && bet.originPairKey) {
-                tripleCsResets[bet.originPairKey] = currentSpinIndex;
-            }
-        });
-        backgroundBets[stratKey] = [];
-    }
+    // RESOLVE ALL BETS (Active & Background) via EngineCore
+    const resolvedBets = window.EngineCore.resolveTurn(val, matchedFaceMask, activeBets, currentGameplayStrategy, updateUserStats);
+    activeBets = [];
 
     // 2. ADD TO HISTORY
     const spinObj = {
@@ -2677,33 +2588,8 @@ async function processSpinValue(val, options = {}) {
     return alerts;
 }
 
-function updateEngineStats(isWin, patternName, unitChange, rawStrategy, rawPattern, spinIndex, spinNum) {
-    if (isWin) {
-        engineStats.totalWins++;
-        engineStats.currentStreak = engineStats.currentStreak >= 0 ? engineStats.currentStreak + 1 : 1;
-    } else {
-        engineStats.totalLosses++;
-        engineStats.currentStreak = engineStats.currentStreak <= 0 ? engineStats.currentStreak - 1 : -1;
-    }
-    engineStats.netUnits += unitChange;
-    engineStats.bankrollHistory.push(engineStats.netUnits);
-
-    if (!engineStats.patternStats[patternName]) {
-        engineStats.patternStats[patternName] = { wins: 0, losses: 0 };
-    }
-    if (isWin) engineStats.patternStats[patternName].wins++;
-    else engineStats.patternStats[patternName].losses++;
-
-    engineStats.signalLog.push({
-        result: isWin ? 'WIN' : 'LOSS',
-        units: unitChange,
-        patternName: patternName,
-        rawStrategy: rawStrategy,
-        rawPattern: rawPattern,
-        spinIndex: spinIndex,
-        spinNum: spinNum
-    });
-}
+// Engine logic moved to EngineCore.js
+// updateEngineStats exists as window.EngineCore.updateStats
 
 function checkFatigue(patternName) {
     const currentSpin = history.length;
@@ -2740,38 +2626,7 @@ function updateUserStats(isWin, bet, spinIndex, unitChange) {
     });
 }
 function renderAnalytics() {
-    let displayStats = {
-        wins: 0, losses: 0, net: 0, streak: 0,
-        history: [0], patterns: {} 
-    };
-
-    // Map display strategy key to the rawStrategy value stored in engineStats.signalLog
-    // Series uses 'Sequence', Combo uses 'Combo' (as set by strategy.combo.js)
-    // Only count stats for the currently active analytics strategy
-    engineStats.signalLog.forEach(log => {
-        const isMatch = (analyticsDisplayStrategy === 'series')
-            ? (log.rawStrategy === 'Sequence' || log.rawStrategy === 'TripleCs')
-            : (log.rawStrategy === 'Combo');
-
-        if (isMatch) {
-            if (log.result === 'WIN') {
-                displayStats.wins++;
-                displayStats.streak = displayStats.streak >= 0 ? displayStats.streak + 1 : 1;
-            } else {
-                displayStats.losses++;
-                displayStats.streak = displayStats.streak <= 0 ? displayStats.streak - 1 : -1;
-            }
-            displayStats.net += log.units;
-            displayStats.history.push(displayStats.net);
-
-            if (!displayStats.patterns[log.patternName]) {
-                displayStats.patterns[log.patternName] = { wins: 0, losses: 0 };
-            }
-            if (log.result === 'WIN') displayStats.patterns[log.patternName].wins++;
-            else displayStats.patterns[log.patternName].losses++;
-        }
-    });
-
+    const displayStats = window.EngineCore.getAnalyticsData(analyticsDisplayStrategy);
     const totalSignals = displayStats.wins + displayStats.losses;
     const hitRate = totalSignals === 0 ? 0 : Math.round((displayStats.wins / totalSignals) * 100);
 
@@ -2799,6 +2654,10 @@ function renderAnalytics() {
 
     drawAdvancedGraph(displayStats.history, displayStats.wins, displayStats.losses, 'graphContainer');
     updatePatternHeatmap(displayStats.patterns);
+
+    // Update other panels too so they are fresh when user switches tabs
+    renderIntelligencePanel();
+    renderAdvancementLog();
 }
 
 function setAnalyticsDisplayStrategy(strategy) {
@@ -2930,12 +2789,72 @@ function openPatternLog(patternName) {
     if (modal) modal.classList.remove('hidden');
 }
 
-// Ensure obsolete Intelligence functions don't throw errors
-function renderIntelligencePanel() {}
-function renderAdvancementLog() {}
-function renderAiFusionPanel() {}
-function renderAiLedger() {}
-function renderAiDebugPanel() {}
+// Restoration of analytics panels logic
+function switchAnalyticsTab(tab) {
+    currentAnalyticsTab = tab;
+    
+    // Panels
+    const panels = {
+        strategy: document.getElementById('strategyAnalyticsPanel'),
+        intelligence: document.getElementById('intelligencePanel'),
+        advancements: document.getElementById('advancementsPanel')
+    };
+    
+    // Buttons
+    const btns = {
+        strategy: document.getElementById('tabBtnStrategy'),
+        intelligence: document.getElementById('tabBtnIntelligence'),
+        advancements: document.getElementById('tabBtnAdvancements')
+    };
+    
+    Object.keys(panels).forEach(k => {
+        if (panels[k]) panels[k].classList.toggle('hidden', k !== tab);
+        if (btns[k]) {
+            btns[k].classList.toggle('text-[#30D158]', k === tab);
+            btns[k].classList.toggle('border-[#30D158]', k === tab);
+            btns[k].classList.toggle('text-gray-400', k !== tab);
+            btns[k].classList.toggle('border-transparent', k !== tab);
+        }
+    });
+
+    // Initial render for the selected tab
+    if (tab === 'strategy') renderAnalytics();
+    if (tab === 'intelligence') renderIntelligencePanel();
+    if (tab === 'advancements') renderAdvancementLog();
+}
+
+function renderAdvancementLog() {
+    const container = document.getElementById('advancementLogContainer');
+    const countEl = document.getElementById('advancementCount');
+    if (!container) return;
+
+    if (!advancementLog || advancementLog.length === 0) {
+        container.innerHTML = `
+            <div class="frosted-plate p-8 text-center text-white/20 italic text-xs">
+                No strategic advancements recorded in this session.
+            </div>
+        `;
+        if (countEl) countEl.innerText = '0 Events';
+        return;
+    }
+
+    if (countEl) countEl.innerText = `${advancementLog.length} Events`;
+    
+    container.innerHTML = advancementLog.slice().reverse().map(event => {
+        const timeStr = event.timestamp ? new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+        return `
+            <div class="frosted-plate p-3 border-l-2 border-l-[#30D158]/50 flex justify-between items-center group hover:bg-white/5 transition-colors">
+                <div class="flex-1">
+                    <div class="text-white text-[11px] font-medium mb-0.5">${escapeAiMarkup(event.text || event)}</div>
+                    <div class="text-white/30 text-[9px] uppercase tracking-tighter">${timeStr}</div>
+                </div>
+                <div class="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <i class="fas fa-chevron-right text-white/20 text-[10px]"></i>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
 
 function renderGapStats() {
@@ -3613,13 +3532,8 @@ function resetData(skipConfirm = false) {
         lastActionableTargetFace = null;
         lastActionableCheckpointSpin = 0;
         strategies = {};
-        backgroundBets = {};
-        tripleCsResets = {};
+        window.EngineCore.reset();
         perimeterStatsCache = {};
-        engineStats = {
-            totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0,
-            bankrollHistory: [0], patternStats: {}, signalLog: []
-        };
         userStats = { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
         faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
 
@@ -4002,7 +3916,7 @@ SMART PLAY PROTOCOL:
 2. GHOST PATTERNS: Look for patterns that aren't in the rules but are repeating on the physical wheel right now (e.g., F1 -> F3 -> F1 -> F3).
 
 ADVERSARIAL TASKS:
-- Check the current Net Units: ${engineStats.netUnits}. If losing, the table is choppy. Tell the user to tighten up.
+- Check the current Net Units: ${window.EngineCore.stats.netUnits}. If losing, the table is choppy. Tell the user to tighten up.
 - Look at the last 10 hits: ${history.slice(-10).map(s => `F${FON_PRIMARY_FACE_MAP[s.num] || '?'}`).join(' -> ') || 'None'}. Provide a "Smart Entry" based on this physical rhythm.
 - If the table is pure chaos, strictly command the user to "SIT OUT."
 
@@ -4038,7 +3952,14 @@ STRICT DATA LIMIT:
 }
 
 function toggleModal(id) {
-    document.getElementById(id).classList.toggle('hidden');
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('hidden');
+    
+    // Auto-initialize to Strategy tab when opening analytics
+    if (id === 'analyticsModal' && !el.classList.contains('hidden')) {
+        switchAnalyticsTab('strategy');
+    }
 }
 
 function exportSpins() {
