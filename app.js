@@ -31,29 +31,9 @@ let spinProcessingQueue = Promise.resolve();
 let faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
 let predictionPerimeterWindow = 14;
 let perimeterRuleEnabled = true;
-let aiEnabled = false;
-let aiProvider = 'gemini';
-let aiApiKey = '';
-let chatMessageHistory = [];
+// --- OTHER STATE ---
 let advancementLog = [];
-let neuralPredictionEnabled = false;
-let currentNeuralSignal = null;
-let neuralPredictionRequestId = 0;
-let aiSignalLedger = [];
-let lastAiFusionSnapshot = null;
-let aiPredictionCacheKey = '';
-let aiPredictionCacheSignal = null;
-let aiPredictionInFlight = null;
-let aiRuntimeState = {
-    status: 'IDLE',
-    provider: 'gemini',
-    lastError: '',
-    lastRequestMode: '',
-    lastLatencyMs: 0,
-    lastPromptPreview: '',
-    lastResponsePreview: '',
-    lastUpdatedLabel: 'Never'
-};
+let chatMessageHistory = [];
 
 // Constants PERIMETER_COMBOS and FACES are already defined in predictionEngine.js
 // Removing duplicate declarations to prevent SyntaxError
@@ -113,6 +93,33 @@ function changePredictionStrategy(val) {
     }, 200);
 }
 
+async function triggerAiAudit() {
+    const btn = event.currentTarget;
+    const originalText = btn.innerText;
+    btn.innerText = 'AUDITING...';
+    btn.disabled = true;
+
+    const audit = await requestTacticalAudit();
+    btn.innerText = originalText;
+    btn.disabled = false;
+
+    if (audit && !audit.error) {
+        const verdictEl = document.getElementById('aiBrainVerdict');
+        const scoreEl = document.getElementById('aiBrainScore');
+        const pivotEl = document.getElementById('aiBrainPivot');
+
+        if (verdictEl) verdictEl.innerText = audit.verdict || "Audit complete.";
+        if (scoreEl) {
+            scoreEl.innerText = `${audit.predictabilityScore || 0}%`;
+            scoreEl.classList.remove('opacity-0');
+        }
+        if (pivotEl && audit.profitPivot) {
+            pivotEl.innerText = `Pivot Suggestion: ${audit.profitPivot}`;
+            pivotEl.classList.remove('hidden');
+        }
+    }
+}
+
 function rebuildPatternConfig() {
     // Delegate to the active strategy module's buildPatternConfig
     const strat = window.StrategyRegistry && window.StrategyRegistry[currentGameplayStrategy];
@@ -133,6 +140,7 @@ let saveSessionTimeout = null;
 function saveSessionData() {
     if (saveSessionTimeout) clearTimeout(saveSessionTimeout);
     saveSessionTimeout = setTimeout(() => {
+        const aiState = window.AiBrain ? window.AiBrain.getState() : {};
         const data = {
             history,
             activeBets,
@@ -147,13 +155,13 @@ function saveSessionData() {
             currentInputLayout,
             isHudColdMode,
             hudHistoryScope,
-            aiEnabled,
-            aiProvider,
-            aiApiKey,
+            aiEnabled: aiState.aiEnabled,
+            aiProvider: aiState.aiProvider,
+            aiApiKey: aiState.aiApiKey,
             advancementLog,
-            neuralPredictionEnabled,
-            aiSignalLedger,
-            aiRuntimeState,
+            neuralPredictionEnabled: aiState.neuralPredictionEnabled,
+            aiSignalLedger: aiState.aiSignalLedger,
+            aiRuntimeState: aiState.runtimeState,
             currentPredictionStrategy,
             currentGameplayStrategy,
             globalSpinIdCounter
@@ -214,13 +222,15 @@ function loadSessionData() {
         if (data.hudHistoryScope) hudHistoryScope = data.hudHistoryScope;
         if (data.currentGameplayStrategy) currentGameplayStrategy = data.currentGameplayStrategy;
         if (data.globalSpinIdCounter !== undefined) globalSpinIdCounter = data.globalSpinIdCounter;
-        if (data.aiEnabled !== undefined) aiEnabled = data.aiEnabled;
-        if (typeof data.aiProvider === 'string' && data.aiProvider) aiProvider = data.aiProvider;
-        if (typeof data.aiApiKey === 'string') aiApiKey = data.aiApiKey;
-        if (Array.isArray(data.advancementLog)) advancementLog = data.advancementLog;
-        if (data.neuralPredictionEnabled !== undefined) neuralPredictionEnabled = data.neuralPredictionEnabled === true;
-        if (Array.isArray(data.aiSignalLedger)) aiSignalLedger = data.aiSignalLedger;
-        if (data.aiRuntimeState && typeof data.aiRuntimeState === 'object') aiRuntimeState = { ...aiRuntimeState, ...data.aiRuntimeState };
+        if (window.AiBrain) {
+            window.AiBrain.updateSettings({
+                aiEnabled: data.aiEnabled,
+                aiProvider: data.aiProvider,
+                aiApiKey: data.aiApiKey,
+                neuralPredictionEnabled: data.neuralPredictionEnabled
+            });
+            // You might need to hydrate the ledger or runtime state if AiBrain needs it
+        }
         updateAiUiState();
         updateNeuralPredictionUi();
         return true;
@@ -1803,117 +1813,25 @@ function calculatePerimeterStats(history, windowSize = 14) {
     return result;
 }
 
+/**
+ * --- TACTICAL BRAIN: SESSION AUDIT DATA ---
+ * Gathers complete context for the AI Hindsight reviewed.
+ */
+/**
+ * --- AI INTELLIGENCE HANDLERS ---
+ * Bridges to the isolated AiBrain module.
+ */
 
-
-async function refreshPredictionEngineUI() {
-    await scanAllStrategies();
-    if (neuralPredictionEnabled && aiEnabled && aiApiKey) {
-        await requestNeuralPrediction({ renderDashboardNow: false, force: true });
-    }
-    updateVisibility();
-    updatePerimeterAnalytics();
-    updateAnalyticsHUD();
+async function requestAiText(promptText, options = {}) {
+    if (!window.AiBrain) return "";
+    // Bridge to AiBrain's text request if needed, but app.js shouldn't really call this anymore
+    return ""; 
 }
 
-function stampAiRuntimeState(nextState = {}) {
-    aiRuntimeState = {
-        ...aiRuntimeState,
-        provider: aiProvider,
-        lastUpdatedLabel: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        ...nextState
-    };
-
-    const analyticsModal = document.getElementById('analyticsModal');
-    if (analyticsModal && !analyticsModal.classList.contains('hidden') && currentAnalyticsTab === 'advancements') {
-        renderAdvancementLog();
-    }
-}
-
-function classifyAiRuntimeStatus(message) {
-    const text = String(message || '').toLowerCase();
-    if (!text) return 'ERROR';
-    if (text.includes('quota') || text.includes('billing')) return 'QUOTA';
-    if (text.includes('rate limit') || text.includes('resource_exhausted') || text.includes('too many requests')) return 'RATE_LIMIT';
-    if (text.includes('invalid') || text.includes('api key') || text.includes('unauthorized') || text.includes('permission')) return 'INVALID_KEY';
-    if (text.includes('model') && text.includes('not found')) return 'MODEL_ERROR';
-    if (text.includes('network') || text.includes('failed to fetch')) return 'NETWORK';
-    return 'ERROR';
-}
-
-function summarizeComboWindow(windowSize) {
-    const stats = calculatePerimeterStats(history, windowSize);
-    return sortEngineReadCombos(getComboCoverageStats(stats)).map(combo =>
-        `${combo.label}: ${combo.hits} hits, hot ${combo.hotPercent}%, cold ${combo.coldPercent}%, rest ${combo.lastSeenDistance ?? '-'}`
-    ).join(' | ');
-}
-
-function buildAiTakeoverPrompt() {
-    const recentSpins = history.slice(-80).map(s => s.num).join(', ') || 'None yet';
-    const recentHits = history.slice(-10).map(s => `F${FON_PRIMARY_FACE_MAP[s.num] || '?'}`).join(' -> ') || 'None yet';
-    const gaps = Object.entries(faceGaps).map(([face, gap]) => `F${face}:${gap}`).join(', ');
-    const mathSignal = engineSnapshot && engineSnapshot.currentPrediction
-        ? `${engineSnapshot.currentPrediction.comboLabel} -> F${engineSnapshot.currentPrediction.targetFace} (${engineSnapshot.currentPrediction.confidence}%)`
-        : 'No active math signal';
-    const currentStreak = engineStats.currentStreak > 0 ? `Winning ${engineStats.currentStreak}` : (engineStats.currentStreak < 0 ? `Losing ${Math.abs(engineStats.currentStreak)}` : 'Flat');
-
-    return `ROLE: You are an expert Roulette "Table Boss" standing over the player's shoulder. 
-Task: Read the live telemetry, the wheel rhythm, and the math engine's current signal. Decide if the math is correct or if it's walking into a trap because the table is acting weird (e.g., choppy, leaking, ghost patterns). Return strict JSON.
-
-Rules:
-1. GRADE THE MATH: Provide a mathAssessment (AGREE, DISAGREE, IGNORE). If the math looks wrong based on the table, DISAGREE and SIT_OUT or provide a better target.
-2. GRADE THE TABLE: Provide a tableState (TRENDING, CHOPPY, FATIGUED). 
-3. PLAY OR PASS: If the math is right or you see a clean edge, return GO. If the table is chaotic and the math is walking into a trap, return SIT_OUT.
-4. Keep the reason tactical, explicitly mentioning the exact rhythm or why the math is right/wrong.
-
-Live Telemetry:
-- Net Units: ${engineStats.netUnits} (Streak: ${currentStreak})
-- Face Gaps: ${gaps}
-- 5-spin combos: ${summarizeComboWindow(5)}
-- 14-spin combos: ${summarizeComboWindow(14)}
-- Math engine read: ${mathSignal}
-- Last 10 hit rhythm: ${recentHits}
-- Last 80 spins: ${recentSpins}
-
-Return JSON only:
-{"status":"GO|WATCH|SIT_OUT","combo":"5-2|5-3|1-3|2-4|NONE","targetFace":1,"confidence":0,"mode":"TREND|INVERSION|WAIT","mathAssessment":"AGREE|DISAGREE|IGNORE","tableState":"TRENDING|CHOPPY|FATIGUED","reason":"tactical table analysis"}`;
-}
-
-function getAiTakeoverSchema() {
-    return {
-        type: 'OBJECT',
-        properties: {
-            status: {
-                type: 'STRING',
-                enum: ['GO', 'WATCH', 'SIT_OUT']
-            },
-            combo: {
-                type: 'STRING',
-                enum: ['5-2', '5-3', '1-3', '2-4', 'NONE']
-            },
-            targetFace: {
-                type: 'NUMBER'
-            },
-            confidence: {
-                type: 'NUMBER'
-            },
-            mode: {
-                type: 'STRING',
-                enum: ['TREND', 'INVERSION', 'WAIT']
-            },
-            mathAssessment: {
-                type: 'STRING',
-                enum: ['AGREE', 'DISAGREE', 'IGNORE']
-            },
-            tableState: {
-                type: 'STRING',
-                enum: ['TRENDING', 'CHOPPY', 'FATIGUED']
-            },
-            reason: {
-                type: 'STRING'
-            }
-        },
-        required: ['status', 'combo', 'confidence', 'mode', 'mathAssessment', 'tableState', 'reason']
-    };
+function updateAiFusionSnapshot() {
+    if (!window.AiBrain) return;
+    window.AiBrain.updateAiFusionSnapshot();
+    renderAiFusionPanel();
 }
 
 function extractAiJsonPayload(rawText) {
@@ -2171,9 +2089,10 @@ function updateNeuralPredictionUi() {
     const takeoverKnob = document.getElementById('aiTakeoverKnob');
     const takeoverStatus = document.getElementById('aiTakeoverStatus');
 
+    const ai = window.AiBrain ? window.AiBrain.getState() : {};
     const applySwitchState = (switchBtn, switchKnob) => {
         if (!switchBtn || !switchKnob) return;
-        if (neuralPredictionEnabled) {
+        if (ai.neuralPredictionEnabled) {
             switchBtn.classList.replace('bg-white/10', 'bg-[#bf5af2]/20');
             switchBtn.classList.replace('border-white/20', 'border-[#bf5af2]/50');
             switchKnob.classList.replace('bg-gray-400', 'bg-[#bf5af2]');
@@ -2181,7 +2100,7 @@ function updateNeuralPredictionUi() {
         } else {
             switchBtn.classList.replace('bg-[#bf5af2]/20', 'bg-white/10');
             switchBtn.classList.replace('border-[#bf5af2]/50', 'border-white/20');
-            switchKnob.classList.replace('bg-[#bf5af2]', 'bg-gray-400');
+            switchKnob.classList.replace('bg-gray-400', 'bg-gray-400'); // No change
             switchKnob.style.transform = 'translateX(0)';
         }
     };
@@ -2190,10 +2109,10 @@ function updateNeuralPredictionUi() {
     applySwitchState(takeoverSwitch, takeoverKnob);
 
     if (takeoverStatus) {
-        if (neuralPredictionEnabled) {
+        if (ai.neuralPredictionEnabled) {
             takeoverStatus.innerText = 'AI LIVE';
             takeoverStatus.className = 'text-[9px] font-black bg-[#bf5af2]/20 px-2.5 py-1 rounded-md text-[#bf5af2] shadow-inner';
-        } else if (aiEnabled && aiApiKey) {
+        } else if (ai.aiEnabled && ai.aiApiKey) {
             takeoverStatus.innerText = 'MATH';
             takeoverStatus.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/70 shadow-inner';
         } else {
@@ -2201,194 +2120,23 @@ function updateNeuralPredictionUi() {
             takeoverStatus.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/40 shadow-inner';
         }
     }
-}
 
-function toggleAiPredictionTakeover(forceState = null) {
-    const nextState = typeof forceState === 'boolean' ? forceState : !neuralPredictionEnabled;
-    if (nextState && (!aiEnabled || !aiApiKey)) {
-        alert("Please enable AI and configure your API key first.");
-        return;
-    }
-
-    neuralPredictionEnabled = nextState;
-    updateNeuralPredictionUi();
-
-    if (neuralPredictionEnabled) {
-        void requestNeuralPrediction({ force: true });
-    } else {
-        neuralPredictionRequestId++;
-        currentNeuralSignal = null;
-        aiPredictionCacheKey = '';
-        aiPredictionCacheSignal = null;
-        aiPredictionInFlight = null;
-        window.currentAlerts = [];
-        updateAiFusionSnapshot(null);
-        void refreshPredictionEngineUI();
-    }
-
-    saveSessionData();
-}
-
-function toggleNeuralPrediction() {
-    toggleAiPredictionTakeover();
-}
-
-async function requestNeuralPrediction(options = {}) {
-    if (!neuralPredictionEnabled || !aiEnabled || !aiApiKey) return;
-
-    const renderDashboardNow = options.renderDashboardNow !== false;
-    const force = options.force === true;
-    const cacheKey = `${history.slice(-80).map(s => s.num).join(',')}|${Object.values(faceGaps).join('-')}|${engineStats.netUnits}`;
-
-    const applyAiSignal = (signal) => {
-        currentNeuralSignal = signal;
-        updateAiFusionSnapshot(signal);
-        if (signal && signal.targetFace && signal.status !== 'SIT_OUT') {
-            activeBets = [signal];
-            window.currentAlerts = [{
-                type: 'AI',
-                patternName: AI_TAKEOVER_PATTERN,
-                targetFace: signal.targetFace,
-                comboLabel: signal.comboLabel,
-                accentColor: signal.accentColor,
-                signalKind: 'ai-takeover'
-            }];
-            recordAiSignalInLedger(signal);
+    const hToggle = document.getElementById('aiHindsightToggle');
+    if (hToggle) {
+        if (ai.neuralPredictionEnabled) {
+            hToggle.classList.add('active');
+            hToggle.classList.add('animate-glow-green');
         } else {
-            activeBets = [];
-            window.currentAlerts = [];
-        }
-        if (renderDashboardNow) {
-            renderDashboard(window.currentAlerts || []);
-            refreshHighlights();
-            if (!document.getElementById('analyticsModal').classList.contains('hidden')) renderAnalytics();
-        }
-        saveSessionData();
-        return signal;
-    };
-
-    if (!force && aiPredictionCacheKey === cacheKey && aiPredictionCacheSignal) {
-        return applyAiSignal({ ...aiPredictionCacheSignal });
-    }
-
-    if (!force && aiPredictionInFlight && aiPredictionInFlight.key === cacheKey) {
-        return aiPredictionInFlight.promise;
-    }
-
-    const requestId = ++neuralPredictionRequestId;
-    const prompt = buildAiTakeoverPrompt();
-
-    const predictionPromise = (async () => {
-        try {
-            const responseText = await requestAiText(prompt, {
-                requestMode: 'prediction-takeover',
-                temperature: 0.18,
-                maxOutputTokens: 260,
-                responseMimeType: 'application/json',
-                responseSchema: getAiTakeoverSchema()
-            });
-            let jsonResponse;
-            try {
-                jsonResponse = extractAiJsonPayload(responseText);
-            } catch (parseError) {
-                console.warn('AI takeover JSON parse fallback engaged', parseError);
-                jsonResponse = salvageAiTakeoverPayload(responseText);
-            }
-            const targetFace = Number(jsonResponse.targetFace);
-            const status = String(jsonResponse.status || 'SIT_OUT').trim().toUpperCase().replace(/\s+/g, '_');
-            const comboLabel = String(jsonResponse.combo || 'NONE').toUpperCase();
-            const mode = String(jsonResponse.mode || 'WAIT').trim().toUpperCase().replace(/\s+/g, '_');
-            const confidence = Math.max(0, Math.min(100, Math.round(Number(jsonResponse.confidence) || 0)));
-            const reason = String(jsonResponse.reason || 'No tactical reason returned.').trim();
-            const mathAssessment = String(jsonResponse.mathAssessment || 'IGNORE').trim().toUpperCase().replace(/\s+/g, '_');
-            const tableState = String(jsonResponse.tableState || 'CHOPPY').trim().toUpperCase().replace(/\s+/g, '_');
-            const normalizedTargetFace = Number.isInteger(targetFace) && targetFace >= 1 && targetFace <= 5 ? targetFace : null;
-
-            if (requestId !== neuralPredictionRequestId || !neuralPredictionEnabled) return currentNeuralSignal;
-
-            const signal = {
-                signalSource: 'ai',
-                patternName: AI_TAKEOVER_PATTERN,
-                filterKey: AI_TAKEOVER_PATTERN,
-                strategy: AI_TAKEOVER_PATTERN,
-                targetFace: status === 'SIT_OUT' ? null : normalizedTargetFace,
-                accentColor: '#bf5af2',
-                subtitle: `${mode} | MATH: ${mathAssessment}${confidence ? ` • ${confidence}%` : ''}`,
-                reason,
-                confidence,
-                confirmed: false,
-                comboLabel,
-                mode,
-                mathAssessment,
-                tableState,
-                status
-            };
-
-            aiPredictionCacheKey = cacheKey;
-            aiPredictionCacheSignal = { ...signal };
-            return applyAiSignal(signal);
-        } catch (error) {
-            console.error("Neural Prediction Failed", error);
-            if (requestId !== neuralPredictionRequestId) return currentNeuralSignal;
-
-            aiPredictionCacheKey = cacheKey;
-            aiPredictionCacheSignal = {
-                signalSource: 'ai',
-                patternName: AI_TAKEOVER_PATTERN,
-                targetFace: null,
-                accentColor: '#bf5af2',
-                subtitle: 'SIT OUT',
-                reason: (error && error.message ? error.message : 'AI link failed').slice(0, 160),
-                confidence: 0,
-                confirmed: false,
-                comboLabel: 'NONE',
-                mode: 'WAIT',
-                mathAssessment: 'IGNORE',
-                tableState: 'CHOPPY',
-                status: 'SIT_OUT'
-            };
-            return applyAiSignal({ ...aiPredictionCacheSignal });
-        } finally {
-            if (aiPredictionInFlight && aiPredictionInFlight.key === cacheKey) {
-                aiPredictionInFlight = null;
-            }
-        }
-    })();
-
-    aiPredictionInFlight = {
-        key: cacheKey,
-        promise: predictionPromise
-    };
-
-    return predictionPromise;
-}
-
-function toggleNeuralPrediction() {
-    neuralPredictionEnabled = !neuralPredictionEnabled;
-    updateNeuralPredictionUi();
-    
-    if (neuralPredictionEnabled && aiEnabled && aiApiKey) {
-        void requestNeuralPrediction();
-    } else {
-        currentNeuralSignal = null;
-        renderDashboard(window.currentAlerts || []);
-    }
-    
-    saveSessionData();
-}
-
-function updateNeuralPredictionUi() {
-    const toggle = document.getElementById('aiHindsightToggle');
-    if (toggle) {
-        if (neuralPredictionEnabled) {
-            toggle.classList.add('active');
-            toggle.classList.add('animate-glow-green');
-        } else {
-            toggle.classList.remove('active');
-            toggle.classList.remove('animate-glow-green');
+            hToggle.classList.remove('active');
+            hToggle.classList.remove('animate-glow-green');
         }
     }
 }
+
+
+/**
+ * --- UI & SETTINGS HELPERS ---
+ */
 
 function adjustPredictionPerimeterWindow(delta) {
     const parsedDelta = parseInt(delta, 10);

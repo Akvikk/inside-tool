@@ -350,6 +350,23 @@
                     </div>
                 </div>
 
+                <!-- STRATEGIC FOCUS HUD -->
+                <div class="glass-panel p-4 border border-white/5 relative overflow-hidden group">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-brain text-[#bf5af2] drop-shadow-[0_0_8px_rgba(191,90,242,0.5)]"></i>
+                            <span class="text-[10px] font-black tracking-widest text-white/40 uppercase">AI Tactical Brain</span>
+                        </div>
+                        <div id="aiBrainScore" class="text-[14px] font-black text-[#bf5af2] opacity-0 transition-opacity duration-500">0%</div>
+                    </div>
+                    <div id="aiBrainVerdict" class="text-[11px] leading-relaxed text-white/80 italic line-clamp-2 min-h-[2.5em]">Awaiting session data for tactical audit...</div>
+                    <div id="aiBrainPivot" class="mt-2 text-[10px] font-bold text-[#bf5af2]/80 uppercase tracking-wider hidden">Pivot: SERIES DETECTED</div>
+                    
+                    <button onclick="triggerAiAudit()" class="mt-3 w-full py-2 bg-[#bf5af2]/10 hover:bg-[#bf5af2]/20 border border-[#bf5af2]/30 rounded text-[9px] font-black tracking-widest text-[#bf5af2] transition-all uppercase">
+                        Initialize Tactical Review
+                    </button>
+                </div>
+
                 <!-- INTELLIGENCE PANEL -->
                 <div id="intelligencePanel" class="hidden space-y-5">
                     <div class="frosted-plate p-4 flex justify-between items-center gap-4">
@@ -472,6 +489,11 @@
     <script src="predictionEngine.js"></script>
     <script src="strategies/strategy.series.js"></script>
     <script src="strategies/strategy.combo.js"></script>
+    
+    <!-- AI TACTICAL BRAIN: ISOLATED DECISION MODULE -->
+    <script src="ai-brain.js"></script>
+
+    <!-- CORE LOGIC: UI & APPLICATION -->
     <script src="app.js"></script>
 </body>
 
