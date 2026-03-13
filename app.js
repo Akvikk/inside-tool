@@ -45,6 +45,7 @@ let lastAiFusionSnapshot = null;
 let aiPredictionCacheKey = '';
 let aiPredictionCacheSignal = null;
 let aiPredictionInFlight = null;
+let aiApiKeyVisible = false;
 let aiRuntimeState = {
     status: 'IDLE',
     provider: 'gemini',
@@ -899,6 +900,7 @@ function openAiConfigModal() {
     if (menu) menu.classList.add('hidden');
     if (backdrop) backdrop.classList.add('hidden');
 
+    aiApiKeyVisible = false;
     updateAiUiState();
 
     const modal = document.getElementById('aiConfigModal');
@@ -912,6 +914,26 @@ function openAiConfigModal() {
             : document.getElementById('aiMasterSwitch');
         if (focusTarget) focusTarget.focus();
     }, 100);
+}
+
+function updateAiApiKeyVisibilityUi() {
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const toggleBtn = document.getElementById('toggleAiKeyVisibilityBtn');
+    const toggleIcon = document.getElementById('toggleAiKeyVisibilityIcon');
+    if (!keyInput || !toggleBtn || !toggleIcon) return;
+
+    keyInput.type = aiApiKeyVisible ? 'text' : 'password';
+    toggleBtn.title = aiApiKeyVisible ? 'Hide API key' : 'Show API key';
+    toggleBtn.setAttribute('aria-label', aiApiKeyVisible ? 'Hide API key' : 'Show API key');
+    toggleIcon.className = aiApiKeyVisible ? 'fas fa-eye-slash' : 'fas fa-eye';
+}
+
+function toggleAiApiKeyVisibility() {
+    aiApiKeyVisible = !aiApiKeyVisible;
+    updateAiApiKeyVisibilityUi();
+
+    const keyInput = document.getElementById('aiApiKeyInput');
+    if (keyInput) keyInput.focus({ preventScroll: true });
 }
 
 function toggleAccordion(id) {
@@ -3950,6 +3972,7 @@ function resetData(skipConfirm = false) {
 }
 
 function updateAiUiState() {
+    const apiConnected = !!aiApiKey;
     const switchBtn = document.getElementById('aiMasterSwitch');
     const switchKnob = document.getElementById('aiSwitchKnob');
     const vaultSection = document.getElementById('aiVaultSection');
@@ -4000,10 +4023,11 @@ function updateAiUiState() {
     const keyInput = document.getElementById('aiApiKeyInput');
     if (providerSelect) providerSelect.value = aiProvider;
     if (keyInput) keyInput.value = aiApiKey;
+    updateAiApiKeyVisibilityUi();
 
     const aiContainer = document.getElementById('aiAnalysisContainer');
     if (aiContainer) {
-        if (aiEnabled && aiApiKey) {
+        if (aiEnabled && apiConnected) {
             aiContainer.classList.remove('hidden');
             aiContainer.classList.add('flex');
         } else {
@@ -4013,21 +4037,25 @@ function updateAiUiState() {
     }
 
     const headerAiBtn = document.getElementById('headerAiBtn');
+    const headerAiBtnStatusDot = document.getElementById('headerAiBtnStatusDot');
     if (headerAiBtn) {
         headerAiBtn.classList.remove('hidden');
         headerAiBtn.classList.add('flex');
+        headerAiBtn.classList.remove('ai-connected', 'ai-offline', 'is-active');
 
-        if (aiApiKey) {
-            headerAiBtn.classList.remove('bg-[#bf5af2]/10', 'border-[#bf5af2]/30', 'shadow-[0_0_10px_rgba(191,90,242,0.15)]');
-            headerAiBtn.classList.add('bg-[#bf5af2]/20', 'border-[#bf5af2]/50', 'shadow-[0_0_18px_rgba(191,90,242,0.35)]');
+        if (apiConnected) {
+            headerAiBtn.classList.add('ai-connected', 'is-active');
             headerAiBtn.title = aiEnabled
                 ? 'AI chat is connected and ready.'
-                : 'API connected. Enable AI in AI Settings to start chat.';
+                : 'API connected. Turn on AI Master to start chat.';
         } else {
-            headerAiBtn.classList.add('bg-[#bf5af2]/10', 'border-[#bf5af2]/30', 'shadow-[0_0_10px_rgba(191,90,242,0.15)]');
-            headerAiBtn.classList.remove('bg-[#bf5af2]/20', 'border-[#bf5af2]/50', 'shadow-[0_0_18px_rgba(191,90,242,0.35)]');
-            headerAiBtn.title = 'Open AI Settings to connect chat.';
+            headerAiBtn.classList.add('ai-offline', 'is-active');
+            headerAiBtn.title = 'API offline. Open AI Settings to connect chat.';
         }
+    }
+    if (headerAiBtnStatusDot) {
+        headerAiBtnStatusDot.classList.add('ai-chat-status-dot');
+        headerAiBtnStatusDot.classList.toggle('animate-pulse', !apiConnected);
     }
 
     if ((!aiEnabled || !aiApiKey) && neuralPredictionEnabled) {
@@ -4159,6 +4187,7 @@ async function saveAiConfig() {
 function clearAiConfig() {
     const wasNeuralEnabled = neuralPredictionEnabled;
     aiApiKey = '';
+    aiApiKeyVisible = false;
     chatMessageHistory = [];
     neuralPredictionEnabled = false;
     currentNeuralSignal = null;

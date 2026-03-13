@@ -308,6 +308,19 @@ body::after {
     --accent-rgb: 191, 90, 242;
 }
 
+#headerAiBtn.ai-offline {
+    --accent-rgb: 255, 69, 58;
+}
+
+#headerAiBtn.ai-connected {
+    --accent-rgb: 48, 209, 88;
+}
+
+#headerAiBtn.ai-connected .ai-chat-status-dot,
+#headerAiBtn.ai-offline .ai-chat-status-dot {
+    box-shadow: 0 0 12px currentColor;
+}
+
 #patternsToggleBtn {
     --accent-rgb: 191, 90, 242;
 }
