@@ -321,6 +321,22 @@ body::after {
     box-shadow: 0 0 12px currentColor;
 }
 
+#headerAiBtn .ai-chat-status-dot.ai-pulse {
+    animation: ai-status-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes ai-status-pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.45;
+        transform: scale(0.82);
+    }
+}
+
 #patternsToggleBtn {
     --accent-rgb: 191, 90, 242;
 }

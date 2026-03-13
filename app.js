@@ -7,6 +7,8 @@ const ENGINE_PRIMARY_WINDOW = 14;
 const ENGINE_CONFIRMATION_WINDOW = 5;
 const HUD_RECENT_WINDOW = 14;
 const GEMINI_MODEL = 'gemini-2.5-flash';
+const AI_RELAY_BASE_URL = 'http://127.0.0.1:8787/api/ai';
+const AI_RELAY_SENTINEL = '__inside_tool_secure_relay__';
 const INTELLIGENCE_VIEW_KEY = 'insideTool.intelligenceViewMode';
 const INTELLIGENCE_VIEWS = ['brief', 'diagnostic', 'minimal'];
 const PATTERN_FILTER_META_COMBO = Object.fromEntries(
@@ -46,6 +48,7 @@ let aiPredictionCacheKey = '';
 let aiPredictionCacheSignal = null;
 let aiPredictionInFlight = null;
 let aiApiKeyVisible = false;
+let aiRelayAvailable = false;
 let aiRuntimeState = {
     status: 'IDLE',
     provider: 'gemini',
@@ -64,6 +67,89 @@ let aiRuntimeState = {
 // Built dynamically based on active strategy via rebuildPatternConfig()
 // Uses StrategyRegistry so that each strategy owns its own key definitions
 let patternConfig = {};
+
+function hasSecureAiConnection() {
+    return aiApiKey === AI_RELAY_SENTINEL;
+}
+
+async function relayFetch(path, options = {}) {
+    const method = options.method || 'GET';
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+    };
+    const init = {
+        method,
+        headers
+    };
+
+    if (options.body !== undefined) {
+        init.body = JSON.stringify(options.body);
+    }
+
+    const res = await fetch(`${AI_RELAY_BASE_URL}${path}`, init);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) {
+        throw new Error((data && data.error) || `AI relay request failed (${res.status})`);
+    }
+    return data;
+}
+
+async function refreshAiRelayStatus(options = {}) {
+    const opts = options && typeof options === 'object' ? options : {};
+    try {
+        const data = await relayFetch('/status');
+        aiRelayAvailable = true;
+        aiProvider = data.provider || aiProvider;
+        aiApiKey = data.connected ? AI_RELAY_SENTINEL : '';
+        if (!data.connected && neuralPredictionEnabled) {
+            neuralPredictionEnabled = false;
+        }
+        if (opts.updateUi !== false) updateAiUiState();
+        return data;
+    } catch (error) {
+        aiRelayAvailable = false;
+        aiApiKey = '';
+        if (opts.silent !== true) {
+            stampAiRuntimeState({
+                status: 'RELAY_OFFLINE',
+                lastError: error.message || 'AI relay offline.'
+            });
+        }
+        if (opts.updateUi !== false) updateAiUiState();
+        return null;
+    }
+}
+
+async function requestAiViaRelay(promptText, options = {}) {
+    if (!hasSecureAiConnection()) {
+        throw new Error('AI relay is not connected. Start the local relay and verify your key.');
+    }
+
+    const data = await relayFetch('/request', {
+        method: 'POST',
+        body: {
+            prompt: promptText,
+            options
+        }
+    });
+
+    return data.text || '';
+}
+
+function classifyAiRuntimeStatus(message) {
+    const text = String(message || '').toLowerCase();
+    if (!text) return 'ERROR';
+    if (text.includes('relay')) return 'RELAY_OFFLINE';
+    if (text.includes('abort') || text.includes('timeout')) return 'TIMEOUT';
+    if (text.includes('invalid') || text.includes('unauthorized') || text.includes('api key')) return 'INVALID_KEY';
+    return 'ERROR';
+}
+
+window.AiRelayClient = {
+    requestText: requestAiViaRelay,
+    refreshStatus: refreshAiRelayStatus
+};
 
 // backgroundBets, tripleCsResets, and engineStats are now managed by EngineCore.js
 // Access via window.EngineCore.stats, window.EngineCore.tripleCsResets, etc.
@@ -139,6 +225,7 @@ function syncAiBrainSettings() {
         aiEnabled,
         aiProvider,
         aiApiKey,
+        aiConnected: hasSecureAiConnection(),
         neuralPredictionEnabled
     });
 }
@@ -210,9 +297,11 @@ function renderDashboardSafe(alerts) {
             neuralPredictionEnabled,
             currentNeuralSignal
         });
+        renderStrategicBrainSummary();
         return;
     }
     renderDashboard(nextAlerts);
+    renderStrategicBrainSummary();
 }
 
 function renderAnalyticsSafe() {
@@ -421,6 +510,84 @@ async function requestNeuralPrediction(options = {}) {
     return signal;
 }
 
+function buildStrategicBrainSummary() {
+    const coreStats = window.EngineCore && window.EngineCore.stats
+        ? window.EngineCore.stats
+        : { totalWins: 0, totalLosses: 0, netUnits: 0 };
+    const totalSignals = coreStats.totalWins + coreStats.totalLosses;
+    const hitRate = totalSignals === 0 ? 0 : Math.round((coreStats.totalWins / totalSignals) * 100);
+    const recentFaces = history.slice(-8).map(spin => FON_PRIMARY_FACE_MAP[spin.num] || 0).filter(Boolean);
+    const faceCounts = recentFaces.reduce((acc, face) => {
+        acc[face] = (acc[face] || 0) + 1;
+        return acc;
+    }, {});
+    const dominantFaceEntry = Object.entries(faceCounts).sort((a, b) => b[1] - a[1])[0] || null;
+    const dominantFace = dominantFaceEntry ? Number(dominantFaceEntry[0]) : null;
+    const dominantHits = dominantFaceEntry ? dominantFaceEntry[1] : 0;
+    const topGapEntry = Object.entries(faceGaps).sort((a, b) => b[1] - a[1])[0] || ['0', 0];
+    const topGapFace = Number(topGapEntry[0]) || null;
+    const topGapValue = Number(topGapEntry[1]) || 0;
+    const neuralConfidence = currentNeuralSignal && Number.isFinite(currentNeuralSignal.confidence)
+        ? currentNeuralSignal.confidence
+        : 0;
+    const trendBonus = dominantHits >= 4 ? 16 : dominantHits >= 3 ? 8 : 0;
+    const gapBonus = topGapValue >= 8 ? 10 : topGapValue >= 6 ? 5 : 0;
+    const pnlPenalty = coreStats.netUnits < 0 ? Math.min(18, Math.abs(coreStats.netUnits) * 3) : 0;
+    const chaosPenalty = recentFaces.length >= 6 && new Set(recentFaces).size >= 5 ? 14 : 0;
+    const predictabilityScore = Math.max(8, Math.min(96, Math.round(hitRate * 0.45 + neuralConfidence * 0.35 + trendBonus + gapBonus - pnlPenalty - chaosPenalty)));
+
+    let verdict = 'Feed more spins to the local brain before acting.';
+    let pivot = '';
+
+    if (history.length < 8) {
+        verdict = 'Sample too thin. Let the wheel print a cleaner rhythm before trusting any push.';
+    } else if (currentNeuralSignal && currentNeuralSignal.status === 'SIT_OUT') {
+        verdict = currentNeuralSignal.reason || 'Noise detected. Local brain says stand down and wait for a cleaner edge.';
+        pivot = 'Pivot: sit out until the table stops chopping.';
+    } else if (coreStats.netUnits <= -4) {
+        verdict = 'The session is bleeding. Tighten exposure and only touch a signal if math and rhythm agree.';
+        pivot = 'Pivot: reduce aggression and wait for confirmation.';
+    } else if (dominantFace && dominantHits >= 4) {
+        verdict = `F${dominantFace} is repeating inside the last 8 hits. The table is leaning instead of spraying.`;
+        pivot = `Pivot: watch F${dominantFace} for continuation or first clean snapback.`;
+    } else if (topGapFace && topGapValue >= 8) {
+        verdict = `F${topGapFace} is stretched to a ${topGapValue}-spin gap. That is the cleanest tension point on the board.`;
+        pivot = `Pivot: monitor F${topGapFace} for a controlled re-entry setup.`;
+    } else {
+        verdict = 'The wheel is mixed. Use the math engine first and demand a strong reason before you press.';
+        pivot = 'Pivot: let structure form before increasing risk.';
+    }
+
+    if (currentNeuralSignal && currentNeuralSignal.status === 'GO' && currentNeuralSignal.targetFace) {
+        pivot = `Pivot: AI leans F${currentNeuralSignal.targetFace} at ${currentNeuralSignal.confidence || 0}% confidence.`;
+    }
+
+    return {
+        predictabilityScore,
+        verdict,
+        profitPivot: pivot
+    };
+}
+
+function renderStrategicBrainSummary() {
+    const verdictEl = document.getElementById('aiBrainVerdict');
+    const scoreEl = document.getElementById('aiBrainScore');
+    const pivotEl = document.getElementById('aiBrainPivot');
+    if (!verdictEl || !scoreEl || !pivotEl) return;
+
+    const summary = buildStrategicBrainSummary();
+    verdictEl.innerText = summary.verdict;
+    scoreEl.innerText = `${summary.predictabilityScore}%`;
+    scoreEl.classList.remove('opacity-0');
+
+    if (summary.profitPivot) {
+        pivotEl.innerText = summary.profitPivot;
+        pivotEl.classList.remove('hidden');
+    } else {
+        pivotEl.classList.add('hidden');
+    }
+}
+
 async function triggerAiAudit() {
     const btn = event.currentTarget;
     const originalText = btn.innerText;
@@ -472,7 +639,7 @@ function saveSessionData() {
         const mergedAiState = {
             aiEnabled: aiState.aiEnabled !== undefined ? aiState.aiEnabled : aiEnabled,
             aiProvider: aiState.aiProvider || aiProvider,
-            aiApiKey: aiState.aiApiKey !== undefined ? aiState.aiApiKey : aiApiKey,
+            aiApiKey: '',
             neuralPredictionEnabled: aiState.neuralPredictionEnabled !== undefined
                 ? aiState.neuralPredictionEnabled
                 : neuralPredictionEnabled,
@@ -495,7 +662,7 @@ function saveSessionData() {
             hudHistoryScope,
             aiEnabled: mergedAiState.aiEnabled,
             aiProvider: mergedAiState.aiProvider,
-            aiApiKey: mergedAiState.aiApiKey,
+            aiApiKey: '',
             advancementLog,
             neuralPredictionEnabled: mergedAiState.neuralPredictionEnabled,
             aiSignalLedger: mergedAiState.aiSignalLedger,
@@ -562,7 +729,7 @@ function loadSessionData() {
         if (data.globalSpinIdCounter !== undefined) globalSpinIdCounter = data.globalSpinIdCounter;
         if (data.aiEnabled !== undefined) aiEnabled = data.aiEnabled === true;
         if (typeof data.aiProvider === 'string' && data.aiProvider) aiProvider = data.aiProvider;
-        if (typeof data.aiApiKey === 'string') aiApiKey = data.aiApiKey;
+        aiApiKey = '';
         if (data.neuralPredictionEnabled !== undefined) neuralPredictionEnabled = data.neuralPredictionEnabled === true;
         if (Array.isArray(data.aiSignalLedger)) aiSignalLedger = data.aiSignalLedger;
         if (data.aiRuntimeState && typeof data.aiRuntimeState === 'object') {
@@ -573,10 +740,12 @@ function loadSessionData() {
                 aiEnabled,
                 aiProvider,
                 aiApiKey,
+                aiConnected: false,
                 neuralPredictionEnabled
             });
             // You might need to hydrate the ledger or runtime state if AiBrain needs it
         }
+        void refreshAiRelayStatus({ silent: true, updateUi: true });
         updateAiUiState();
         updateNeuralPredictionUi();
         return true;
@@ -823,7 +992,7 @@ window.onload = async () => {
     updateAnalyticsHUD();
     applyAnalyticsTabUI();
     renderDashboardSafe(window.currentAlerts || []);
-    if (neuralPredictionEnabled && aiEnabled && aiApiKey) {
+    if (neuralPredictionEnabled && aiEnabled && hasSecureAiConnection()) {
         void requestNeuralPrediction();
     }
 
@@ -902,6 +1071,7 @@ function openAiConfigModal() {
 
     aiApiKeyVisible = false;
     updateAiUiState();
+    void refreshAiRelayStatus({ silent: true, updateUi: true });
 
     const modal = document.getElementById('aiConfigModal');
     if (modal && modal.classList.contains('hidden')) {
@@ -1623,8 +1793,11 @@ async function refreshPredictionEngineUI(options = {}) {
         await syncPredictionEngine({ skipStoreSync: true });
     }
 
-    if (neuralPredictionEnabled && aiEnabled && aiApiKey && options.skipNeural !== true) {
-        await requestNeuralPrediction({ renderDashboardNow: false, force: true });
+    if (neuralPredictionEnabled && aiEnabled && hasSecureAiConnection() && options.skipNeural !== true) {
+        await requestNeuralPrediction({
+            renderDashboardNow: false,
+            force: options.forceNeural === true
+        });
     }
 
     if (options.skipHistoryRender === true) {
@@ -2337,12 +2510,6 @@ function calculatePerimeterStats(history, windowSize = 14) {
  * Bridges to the isolated AiBrain module.
  */
 
-async function requestAiText(promptText, options = {}) {
-    if (!window.AiBrain) return "";
-    // Bridge to AiBrain's text request if needed, but app.js shouldn't really call this anymore
-    return ""; 
-}
-
 function updateAiFusionSnapshot() {
     if (!window.AiBrain) return;
     window.AiBrain.updateAiFusionSnapshot();
@@ -2389,8 +2556,8 @@ function salvageAiTakeoverPayload(rawText) {
 }
 
 async function requestAiText(promptText, options = {}) {
-    if (!aiApiKey) {
-        throw new Error('AI key is not configured.');
+    if (!hasSecureAiConnection()) {
+        throw new Error('Secure AI relay is not connected. Start it and verify your key first.');
     }
 
     const temperature = typeof options.temperature === 'number' ? options.temperature : 0.2;
@@ -2408,62 +2575,13 @@ async function requestAiText(promptText, options = {}) {
     });
 
     try {
-        let responseText = '';
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s safety timeout
-
-        if (aiProvider === 'gemini') {
-            const generationConfig = {
-                temperature,
-                topP: 0.8,
-                maxOutputTokens
-            };
-            if (responseMimeType) generationConfig.responseMimeType = responseMimeType;
-            if (responseSchema) generationConfig.responseSchema = responseSchema;
-
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-goog-api-key': aiApiKey
-                },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: promptText }] }],
-                    generationConfig
-                }),
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-            const data = await res.json();
-            if (!res.ok || data.error) throw new Error((data.error && data.error.message) || `Gemini request failed (${res.status})`);
-            responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        } else if (aiProvider === 'openai') {
-            const res = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${aiApiKey}`
-                },
-                body: JSON.stringify({
-                    model: 'gpt-4o-mini',
-                    temperature,
-                    max_tokens: maxOutputTokens,
-                    messages: [{ role: 'user', content: promptText }],
-                    ...(responseMimeType === 'application/json'
-                        ? { response_format: { type: 'json_object' } }
-                        : {})
-                }),
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-            const data = await res.json();
-            if (!res.ok || data.error) throw new Error((data.error && data.error.message) || `OpenAI request failed (${res.status})`);
-            responseText = data?.choices?.[0]?.message?.content || '';
-        } else {
-            clearTimeout(timeoutId);
-            throw new Error("Provider not fully implemented yet.");
-        }
+        const responseText = await requestAiViaRelay(promptText, {
+            temperature,
+            maxOutputTokens,
+            requestMode,
+            responseMimeType,
+            responseSchema
+        });
 
         stampAiRuntimeState({
             status: 'CONNECTED',
@@ -2627,7 +2745,7 @@ function updateNeuralPredictionUi() {
         if (ai.neuralPredictionEnabled) {
             takeoverStatus.innerText = 'AI LIVE';
             takeoverStatus.className = 'text-[9px] font-black bg-[#bf5af2]/20 px-2.5 py-1 rounded-md text-[#bf5af2] shadow-inner';
-        } else if (ai.aiEnabled && ai.aiApiKey) {
+        } else if (ai.aiEnabled && ai.aiConnected) {
             takeoverStatus.innerText = 'MATH';
             takeoverStatus.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/70 shadow-inner';
         } else {
@@ -2649,7 +2767,7 @@ function updateNeuralPredictionUi() {
 }
 
 function toggleNeuralPrediction() {
-    if (!aiEnabled || !aiApiKey) {
+    if (!aiEnabled || !hasSecureAiConnection()) {
         alert("Enable AI and connect an API key first.");
         return;
     }
@@ -2888,6 +3006,7 @@ async function processSpinValue(val, options = {}) {
             : spinObj;
         window.AppStore.dispatch('history/append', safeSpin);
     }
+    await refreshAiRelayStatus({ silent: true, updateUi: true });
     settleAiSignalLedger();
     refreshAdvancementStates();
 
@@ -3972,7 +4091,7 @@ function resetData(skipConfirm = false) {
 }
 
 function updateAiUiState() {
-    const apiConnected = !!aiApiKey;
+    const apiConnected = hasSecureAiConnection();
     const switchBtn = document.getElementById('aiMasterSwitch');
     const switchKnob = document.getElementById('aiSwitchKnob');
     const vaultSection = document.getElementById('aiVaultSection');
@@ -3999,7 +4118,10 @@ function updateAiUiState() {
     }
 
     if (badge) {
-        if (aiApiKey) {
+        if (!aiRelayAvailable) {
+            badge.innerText = 'RELAY OFFLINE';
+            badge.className = 'text-[9px] font-black bg-[#ff453a]/15 px-2.5 py-1 rounded-md text-[#ff453a] shadow-inner';
+        } else if (apiConnected) {
             badge.innerText = 'CONNECTED';
             badge.className = 'text-[9px] font-black bg-[#30D158]/20 px-2.5 py-1 rounded-md text-[#30D158] shadow-inner';
         } else {
@@ -4009,20 +4131,22 @@ function updateAiUiState() {
     }
 
     if (connectionText) {
-        if (aiApiKey) {
+        if (!aiRelayAvailable) {
+            connectionText.innerText = 'Secure relay offline. Start it with "npm run ai:relay", then verify your key.';
+        } else if (apiConnected) {
             const providerLabel = aiProvider === 'openai' ? 'OpenAI' : 'Gemini';
-            connectionText.innerText = `${providerLabel} key verified and ready for use.`;
+            connectionText.innerText = `${providerLabel} key is stored in the local secure relay and ready for use.`;
         } else if (aiEnabled) {
-            connectionText.innerText = 'AI Master is on. Paste your API key and click Verify & Save.';
+            connectionText.innerText = 'AI Master is on. Paste your API key and click Verify & Save to store it in the local secure relay.';
         } else {
-            connectionText.innerText = 'Turn on AI Master, add your API key, then verify the connection.';
+            connectionText.innerText = 'Turn on AI Master, add your API key, then verify the connection through the local secure relay.';
         }
     }
 
     const providerSelect = document.getElementById('aiProviderSelect');
     const keyInput = document.getElementById('aiApiKeyInput');
     if (providerSelect) providerSelect.value = aiProvider;
-    if (keyInput) keyInput.value = aiApiKey;
+    if (keyInput && hasSecureAiConnection()) keyInput.value = '';
     updateAiApiKeyVisibilityUi();
 
     const aiContainer = document.getElementById('aiAnalysisContainer');
@@ -4047,18 +4171,20 @@ function updateAiUiState() {
             headerAiBtn.classList.add('ai-connected', 'is-active');
             headerAiBtn.title = aiEnabled
                 ? 'AI chat is connected and ready.'
-                : 'API connected. Turn on AI Master to start chat.';
+                : 'Relay is connected. Turn on AI Master to start chat.';
         } else {
             headerAiBtn.classList.add('ai-offline', 'is-active');
-            headerAiBtn.title = 'API offline. Open AI Settings to connect chat.';
+            headerAiBtn.title = aiRelayAvailable
+                ? 'Relay is online but no verified AI key is connected.'
+                : 'Secure relay offline. Start npm run ai:relay.';
         }
     }
     if (headerAiBtnStatusDot) {
         headerAiBtnStatusDot.classList.add('ai-chat-status-dot');
-        headerAiBtnStatusDot.classList.toggle('animate-pulse', !apiConnected);
+        headerAiBtnStatusDot.classList.toggle('ai-pulse', !apiConnected);
     }
 
-    if ((!aiEnabled || !aiApiKey) && neuralPredictionEnabled) {
+    if ((!aiEnabled || !hasSecureAiConnection()) && neuralPredictionEnabled) {
         neuralPredictionEnabled = false;
         currentNeuralSignal = null;
         neuralPredictionRequestId++;
@@ -4128,30 +4254,19 @@ async function saveAiConfig() {
     btn.classList.add('opacity-70');
 
     try {
-        if (testProvider === 'gemini') {
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}`, {
-                method: 'GET',
-                headers: {
-                    'x-goog-api-key': testKey
-                }
-            });
-            const data = await res.json();
-            if (!res.ok || data.error) throw new Error((data.error && data.error.message) || `Gemini request failed (${res.status})`);
-        } else if (testProvider === 'openai') {
-            const res = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${testKey}`
-                },
-                body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: 'ping' }] })
-            });
-            const data = await res.json();
-            if (!res.ok || data.error) throw new Error((data.error && data.error.message) || `OpenAI request failed (${res.status})`);
-        }
+        await relayFetch('/connect', {
+            method: 'POST',
+            body: {
+                provider: testProvider,
+                apiKey: testKey
+            }
+        });
 
         aiProvider = testProvider;
-        aiApiKey = testKey;
+        aiApiKey = AI_RELAY_SENTINEL;
+        aiApiKeyVisible = false;
+        aiRelayAvailable = true;
+        keyInput.value = '';
         stampAiRuntimeState({
             status: 'CONNECTED',
             provider: testProvider,
@@ -4184,10 +4299,18 @@ async function saveAiConfig() {
     }
 }
 
-function clearAiConfig() {
+async function clearAiConfig() {
     const wasNeuralEnabled = neuralPredictionEnabled;
+    try {
+        if (aiRelayAvailable || hasSecureAiConnection()) {
+            await relayFetch('/disconnect', { method: 'POST' });
+        }
+    } catch (error) {
+        console.warn('AI relay disconnect failed:', error);
+    }
     aiApiKey = '';
     aiApiKeyVisible = false;
+    aiRelayAvailable = false;
     chatMessageHistory = [];
     neuralPredictionEnabled = false;
     currentNeuralSignal = null;
@@ -4215,7 +4338,7 @@ function clearAiConfig() {
         void refreshPredictionEngineUI();
     }
     saveSessionData();
-    alert('API Key removed from browser storage.');
+    alert('AI key disconnected from the local secure relay.');
 }
 
 function escapeAiMarkup(value) {
@@ -4281,7 +4404,7 @@ Provide a strict, 3-sentence tactical breakdown of the table.
 }
 
 async function runAiAnalysis() {
-    if (!aiEnabled || !aiApiKey) {
+    if (!aiEnabled || !hasSecureAiConnection()) {
         openAiConfigModal();
         return;
     }
@@ -4315,7 +4438,7 @@ async function runAiAnalysis() {
 }
 
 function openAiChat() {
-    if (!aiEnabled || !aiApiKey) {
+    if (!aiEnabled || !hasSecureAiConnection()) {
         openAiConfigModal();
         return;
     }

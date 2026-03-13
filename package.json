@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "INSIDE tool stability checks and architecture guardrails",
   "scripts": {
+    "ai:relay": "node server.js",
     "test": "node tests/run-tests.js",
     "test:replay": "node tests/run-tests.js replay",
     "test:smoke": "node tests/run-tests.js ui-smoke",

@@ -24,6 +24,7 @@
     let aiEnabled = false;
     let aiProvider = 'gemini';
     let aiApiKey = '';
+    let aiConnected = false;
     let neuralPredictionEnabled = false;
     let currentNeuralSignal = null;
     let neuralPredictionRequestId = 0;
@@ -52,7 +53,7 @@
         // State Accessors
         config: () => ({ ...CONFIG }),
         getState: () => ({
-            aiEnabled, aiProvider, aiApiKey, neuralPredictionEnabled,
+            aiEnabled, aiProvider, aiApiKey, aiConnected, neuralPredictionEnabled,
             currentNeuralSignal, aiSignalLedger, lastAiFusionSnapshot, runtimeState
         }),
         
@@ -61,6 +62,7 @@
             if (settings.aiEnabled !== undefined) aiEnabled = settings.aiEnabled;
             if (settings.aiProvider !== undefined) aiProvider = settings.aiProvider;
             if (settings.aiApiKey !== undefined) aiApiKey = settings.aiApiKey;
+            if (settings.aiConnected !== undefined) aiConnected = settings.aiConnected === true;
             if (settings.neuralPredictionEnabled !== undefined) neuralPredictionEnabled = settings.neuralPredictionEnabled;
         },
 
@@ -81,7 +83,7 @@
      * The live 'per-spin' logic.
      */
     async function requestNeuralPrediction(context, options = {}) {
-        if (!neuralPredictionEnabled || !aiEnabled || !aiApiKey) return null;
+        if (!neuralPredictionEnabled || !aiEnabled || !aiConnected) return null;
         if (!context || !Array.isArray(context.history) || context.history.length < CONFIG.MIN_NEURAL_SPINS) return null;
         
         const { force = false } = options;
@@ -137,7 +139,7 @@
      * The heavy session hindsight logic.
      */
     async function requestTacticalAudit(context) {
-        if (!aiEnabled || !aiApiKey) return { error: "AI Key missing" };
+        if (!aiEnabled || !aiConnected) return { error: "AI relay not connected" };
         
         const auditData = compileAuditData(context);
         const prompt = `ROLE: You are the 'TACTICAL BRAIN' auditor... (Full Brain Logic)
@@ -188,47 +190,17 @@ TASK: Validate if math is walking into a trap. Return JSON.`;
         updateRuntime({ status: 'WORKING', lastRequestMode: options.requestMode });
 
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 12000);
+            if (!window.AiRelayClient || typeof window.AiRelayClient.requestText !== 'function') {
+                throw new Error('AI relay client is unavailable.');
+            }
 
-            const body = aiProvider === 'gemini' 
-                ? {
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: {
-                        temperature: options.temperature,
-                        maxOutputTokens: options.maxOutputTokens,
-                        ...(options.responseMimeType ? { responseMimeType: options.responseMimeType } : {}),
-                        ...(options.responseSchema ? { responseSchema: options.responseSchema } : {})
-                    }
-                }
-                : {
-                    model: 'gpt-4o-mini',
-                    messages: [{ role: 'user', content: prompt }],
-                    temperature: options.temperature,
-                    max_tokens: options.maxOutputTokens,
-                    ...(options.responseMimeType === 'application/json'
-                        ? { response_format: { type: 'json_object' } }
-                        : {})
-                };
-
-            const url = aiProvider === 'gemini'
-                ? `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.GEMINI_MODEL}:generateContent?key=${aiApiKey}`
-                : `https://api.openai.com/v1/chat/completions`;
-
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...(aiProvider === 'openai' ? { 'Authorization': `Bearer ${aiApiKey}` } : {}) },
-                body: JSON.stringify(body),
-                signal: controller.signal
+            const text = await window.AiRelayClient.requestText(prompt, {
+                temperature: options.temperature,
+                maxOutputTokens: options.maxOutputTokens,
+                requestMode: options.requestMode,
+                responseMimeType: options.responseMimeType,
+                responseSchema: options.responseSchema
             });
-
-            clearTimeout(timeoutId);
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error?.message || 'API Error');
-
-            const text = aiProvider === 'gemini' 
-                ? data.candidates?.[0]?.content?.parts?.[0]?.text 
-                : data.choices?.[0]?.message?.content;
 
             updateRuntime({ status: 'CONNECTED', lastLatencyMs: Date.now() - startedAt });
             return text || '';
