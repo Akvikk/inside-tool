@@ -240,7 +240,7 @@
     <div id="betsModal"
         class="fixed inset-0 bg-black/60 backdrop-blur-md hidden z-50 flex items-center justify-center p-4"
         onclick="toggleModal('betsModal')">
-        <div class="glass-menu w-full max-w-3xl h-[80vh] flex flex-col overflow-hidden"
+        <div class="glass-menu modal-surface w-full max-w-3xl h-[80vh] flex flex-col overflow-hidden"
             onclick="event.stopPropagation()">
             <div class="p-4 glass-header flex justify-between items-center">
                 <h2 class="font-bold text-sm tracking-wide uppercase text-white">Bet History</h2>
@@ -286,7 +286,7 @@
     <div id="analyticsModal"
         class="fixed inset-0 bg-black/60 backdrop-blur-md hidden z-50 flex items-center justify-center p-4"
         onclick="toggleModal('analyticsModal')">
-        <div class="glass-menu w-full max-w-3xl h-[85vh] flex flex-col overflow-hidden"
+        <div class="glass-menu modal-surface w-full max-w-3xl h-[85vh] flex flex-col overflow-hidden"
             onclick="event.stopPropagation()">
             <div class="border-b border-white/5 bg-black/20">
                 <div class="px-6 py-3 border-b border-white/5 flex justify-center items-center gap-3">
@@ -420,7 +420,7 @@
     <div id="patternDetailModal"
         class="fixed inset-0 z-[60] bg-black/60 backdrop-blur-md hidden flex items-center justify-center p-4"
         onclick="toggleModal('patternDetailModal')">
-        <div class="glass-menu w-full max-w-xl flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+        <div class="glass-menu modal-surface w-full max-w-xl flex flex-col overflow-hidden" onclick="event.stopPropagation()">
             <div id="patternDetailBody"></div>
         </div>
     </div>
@@ -428,7 +428,7 @@
     <div id="aiConfigModal"
         class="fixed inset-0 z-[80] bg-black/60 backdrop-blur-md hidden flex items-center justify-center p-4"
         onclick="toggleModal('aiConfigModal')">
-        <div class="glass-menu w-full max-w-md p-6" onclick="event.stopPropagation()">
+        <div class="glass-menu modal-surface w-full max-w-md p-6" onclick="event.stopPropagation()">
             <h2 class="text-white font-bold mb-4">AI Configuration</h2>
             <input type="password" id="aiApiKeyInput"
                 class="w-full bg-black/50 border border-white/10 rounded-lg text-white p-3 mb-4" placeholder="API Key">
@@ -453,7 +453,7 @@
 
     <div id="confirmModal"
         class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md hidden flex items-center justify-center p-4">
-        <div class="glass-menu p-6 text-center max-w-sm">
+        <div class="glass-menu modal-surface p-6 text-center max-w-sm">
             <h3 class="text-white font-bold text-lg mb-4">Reset Session?</h3>
             <div class="flex gap-3">
                 <button onclick="toggleModal('confirmModal')"

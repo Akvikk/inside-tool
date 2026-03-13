@@ -293,6 +293,17 @@ body::after {
     transform: scale(0.96);
 }
 
+.top-nav-btn.is-active {
+    border-color: rgba(var(--accent-rgb), 0.56);
+    background:
+        linear-gradient(180deg, rgba(var(--accent-rgb), 0.24), rgba(var(--accent-rgb), 0.11) 60%, rgba(8, 8, 12, 0.78)),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.14), transparent 45%);
+    box-shadow:
+        0 14px 30px rgba(0, 0, 0, 0.56),
+        0 0 24px rgba(var(--accent-rgb), 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
 #headerAiBtn {
     --accent-rgb: 191, 90, 242;
 }
@@ -861,6 +872,38 @@ button.bg-gradient-to-b:active {
     -webkit-backdrop-filter: blur(16px) saturate(140%);
 }
 
+@keyframes modalBackdropIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes modalLiftIn {
+    from {
+        opacity: 0;
+        transform: translateY(24px) scale(0.965) rotateX(7deg);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.32);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1) rotateX(0deg);
+        box-shadow: 0 42px 120px rgba(0, 0, 0, 0.8);
+    }
+}
+
+@keyframes modalDrift {
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-6px);
+    }
+}
+
 .glass-menu {
     position: relative;
     isolation: isolate;
@@ -914,6 +957,58 @@ button.bg-gradient-to-b:active {
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.1),
         0 10px 26px rgba(0, 0, 0, 0.5);
+}
+
+.modal-surface {
+    transform-origin: 50% 14%;
+    transform-style: preserve-3d;
+    border-color: rgba(255, 255, 255, 0.16);
+    box-shadow:
+        0 42px 120px rgba(0, 0, 0, 0.8),
+        0 18px 50px rgba(0, 0, 0, 0.42),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.modal-surface::before {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 34%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 52%);
+    opacity: 0.5;
+}
+
+.modal-surface::after {
+    top: auto;
+    bottom: -70px;
+    left: 50%;
+    right: auto;
+    width: 76%;
+    height: 120px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background:
+        radial-gradient(circle, rgba(255, 255, 255, 0.09), transparent 52%),
+        radial-gradient(circle, rgba(48, 209, 88, 0.12), transparent 72%);
+    filter: blur(10px);
+    opacity: 0.9;
+}
+
+#betsModal:not(.hidden),
+#analyticsModal:not(.hidden),
+#patternDetailModal:not(.hidden),
+#aiConfigModal:not(.hidden),
+#confirmModal:not(.hidden) {
+    animation: modalBackdropIn 0.2s ease-out;
+}
+
+#betsModal:not(.hidden) .modal-surface,
+#analyticsModal:not(.hidden) .modal-surface,
+#patternDetailModal:not(.hidden) .modal-surface,
+#aiConfigModal:not(.hidden) .modal-surface,
+#confirmModal:not(.hidden) .modal-surface {
+    animation:
+        modalLiftIn 0.28s cubic-bezier(0.18, 0.88, 0.24, 1) both,
+        modalDrift 6.8s ease-in-out 0.32s infinite;
 }
 
 /* Modal Headers */
@@ -1044,6 +1139,11 @@ input[type=number] {
         inset 0 1px 0 rgba(255, 255, 255, 0.17),
         inset 0 -1px 0 rgba(255, 255, 255, 0.05);
     transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease;
+}
+
+#analyticsHUD::before,
+#analyticsHUD::after {
+    display: none;
 }
 
 #analyticsHUD.hud-interacting {

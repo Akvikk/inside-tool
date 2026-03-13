@@ -834,6 +834,12 @@ function initAnalyticsHUD() {
         if (e.cancelable) e.preventDefault();
         e.stopPropagation();
 
+        // Convert from right-anchored initial position to left-anchored dragging.
+        if (!hud.style.left || hud.style.left === 'auto') {
+            hud.style.left = `${hud.offsetLeft}px`;
+        }
+        hud.style.right = 'auto';
+
         interaction = {
             type,
             pointerId: e.pointerId,
@@ -905,18 +911,19 @@ function initAnalyticsHUD() {
 function toggleAnalyticsHUD() {
     const hud = document.getElementById('analyticsHUD');
     const btn = document.getElementById('hudToggleBtn');
+    if (!hud || !btn) return;
 
     if (hud.classList.contains('hidden')) {
         hud.classList.remove('hidden');
         hud.classList.add('flex');
-        btn.classList.add('bg-white/10');
+        btn.classList.add('bg-white/10', 'is-active');
         initAnalyticsHUD();  // ensure drag/resize is wired up
         updateAnalyticsHUD();
         fitAnalyticsHUD();
     } else {
         hud.classList.add('hidden');
         hud.classList.remove('flex');
-        btn.classList.remove('bg-white/10');
+        btn.classList.remove('bg-white/10', 'is-active');
     }
 }
 
