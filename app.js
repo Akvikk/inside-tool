@@ -893,6 +893,27 @@ function toggleHamburgerMenu() {
     }
 }
 
+function openAiConfigModal() {
+    const menu = document.getElementById('hamburgerMenu');
+    const backdrop = document.getElementById('hamburgerBackdrop');
+    if (menu) menu.classList.add('hidden');
+    if (backdrop) backdrop.classList.add('hidden');
+
+    updateAiUiState();
+
+    const modal = document.getElementById('aiConfigModal');
+    if (modal && modal.classList.contains('hidden')) {
+        toggleModal('aiConfigModal');
+    }
+
+    setTimeout(() => {
+        const focusTarget = aiEnabled
+            ? document.getElementById('aiApiKeyInput')
+            : document.getElementById('aiMasterSwitch');
+        if (focusTarget) focusTarget.focus();
+    }, 100);
+}
+
 function toggleAccordion(id) {
     const content = document.getElementById(id);
     const icon = document.getElementById(id + 'Icon');
@@ -3991,11 +4012,11 @@ function updateAiUiState() {
             headerAiBtn.classList.add('bg-[#bf5af2]/20', 'border-[#bf5af2]/50', 'shadow-[0_0_18px_rgba(191,90,242,0.35)]');
             headerAiBtn.title = aiEnabled
                 ? 'AI chat is connected and ready.'
-                : 'API connected. Enable AI in the menu to start chat.';
+                : 'API connected. Enable AI in AI Settings to start chat.';
         } else {
             headerAiBtn.classList.add('bg-[#bf5af2]/10', 'border-[#bf5af2]/30', 'shadow-[0_0_10px_rgba(191,90,242,0.15)]');
             headerAiBtn.classList.remove('bg-[#bf5af2]/20', 'border-[#bf5af2]/50', 'shadow-[0_0_18px_rgba(191,90,242,0.35)]');
-            headerAiBtn.title = 'Configure your AI key in the menu to activate chat.';
+            headerAiBtn.title = 'Open AI Settings to connect chat.';
         }
     }
 
@@ -4100,7 +4121,7 @@ async function saveAiConfig() {
             toggleModal('aiConfigModal');
         }, 1200);
     } catch (error) {
-        console.error("Gemini Connection Error:", error);
+        console.error("AI Connection Error:", error);
         btn.innerHTML = `<i class="fas fa-times-circle mr-2"></i> ${error.message.toUpperCase()}`;
         btn.className = 'flex-[2] py-2.5 rounded-lg font-bold text-[10px] uppercase tracking-wider text-[#ff1a33] border border-[#ff1a33]/50 bg-[#ff1a33]/10';
 
@@ -4208,7 +4229,7 @@ Provide a strict, 3-sentence tactical breakdown of the table.
 
 async function runAiAnalysis() {
     if (!aiEnabled || !aiApiKey) {
-        alert("Please configure your AI API key in the Hamburger Menu first.");
+        openAiConfigModal();
         return;
     }
 
@@ -4242,7 +4263,7 @@ async function runAiAnalysis() {
 
 function openAiChat() {
     if (!aiEnabled || !aiApiKey) {
-        alert("Please enable AI and configure your API key in the Hamburger Menu first.");
+        openAiConfigModal();
         return;
     }
 
