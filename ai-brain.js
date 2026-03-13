@@ -15,7 +15,9 @@
     const CONFIG = {
         GEMINI_MODEL: 'gemini-2.5-flash',
         TAKEOVER_PATTERN_NAME: 'AI Takeover',
-        RECENT_WINDOW: 80,
+        RECENT_WINDOW: 36,
+        AUDIT_WINDOW: 12,
+        MIN_NEURAL_SPINS: 12,
         LEDGER_LIMIT: 40
     };
 
@@ -80,6 +82,7 @@
      */
     async function requestNeuralPrediction(context, options = {}) {
         if (!neuralPredictionEnabled || !aiEnabled || !aiApiKey) return null;
+        if (!context || !Array.isArray(context.history) || context.history.length < CONFIG.MIN_NEURAL_SPINS) return null;
         
         const { force = false } = options;
         const cacheKey = `${context.history.length}_${context.strategy}_${context.netUnits}`;
@@ -145,7 +148,7 @@ TASK: Provide a cold, profitable critique and 3 tactical adjustments. Return JSO
             const responseText = await requestAiText(prompt, {
                 requestMode: 'tactical-audit',
                 temperature: 0.3,
-                maxOutputTokens: 500,
+                maxOutputTokens: 240,
                 responseMimeType: 'application/json'
             });
             return extractJson(responseText);
@@ -189,8 +192,24 @@ TASK: Validate if math is walking into a trap. Return JSON.`;
             const timeoutId = setTimeout(() => controller.abort(), 12000);
 
             const body = aiProvider === 'gemini' 
-                ? { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: options.temperature, maxOutputTokens: options.maxOutputTokens } }
-                : { model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], temperature: options.temperature };
+                ? {
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        temperature: options.temperature,
+                        maxOutputTokens: options.maxOutputTokens,
+                        ...(options.responseMimeType ? { responseMimeType: options.responseMimeType } : {}),
+                        ...(options.responseSchema ? { responseSchema: options.responseSchema } : {})
+                    }
+                }
+                : {
+                    model: 'gpt-4o-mini',
+                    messages: [{ role: 'user', content: prompt }],
+                    temperature: options.temperature,
+                    max_tokens: options.maxOutputTokens,
+                    ...(options.responseMimeType === 'application/json'
+                        ? { response_format: { type: 'json_object' } }
+                        : {})
+                };
 
             const url = aiProvider === 'gemini'
                 ? `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.GEMINI_MODEL}:generateContent?key=${aiApiKey}`
@@ -274,8 +293,8 @@ TASK: Validate if math is walking into a trap. Return JSON.`;
 
     function compileAuditData(ctx) {
         return {
-            history: ctx.history.slice(-20).map(s => s.num),
-            ledger: aiSignalLedger.slice(0, 5),
+            history: ctx.history.slice(-CONFIG.AUDIT_WINDOW).map(s => s.num),
+            ledger: aiSignalLedger.slice(0, 3),
             net: ctx.netUnits
         };
     }

@@ -3950,39 +3950,49 @@ function resetData(skipConfirm = false) {
 }
 
 function updateAiUiState() {
-    if (window.AiBrain && typeof window.AiBrain.getState === 'function') {
-        const state = window.AiBrain.getState();
-        aiEnabled = state.aiEnabled !== undefined ? state.aiEnabled : aiEnabled;
-        aiProvider = state.aiProvider || aiProvider;
-        aiApiKey = state.aiApiKey !== undefined ? state.aiApiKey : aiApiKey;
-        neuralPredictionEnabled = state.neuralPredictionEnabled !== undefined
-            ? state.neuralPredictionEnabled
-            : neuralPredictionEnabled;
-        currentNeuralSignal = state.currentNeuralSignal !== undefined ? state.currentNeuralSignal : currentNeuralSignal;
-    }
-
     const switchBtn = document.getElementById('aiMasterSwitch');
     const switchKnob = document.getElementById('aiSwitchKnob');
     const vaultSection = document.getElementById('aiVaultSection');
     const badge = document.getElementById('aiStatusBadge');
+    const masterStatusText = document.getElementById('aiMasterStatusText');
+    const connectionText = document.getElementById('aiConnectionText');
 
-    if (switchBtn && switchKnob && vaultSection && badge) {
+    if (switchBtn && switchKnob && vaultSection) {
         if (aiEnabled) {
             switchBtn.classList.replace('bg-white/10', 'bg-[#30D158]/20');
             switchBtn.classList.replace('border-white/20', 'border-[#30D158]/50');
             switchKnob.classList.replace('bg-gray-400', 'bg-[#30D158]');
             switchKnob.style.transform = 'translateX(24px)';
             vaultSection.classList.remove('hidden');
-            badge.innerText = 'ON';
-            badge.className = 'text-[9px] font-black bg-[#30D158]/20 px-2.5 py-1 rounded-md text-[#30D158] shadow-inner';
+            if (masterStatusText) masterStatusText.innerText = 'Enabled';
         } else {
             switchBtn.classList.replace('bg-[#30D158]/20', 'bg-white/10');
             switchBtn.classList.replace('border-[#30D158]/50', 'border-white/20');
             switchKnob.classList.replace('bg-[#30D158]', 'bg-gray-400');
             switchKnob.style.transform = 'translateX(0)';
             vaultSection.classList.add('hidden');
-            badge.innerText = 'OFF';
+            if (masterStatusText) masterStatusText.innerText = 'Disabled';
+        }
+    }
+
+    if (badge) {
+        if (aiApiKey) {
+            badge.innerText = 'CONNECTED';
+            badge.className = 'text-[9px] font-black bg-[#30D158]/20 px-2.5 py-1 rounded-md text-[#30D158] shadow-inner';
+        } else {
+            badge.innerText = 'NOT CONNECTED';
             badge.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner';
+        }
+    }
+
+    if (connectionText) {
+        if (aiApiKey) {
+            const providerLabel = aiProvider === 'openai' ? 'OpenAI' : 'Gemini';
+            connectionText.innerText = `${providerLabel} key verified and ready for use.`;
+        } else if (aiEnabled) {
+            connectionText.innerText = 'AI Master is on. Paste your API key and click Verify & Save.';
+        } else {
+            connectionText.innerText = 'Turn on AI Master, add your API key, then verify the connection.';
         }
     }
 
@@ -4050,11 +4060,24 @@ function toggleAiMasterSwitch() {
         aiPredictionInFlight = null;
         lastAiFusionSnapshot = null;
     }
+    syncAiBrainSettings();
     updateAiUiState();
     if (!aiEnabled && wasNeuralEnabled) {
         void refreshPredictionEngineUI();
     }
     saveSessionData();
+
+    if (aiEnabled) {
+        setTimeout(() => {
+            const providerSelect = document.getElementById('aiProviderSelect');
+            const keyInput = document.getElementById('aiApiKeyInput');
+            if (keyInput && !keyInput.value.trim()) {
+                keyInput.focus();
+            } else if (providerSelect) {
+                providerSelect.focus();
+            }
+        }, 100);
+    }
 }
 
 async function saveAiConfig() {
@@ -4106,6 +4129,7 @@ async function saveAiConfig() {
             provider: testProvider,
             lastError: ''
         });
+        syncAiBrainSettings();
         updateAiUiState();
         saveSessionData();
 
@@ -4118,7 +4142,6 @@ async function saveAiConfig() {
             btn.classList.remove('text-white', 'bg-[#30D158]', 'shadow-[0_0_20px_rgba(48,209,88,0.4)]');
             btn.classList.add('text-[#30D158]');
             btn.disabled = false;
-            toggleModal('aiConfigModal');
         }, 1200);
     } catch (error) {
         console.error("AI Connection Error:", error);
@@ -4156,6 +4179,7 @@ function clearAiConfig() {
     };
     const keyInput = document.getElementById('aiApiKeyInput');
     if (keyInput) keyInput.value = '';
+    syncAiBrainSettings();
     updateAiUiState();
     resetAiChatUi();
     if (wasNeuralEnabled) {
@@ -4200,7 +4224,7 @@ function resetAiChatUi() {
 }
 
 function generateAiPrompt() {
-    const recentSpins = history.slice(-60).map(s => s.num).join(', ');
+    const recentSpins = history.slice(-24).map(s => s.num).join(', ');
     const recentHits = history.slice(-10).map(s => `F${FON_PRIMARY_FACE_MAP[s.num] || '?'}`).join(' -> ') || 'None yet';
     const gaps = Object.entries(faceGaps).map(([face, gap]) => `F${face}:${gap}`).join(', ');
     const coreStats = window.EngineCore && window.EngineCore.stats
@@ -4218,7 +4242,7 @@ LIVE TELEMETRY:
 - Session Stats: ${stats} (Global Hit Rate: ${hitRate}%)
 - Current Wheel Gaps: ${gaps}
 - Last 10 hitting Rhythm: ${recentHits}
-- Last 60 spins (Oldest -> Newest): ${recentSpins}
+    - Last 24 spins (Oldest -> Newest): ${recentSpins}
 
 TASK:
 Provide a strict, 3-sentence tactical breakdown of the table. 
@@ -4250,7 +4274,7 @@ async function runAiAnalysis() {
         const responseText = await requestAiText(promptText, {
             requestMode: 'session-analysis',
             temperature: 0.22,
-            maxOutputTokens: 420
+            maxOutputTokens: 220
         });
         responseBox.innerHTML = `<span class="text-[#30D158] font-bold tracking-wide uppercase text-[10px] block mb-2">Neural Output:</span>${escapeAiMarkup(responseText)}`;
     } catch (error) {
@@ -4331,14 +4355,18 @@ STRICT DATA LIMIT:
 - Use ONLY Faces (F1-F5) and the 4 Perimeter Combos (5-2, 5-3, 1-3, 2-4).
 - TALK LIKE A TABLE BOSS. Short, punchy sentences.
 `;
-    const recentConversation = chatMessageHistory.slice(0, -1).slice(-6).map(entry => `${entry.role.toUpperCase()}: ${entry.content}`).join('\n');
+    const recentConversation = chatMessageHistory
+        .slice(0, -1)
+        .slice(-3)
+        .map(entry => `${entry.role.toUpperCase()}: ${String(entry.content || '').slice(0, 180)}`)
+        .join('\n');
     const fullPrompt = `${systemInstruction}\n\nRECENT CONVERSATION:\n${recentConversation}\n\nUSER INPUT: ${message}`;
 
     try {
         const responseText = await requestAiText(fullPrompt, {
             requestMode: 'chat-strategy',
             temperature: 0.1,
-            maxOutputTokens: 800
+            maxOutputTokens: 320
         });
         if (responseText.toUpperCase().includes("ADVANCEMENT:") || responseText.toUpperCase().includes("PIVOT:")) {
             const lines = responseText.split('\n');
