@@ -2470,31 +2470,24 @@ function handleGridClick(n) {
     void addSpin();
 }
 
-function enqueueSpin(spinValue, options = {}) {
-    const val = parseInt(spinValue, 10);
-    if (Number.isNaN(val) || val < 0 || val > 36) return Promise.resolve([]);
-
-    spinProcessingQueue = spinProcessingQueue
-        .catch(error => {
-            console.error('Spin processing failed', error);
-            return [];
-        })
-        .then(() => new Promise(resolve => {
-            setTimeout(() => {
-                processSpinValue(val, options).then(resolve);
-            }, 0);
-        }));
-
-    return spinProcessingQueue;
+function enqueueSpin(val) {
+    // Create a new promise that will resolve when *this specific spin* is done.
+    const spinCompletePromise = new Promise((resolve, reject) => {
+        spinProcessingQueue = spinProcessingQueue
+            .then(() => processSpinValue(val))
+            .then(resolve)  // Resolve the individual promise when processSpinValue completes
+            .catch(reject); // Reject the individual promise if processSpinValue fails
+    });
+    return spinCompletePromise;
 }
 
 async function addSpin() {
     const input = document.getElementById('spinInput');
     const addBtn = document.getElementById('addSpinBtn');
-    if (!input) return;
+    if (!input || input.disabled) return;
 
     const raw = input.value.trim();
-    if (raw === '') return; 
+    if (raw === '') return;
 
     const val = parseInt(raw, 10);
 
@@ -2506,23 +2499,25 @@ async function addSpin() {
         input.focus();
         return;
     }
-
+    
     input.disabled = true;
     if (addBtn) addBtn.disabled = true;
+    document.body.classList.add('processing');
     
     input.value = ''; 
     
     try {
         await enqueueSpin(val);
-    } catch (e) {
-        console.error("An error occurred during spin processing:", e);
+    } catch (error) {
+        console.error("Error processing spin:", error);
+        // Optionally, provide user feedback about the error
     } finally {
         input.disabled = false;
         if (addBtn) addBtn.disabled = false;
+        document.body.classList.remove('processing');
         input.focus();
     }
 }
-
 async function undoSpin() {
     if (history.length === 0) return;
     

@@ -573,4 +573,14 @@ const PredictionEngine = {
     }
 };
 
+// --- EXPORTS ---
+window.FACE_MASKS = FACE_MASKS;
+window.FACES = FACES;
+window.FON_MAP = FON_MAP;
+window.FON_MASK_MAP = FON_MASK_MAP;
+window.FON_PRIMARY_FACE_MAP = FON_PRIMARY_FACE_MAP;
+window.PERIMETER_COMBOS = PERIMETER_COMBOS;
+window.PERIMETER_COMBO_LOOKUP = PERIMETER_COMBO_LOOKUP;
+window.PredictionEngine = PredictionEngine;
+
 console.log('Prediction Engine Loaded');
