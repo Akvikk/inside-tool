@@ -102,19 +102,34 @@ function changePredictionStrategy(val) {
     
     if (changeStrategyTimeout) clearTimeout(changeStrategyTimeout);
     changeStrategyTimeout = setTimeout(() => {
+        void (async () => {
         // Rebuild patternConfig for the new strategy
         rebuildPatternConfig();
         renderFilterMenu();
-        updateVisibility();
+        const usedCache = applyCachedStrategySync(val);
+        if (!usedCache) {
+            await syncPredictionEngine({ skipStoreSync: true });
+        }
 
-        // Re-render the whole history table so bridges redraw for the new strategy
+        await yieldToMainThread();
+        renderDashboardSafe(window.currentAlerts || []);
         renderHistorySafe({ history });
-        requestAnimationFrame(layoutAllComboBridges);
         refreshHighlights();
 
-        void refreshPredictionEngineUI();
+        const analyticsModal = document.getElementById('analyticsModal');
+        if (analyticsModal && !analyticsModal.classList.contains('hidden')) {
+            renderAnalyticsSafe();
+        }
+
+        updatePerimeterAnalytics();
+        updateAnalyticsHUD();
+        renderIntelligencePanel();
+        syncAppStore();
         saveSessionData();
-    }, 200);
+        })().catch(error => {
+            console.error('Strategy change refresh failed:', error);
+        });
+    }, 80);
 }
 
 function syncAiBrainSettings() {
@@ -159,15 +174,10 @@ function registerUiRendererBridge() {
 
     window.UiRenderers.register({
         history: (viewModel) => {
-            if (viewModel && Array.isArray(viewModel.history)) {
-                const tbody = document.getElementById('historyBody');
-                if (!tbody) return;
-                tbody.innerHTML = '';
-                viewModel.history.forEach(spin => renderRow(spin));
-                requestAnimationFrame(layoutAllComboBridges);
-                return;
-            }
-            reRenderHistory();
+            const rows = viewModel && Array.isArray(viewModel.history)
+                ? viewModel.history
+                : history;
+            void renderHistoryChunked(rows);
         },
         dashboard: (viewModel) => {
             const alerts = viewModel && Array.isArray(viewModel.alerts)
@@ -212,6 +222,147 @@ function renderAnalyticsSafe() {
         return;
     }
     renderAnalytics();
+}
+
+async function yieldToMainThread() {
+    if (window.scheduler && typeof window.scheduler.yield === 'function') {
+        await window.scheduler.yield();
+        return;
+    }
+    if (typeof window.requestIdleCallback === 'function') {
+        await new Promise(resolve => window.requestIdleCallback(() => resolve(), { timeout: 32 }));
+        return;
+    }
+    await new Promise(resolve => requestAnimationFrame(() => resolve()));
+}
+
+function cloneStrategySyncCacheEntry(entry) {
+    if (!entry) return null;
+    return {
+        historyLength: entry.historyLength,
+        snapshot: entry.snapshot || null,
+        notifications: Array.isArray(entry.notifications) ? entry.notifications.slice() : [],
+        nextBets: Array.isArray(entry.nextBets) ? entry.nextBets.slice() : []
+    };
+}
+
+function getCachedStrategySync(strategyKey = currentGameplayStrategy) {
+    const entry = strategySyncCache[strategyKey];
+    if (!entry || entry.historyLength !== history.length) {
+        return null;
+    }
+    return cloneStrategySyncCacheEntry(entry);
+}
+
+function applyCachedStrategySync(strategyKey = currentGameplayStrategy) {
+    const cached = getCachedStrategySync(strategyKey);
+    if (!cached) return false;
+
+    engineSnapshot = cached.snapshot || engineSnapshot;
+    window.currentAlerts = cached.notifications;
+    activeBets = cached.nextBets;
+    return true;
+}
+
+async function renderHistoryChunked(spins = history) {
+    const tbody = document.getElementById('historyBody');
+    if (!tbody) return;
+
+    const renderVersion = ++historyRenderVersion;
+    const rows = Array.isArray(spins) ? spins : history;
+    tbody.innerHTML = '';
+
+    for (let start = 0; start < rows.length; start += HISTORY_RENDER_CHUNK_SIZE) {
+        if (renderVersion !== historyRenderVersion) return;
+
+        const fragment = document.createDocumentFragment();
+        const chunk = rows.slice(start, start + HISTORY_RENDER_CHUNK_SIZE);
+        chunk.forEach(spin => renderRow(spin, fragment));
+        tbody.appendChild(fragment);
+
+        if (start + HISTORY_RENDER_CHUNK_SIZE < rows.length) {
+            await yieldToMainThread();
+        }
+    }
+
+    if (renderVersion === historyRenderVersion) {
+        refreshHighlights();
+        requestAnimationFrame(layoutAllComboBridges);
+    }
+}
+
+async function flushRebuiltSessionUi(options = {}) {
+    await renderHistoryChunked(history);
+    renderGapStats();
+    renderDashboardSafe(window.currentAlerts || []);
+
+    const analyticsModal = document.getElementById('analyticsModal');
+    if (analyticsModal && !analyticsModal.classList.contains('hidden')) {
+        renderAnalyticsSafe();
+    }
+
+    const betsModal = document.getElementById('betsModal');
+    if (betsModal && !betsModal.classList.contains('hidden')) {
+        renderUserAnalytics();
+    }
+
+    updatePerimeterAnalytics();
+    updateAnalyticsHUD();
+    refreshHighlights();
+    renderIntelligencePanel();
+    syncAppStore();
+    saveSessionData();
+
+    if (options.scrollToEnd === true) {
+        const sc = document.querySelector('#scrollContainer > div');
+        if (sc) sc.scrollTop = sc.scrollHeight;
+    }
+}
+
+async function rebuildSessionFromSpins(spinValues, options = {}) {
+    const inputField = document.getElementById('spinInput');
+    const normalizedSpins = [];
+
+    if (inputField) inputField.disabled = true;
+
+    try {
+        resetData(true);
+
+        const source = Array.isArray(spinValues) ? spinValues : [];
+        for (let i = 0; i < source.length; i++) {
+            let value = source[i];
+            if (typeof value === 'object' && value !== null && 'num' in value) {
+                value = value.num;
+            }
+
+            const parsed = parseSpinNumber(value);
+            if (parsed !== null) {
+                normalizedSpins.push(parsed);
+            }
+        }
+
+        for (let i = 0; i < normalizedSpins.length; i++) {
+            await processSpinValue(normalizedSpins[i], {
+                silent: true,
+                preserveInput: true,
+                skipStoreSync: true,
+                skipNeural: true
+            });
+
+            if ((i + 1) % BULK_REPLAY_CHUNK_SIZE === 0) {
+                await yieldToMainThread();
+            }
+        }
+
+        await flushRebuiltSessionUi(options);
+        return normalizedSpins.length;
+    } finally {
+        if (inputField) {
+            inputField.value = '';
+            inputField.disabled = false;
+            inputField.focus();
+        }
+    }
 }
 
 async function requestTacticalAudit() {
@@ -443,6 +594,10 @@ let lastActionableComboLabel = null;
 let lastActionableTargetFace = null;
 let lastActionableCheckpointSpin = 0;
 let analyticsDisplayStrategy = 'series';
+const BULK_REPLAY_CHUNK_SIZE = 24;
+const HISTORY_RENDER_CHUNK_SIZE = 80;
+let historyRenderVersion = 0;
+let strategySyncCache = { series: null, combo: null };
 window.currentAlerts = [];
 
 function normalizeIntelligenceMode(mode) {
@@ -1345,7 +1500,7 @@ async function buildPredictionEngineSnapshot(allSpins = history) {
     return snapshot;
 }
 
-async function syncPredictionEngine() {
+async function syncPredictionEngine(options = {}) {
     activeBets = [];
     window.currentAlerts = [];
 
@@ -1361,14 +1516,49 @@ async function syncPredictionEngine() {
         patternConfig,
         { registry: window.StrategyRegistry || {} }
     );
+    const resultsByStrategy = rawResult && rawResult.resultsByStrategy && typeof rawResult.resultsByStrategy === 'object'
+        ? rawResult.resultsByStrategy
+        : null;
+    const activeRawResult = resultsByStrategy && resultsByStrategy[currentGameplayStrategy]
+        ? resultsByStrategy[currentGameplayStrategy]
+        : rawResult;
     const adapted = window.EngineAdapter && typeof window.EngineAdapter.toSyncView === 'function'
-        ? window.EngineAdapter.toSyncView(rawResult)
+        ? window.EngineAdapter.toSyncView(activeRawResult)
         : {
-            notifications: Array.isArray(rawResult && rawResult.notifications) ? rawResult.notifications : [],
-            nextBets: Array.isArray(rawResult && rawResult.nextBets) ? rawResult.nextBets : [],
+            notifications: Array.isArray(activeRawResult && activeRawResult.notifications) ? activeRawResult.notifications : [],
+            nextBets: Array.isArray(activeRawResult && activeRawResult.nextBets) ? activeRawResult.nextBets : [],
             valid: true,
             errors: []
         };
+
+    if (resultsByStrategy) {
+        Object.keys(resultsByStrategy).forEach(strategyKey => {
+            const entry = window.EngineAdapter && typeof window.EngineAdapter.toSyncView === 'function'
+                ? window.EngineAdapter.toSyncView(resultsByStrategy[strategyKey])
+                : {
+                    notifications: Array.isArray(resultsByStrategy[strategyKey] && resultsByStrategy[strategyKey].notifications)
+                        ? resultsByStrategy[strategyKey].notifications
+                        : [],
+                    nextBets: Array.isArray(resultsByStrategy[strategyKey] && resultsByStrategy[strategyKey].nextBets)
+                        ? resultsByStrategy[strategyKey].nextBets
+                        : []
+                };
+
+            strategySyncCache[strategyKey] = {
+                historyLength: history.length,
+                snapshot,
+                notifications: Array.isArray(entry.notifications) ? entry.notifications.slice() : [],
+                nextBets: Array.isArray(entry.nextBets) ? entry.nextBets.slice() : []
+            };
+        });
+    } else {
+        strategySyncCache[currentGameplayStrategy] = {
+            historyLength: history.length,
+            snapshot,
+            notifications: Array.isArray(adapted.notifications) ? adapted.notifications.slice() : [],
+            nextBets: Array.isArray(adapted.nextBets) ? adapted.nextBets.slice() : []
+        };
+    }
 
     if (adapted.valid === false && Array.isArray(adapted.errors) && adapted.errors.length > 0) {
         console.warn('Engine contract validation failed:', adapted.errors);
@@ -1376,9 +1566,46 @@ async function syncPredictionEngine() {
 
     window.currentAlerts = adapted.notifications || [];
     activeBets = adapted.nextBets || [];
-    syncAppStore();
+    if (options.skipStoreSync !== true) {
+        syncAppStore();
+    }
 
     return window.currentAlerts;
+}
+
+async function refreshPredictionEngineUI(options = {}) {
+    const usedCache = options.preferCache !== false && applyCachedStrategySync(currentGameplayStrategy);
+
+    if (!usedCache) {
+        await syncPredictionEngine({ skipStoreSync: true });
+    }
+
+    if (neuralPredictionEnabled && aiEnabled && aiApiKey && options.skipNeural !== true) {
+        await requestNeuralPrediction({ renderDashboardNow: false, force: true });
+    }
+
+    if (options.skipHistoryRender === true) {
+        renderDashboardSafe(window.currentAlerts || []);
+        const analyticsModal = document.getElementById('analyticsModal');
+        if (analyticsModal && !analyticsModal.classList.contains('hidden')) {
+            renderAnalyticsSafe();
+        }
+    } else {
+        updateVisibility();
+    }
+
+    updatePerimeterAnalytics();
+    updateAnalyticsHUD();
+    renderIntelligencePanel();
+
+    const betsModal = document.getElementById('betsModal');
+    if (betsModal && !betsModal.classList.contains('hidden')) {
+        renderUserAnalytics();
+    }
+
+    if (options.skipStoreSync !== true) {
+        syncAppStore();
+    }
 }
 
 // runSequenceEngine is now owned by strategies/strategy.series.js
@@ -2484,10 +2711,7 @@ function updateVisibility() {
 }
 
 function reRenderHistory() {
-    const tbody = document.getElementById('historyBody');
-    tbody.innerHTML = '';
-    history.forEach(spin => renderRow(spin));
-    requestAnimationFrame(layoutAllComboBridges);
+    void renderHistoryChunked(history);
 }
 
 function handleGridClick(n) {
@@ -2556,43 +2780,8 @@ async function undoSpin() {
     // 2. Clone the remaining spins to rebuild state
     const remainingSpins = history.map(s => s.num);
 
-    // 3. Reset the core state
-    resetData(true);
-
-    // 4. Re-run all remaining spins silently
-    const inputField = document.getElementById('spinInput');
-    if (inputField) inputField.disabled = true;
-
-    try {
-        for (let i = 0; i < remainingSpins.length; i++) {
-            await processSpinValue(remainingSpins[i], { silent: true, preserveInput: true });
-        }
-
-        // 5. Re-render everything
-        const historyBody = document.getElementById('historyBody');
-        if (historyBody) {
-            historyBody.innerHTML = '';
-            const fragment = document.createDocumentFragment();
-            for (let i = 0; i < history.length; i++) {
-                renderRow(history[i], fragment);
-            }
-            historyBody.appendChild(fragment);
-            requestAnimationFrame(layoutAllComboBridges);
-        }
-
-        renderGapStats();
-        await syncPredictionEngine();
-        await scanAllStrategies();
-        renderDashboardSafe(window.currentAlerts || []);
-        renderAnalyticsSafe();
-        updatePerimeterAnalytics();
-        updateAnalyticsHUD();
-        updateVisibility();
-        refreshHighlights();
-        saveSessionData();
-    } finally {
-        if (inputField) inputField.disabled = false;
-    }
+    // 3. Rebuild in background so large histories don't lock the UI.
+    await rebuildSessionFromSpins(remainingSpins, { scrollToEnd: false });
 }
 
 
@@ -2618,7 +2807,9 @@ async function processSpinValue(val, options = {}) {
     // Update Gaps for ALL matching faces
     for (let f = 1; f <= 5; f++) faceGaps[f]++;
     matchedFaces.forEach(f => faceGaps[f] = 0);
-    renderGapStats();
+    if (!options.silent) {
+        renderGapStats();
+    }
 
     const currentSpinIndex = history.length;
 
@@ -2648,7 +2839,7 @@ async function processSpinValue(val, options = {}) {
         id: ++globalSpinIdCounter
     };
     history.push(spinObj);
-    if (window.AppStore && typeof window.AppStore.dispatch === 'function') {
+    if (options.skipStoreSync !== true && window.AppStore && typeof window.AppStore.dispatch === 'function') {
         const safeSpin = window.EngineContract && typeof window.EngineContract.sanitizeSpinObject === 'function'
             ? window.EngineContract.sanitizeSpinObject(spinObj, currentSpinIndex)
             : spinObj;
@@ -2660,13 +2851,13 @@ async function processSpinValue(val, options = {}) {
     // 3. SCAN FOR NEW PATTERNS
     let alerts = [];
     try {
-        alerts = await scanAllStrategies();
+        alerts = await scanAllStrategies({ skipStoreSync: options.skipStoreSync === true || options.silent === true });
     } catch (error) {
         console.error('Strategy scan failed for this spin:', error);
         alerts = window.currentAlerts || [];
     }
 
-    if (neuralPredictionEnabled) {
+    if (neuralPredictionEnabled && !options.silent && options.skipNeural !== true) {
         // Run AI in background to keep math engine fast & responsive
         requestNeuralPrediction({ renderDashboardNow: true }).catch(error => {
             console.error('Neural prediction request failed:', error);
@@ -3293,8 +3484,8 @@ function calculateDominantPerimeterCombo() {
     };
 }
 
-async function scanAllStrategies() {
-    return syncPredictionEngine();
+async function scanAllStrategies(options = {}) {
+    return syncPredictionEngine(options);
 }
 
 function renderRow(spin, container = null) {
@@ -3702,6 +3893,8 @@ function resetData(skipConfirm = false) {
         syncAiBrainSettings();
         window.currentAlerts = [];
         engineSnapshot = createEmptyEngineSnapshot(0);
+        strategySyncCache = { series: null, combo: null };
+        historyRenderVersion++;
         lastActionableComboLabel = null;
         lastActionableTargetFace = null;
         lastActionableCheckpointSpin = 0;
@@ -4193,64 +4386,8 @@ function importSpins(input) {
             }
 
             if (bulkSpins.length > 0) {
-                // Pause UI and reset core memory arrays
-                resetData(true);
-
-                // --- BULK IMPORT LOOP ---
-                inputField = document.getElementById('spinInput');
-                if (inputField) inputField.disabled = true;
-
-                for (let i = 0; i < bulkSpins.length; i++) {
-                    let val = bulkSpins[i];
-                    // Handle objects {num: X} or direct numbers
-                    if (typeof val === 'object' && val !== null && 'num' in val) {
-                        val = val.num;
-                    }
-                    
-                    const parsed = parseSpinNumber(val);
-                    if (parsed === null) continue;
-                    
-                    // Call the full logic pipeline silently (bypasses layout rendering)
-                    await processSpinValue(parsed, { silent: true, preserveInput: true });
-                }
-
-                // --- BATCH DOM RENDER ---
-                const historyBody = document.getElementById('historyBody');
-                if (historyBody) {
-                    historyBody.innerHTML = '';
-                    const fragment = document.createDocumentFragment();
-                    
-                    for (let i = 0; i < history.length; i++) {
-                        renderRow(history[i], fragment);
-                    }
-                    
-                    historyBody.appendChild(fragment);
-                    requestAnimationFrame(layoutAllComboBridges);
-                    
-                    const sc = document.querySelector('#scrollContainer > div');
-                    if (sc) sc.scrollTop = sc.scrollHeight;
-                }
-
-                // --- FULL RECALCULATION PIPELINE ---
-                renderGapStats();
-                await syncPredictionEngine();
-                await scanAllStrategies();
-                renderDashboardSafe(window.currentAlerts || []);
-                renderAnalyticsSafe();
-                updatePerimeterAnalytics();
-                updateAnalyticsHUD();
-                updateVisibility();
-                refreshHighlights();
-                renderIntelligencePanel();
-                saveSessionData();
-
-                if (inputField) {
-                    inputField.value = '';
-                    inputField.disabled = false;
-                    inputField.focus();
-                }
-
-                alert(`Successfully imported ${history.length} spins.`);
+                const importedCount = await rebuildSessionFromSpins(bulkSpins, { scrollToEnd: true });
+                alert(`Successfully imported ${importedCount} spins.`);
             } else {
                 alert("File is empty or contains no valid spins.");
             }

@@ -141,6 +141,7 @@ window.EngineCore = {
     async scanAll(history, snapshot, activeStrategyKey, patternConfig, runtime = {}) {
         const registry = runtime.registry || window.StrategyRegistry || {};
         let activeResults = { notifications: [], nextBets: [] };
+        const resultsByStrategy = {};
 
         for (const stratKey of Object.keys(registry)) {
             const strat = registry[stratKey];
@@ -152,12 +153,19 @@ window.EngineCore = {
 
             const result = strat.run(history, snapshot, config, { tripleCsResets: this.tripleCsResets });
             this.backgroundBets[stratKey] = result.nextBets || [];
+            resultsByStrategy[stratKey] = {
+                notifications: Array.isArray(result.notifications) ? result.notifications : [],
+                nextBets: Array.isArray(result.nextBets) ? result.nextBets : []
+            };
 
             if (stratKey === activeStrategyKey) {
                 activeResults = result;
             }
         }
-        return activeResults;
+        return {
+            ...activeResults,
+            resultsByStrategy
+        };
     },
 
     /**
