@@ -2479,31 +2479,48 @@ function enqueueSpin(spinValue, options = {}) {
             console.error('Spin processing failed', error);
             return [];
         })
-        .then(() => processSpinValue(val, options));
+        .then(() => new Promise(resolve => {
+            setTimeout(() => {
+                processSpinValue(val, options).then(resolve);
+            }, 0);
+        }));
 
     return spinProcessingQueue;
 }
 
-function addSpin() {
+async function addSpin() {
     const input = document.getElementById('spinInput');
+    const addBtn = document.getElementById('addSpinBtn');
     if (!input) return;
+
     const raw = input.value.trim();
+    if (raw === '') return; 
+
     const val = parseInt(raw, 10);
 
-    // Validate range 0-36
-    if (raw === '' || Number.isNaN(val) || val < 0 || val > 36) {
-        // Shake and clear
+    if (Number.isNaN(val) || val < 0 || val > 36) {
         input.value = '';
         input.classList.remove('input-shake');
-        void input.offsetWidth; // reflow
+        void input.offsetWidth;
         input.classList.add('input-shake');
         input.focus();
         return;
     }
 
-    input.value = '';
-    input.focus();
-    return enqueueSpin(val);
+    input.disabled = true;
+    if (addBtn) addBtn.disabled = true;
+    
+    input.value = ''; 
+    
+    try {
+        await enqueueSpin(val);
+    } catch (e) {
+        console.error("An error occurred during spin processing:", e);
+    } finally {
+        input.disabled = false;
+        if (addBtn) addBtn.disabled = false;
+        input.focus();
+    }
 }
 
 async function undoSpin() {
