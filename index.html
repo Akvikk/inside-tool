@@ -27,7 +27,7 @@
     <div class="glass-header px-4 flex justify-between items-center shrink-0 z-30 h-[56px]">
         <div class="flex gap-3 items-center">
             <div class="relative">
-                <input type="number" id="spinInput" min="0" max="36"
+                <input type="text" id="spinInput" inputmode="numeric" autocomplete="off" maxlength="2"
                     onkeydown="if(event.key==='Enter'){event.preventDefault();addSpin();}"
                     class="ios-input w-[64px] h-8 text-lg font-bold text-center placeholder-white/20" placeholder="#">
             </div>
@@ -489,6 +489,10 @@
     <script src="predictionEngine.js"></script>
     <script src="strategies/strategy.series.js"></script>
     <script src="strategies/strategy.combo.js"></script>
+    <script src="engine-contract.js"></script>
+    <script src="engine-adapter.js"></script>
+    <script src="store.js"></script>
+    <script src="ui-renderers.js"></script>
     
     <!-- AI TACTICAL BRAIN: ISOLATED DECISION MODULE -->
     <script src="ai-brain.js"></script>

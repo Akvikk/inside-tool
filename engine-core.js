@@ -70,16 +70,17 @@ window.EngineCore = {
     /**
      * Resolves all pending bets (active and background) for a new spin.
      */
-    resolveTurn(val, matchedFaceMask, activeBets, currentGameplayStrategy, updateUserStats) {
-        const historyLength = window.history ? window.history.length : 0;
+    resolveTurn(val, matchedFaceMask, activeBets, currentGameplayStrategy, updateUserStats, runtime = {}) {
+        const historyLength = Number.isInteger(runtime.historyLength)
+            ? runtime.historyLength
+            : (Array.isArray(runtime.history) ? runtime.history.length : 0);
+        const faceMasks = runtime.faceMasks || window.FACE_MASKS || {};
+        const faces = runtime.faces || window.FACES || {};
         const resolvedTurnBets = [];
 
         // Resolve Active Bets
         if (activeBets && activeBets.length > 0) {
             activeBets.forEach(bet => {
-                const faceMasks = window.FACE_MASKS || {};
-                const faces = window.FACES || {};
-                
                 const mask = faceMasks[bet.targetFace] || 0;
                 const isWin = (matchedFaceMask & mask) !== 0;
                 const count = faces[bet.targetFace] ? faces[bet.targetFace].nums.length : 0;
@@ -118,9 +119,6 @@ window.EngineCore = {
             if (stratKey === currentGameplayStrategy) continue;
             const bgBets = this.backgroundBets[stratKey] || [];
             bgBets.forEach(bet => {
-                const faceMasks = window.FACE_MASKS || {};
-                const faces = window.FACES || {};
-                
                 const isWin = (matchedFaceMask & (faceMasks[bet.targetFace] || 0)) !== 0;
                 const count = faces[bet.targetFace] ? faces[bet.targetFace].nums.length : 0;
                 const unitChange = isWin ? (35 - count) : -count;
@@ -140,8 +138,8 @@ window.EngineCore = {
     /**
      * Runs all registered strategies and stores results.
      */
-    async scanAll(history, snapshot, activeStrategyKey, patternConfig) {
-        const registry = window.StrategyRegistry || {};
+    async scanAll(history, snapshot, activeStrategyKey, patternConfig, runtime = {}) {
+        const registry = runtime.registry || window.StrategyRegistry || {};
         let activeResults = { notifications: [], nextBets: [] };
 
         for (const stratKey of Object.keys(registry)) {

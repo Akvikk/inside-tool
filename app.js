@@ -34,6 +34,27 @@ let perimeterRuleEnabled = true;
 // --- OTHER STATE ---
 let advancementLog = [];
 let chatMessageHistory = [];
+let aiEnabled = false;
+let aiProvider = 'gemini';
+let aiApiKey = '';
+let neuralPredictionEnabled = false;
+let currentNeuralSignal = null;
+let neuralPredictionRequestId = 0;
+let aiSignalLedger = [];
+let lastAiFusionSnapshot = null;
+let aiPredictionCacheKey = '';
+let aiPredictionCacheSignal = null;
+let aiPredictionInFlight = null;
+let aiRuntimeState = {
+    status: 'IDLE',
+    provider: 'gemini',
+    lastError: '',
+    lastRequestMode: '',
+    lastLatencyMs: 0,
+    lastPromptPreview: '',
+    lastResponsePreview: '',
+    lastUpdatedLabel: 'Never'
+};
 
 // Constants PERIMETER_COMBOS and FACES are already defined in predictionEngine.js
 // Removing duplicate declarations to prevent SyntaxError
@@ -62,6 +83,9 @@ let perimeterStatsCache = {};
 
 function changePredictionStrategy(val) {
     currentGameplayStrategy = val;
+    if (window.AppStore && typeof window.AppStore.dispatch === 'function') {
+        window.AppStore.dispatch('ui/setStrategy', val);
+    }
     const headerEl = document.getElementById('historyComboHeader');
     if (headerEl) {
         headerEl.innerText = val === 'series' ? 'SEQUENCE' : 'COMBO';
@@ -84,13 +108,165 @@ function changePredictionStrategy(val) {
         updateVisibility();
 
         // Re-render the whole history table so bridges redraw for the new strategy
-        reRenderHistory();
+        renderHistorySafe({ history });
         requestAnimationFrame(layoutAllComboBridges);
         refreshHighlights();
 
         void refreshPredictionEngineUI();
         saveSessionData();
     }, 200);
+}
+
+function syncAiBrainSettings() {
+    if (!window.AiBrain || typeof window.AiBrain.updateSettings !== 'function') return;
+    window.AiBrain.updateSettings({
+        aiEnabled,
+        aiProvider,
+        aiApiKey,
+        neuralPredictionEnabled
+    });
+}
+
+function syncAppStore() {
+    if (!window.AppStore || typeof window.AppStore.dispatch !== 'function') return;
+
+    const patch = window.EngineAdapter && typeof window.EngineAdapter.toStorePatch === 'function'
+        ? window.EngineAdapter.toStorePatch({
+            history,
+            activeBets,
+            alerts: window.currentAlerts || [],
+            snapshot: engineSnapshot
+        })
+        : {
+            history: Array.isArray(history) ? history : [],
+            activeBets: Array.isArray(activeBets) ? activeBets : [],
+            alerts: Array.isArray(window.currentAlerts) ? window.currentAlerts : [],
+            snapshot: engineSnapshot || null
+        };
+
+    window.AppStore.dispatch('history/set', patch.history);
+    window.AppStore.dispatch('engine/sync', {
+        activeBets: patch.activeBets,
+        alerts: patch.alerts,
+        snapshot: patch.snapshot
+    });
+    window.AppStore.dispatch('ui/setStrategy', currentGameplayStrategy);
+    window.AppStore.dispatch('ui/setInputLayout', currentInputLayout);
+}
+
+function registerUiRendererBridge() {
+    if (!window.UiRenderers || typeof window.UiRenderers.register !== 'function') return;
+
+    window.UiRenderers.register({
+        history: (viewModel) => {
+            if (viewModel && Array.isArray(viewModel.history)) {
+                const tbody = document.getElementById('historyBody');
+                if (!tbody) return;
+                tbody.innerHTML = '';
+                viewModel.history.forEach(spin => renderRow(spin));
+                requestAnimationFrame(layoutAllComboBridges);
+                return;
+            }
+            reRenderHistory();
+        },
+        dashboard: (viewModel) => {
+            const alerts = viewModel && Array.isArray(viewModel.alerts)
+                ? viewModel.alerts
+                : (window.currentAlerts || []);
+            renderDashboard(alerts);
+        },
+        analytics: () => {
+            renderAnalytics();
+        }
+    });
+}
+
+function renderHistorySafe(viewModel) {
+    if (window.UiRenderers && typeof window.UiRenderers.has === 'function' && window.UiRenderers.has('history')) {
+        window.UiRenderers.renderHistory(viewModel);
+        return;
+    }
+    reRenderHistory();
+}
+
+function renderDashboardSafe(alerts) {
+    const nextAlerts = Array.isArray(alerts) ? alerts : (window.currentAlerts || []);
+    if (window.UiRenderers && typeof window.UiRenderers.has === 'function' && window.UiRenderers.has('dashboard')) {
+        window.UiRenderers.renderDashboard({
+            alerts: nextAlerts,
+            activeBets,
+            patternConfig,
+            neuralPredictionEnabled,
+            currentNeuralSignal
+        });
+        return;
+    }
+    renderDashboard(nextAlerts);
+}
+
+function renderAnalyticsSafe() {
+    if (window.UiRenderers && typeof window.UiRenderers.has === 'function' && window.UiRenderers.has('analytics')) {
+        window.UiRenderers.renderAnalytics({
+            strategy: analyticsDisplayStrategy
+        });
+        return;
+    }
+    renderAnalytics();
+}
+
+async function requestTacticalAudit() {
+    if (!window.AiBrain || typeof window.AiBrain.requestTacticalAudit !== 'function') {
+        return { error: 'AI module unavailable.' };
+    }
+    syncAiBrainSettings();
+    return window.AiBrain.requestTacticalAudit({
+        history,
+        netUnits: window.EngineCore && window.EngineCore.stats
+            ? window.EngineCore.stats.netUnits
+            : 0
+    });
+}
+
+async function requestNeuralPrediction(options = {}) {
+    if (!window.AiBrain || typeof window.AiBrain.requestNeuralPrediction !== 'function') {
+        return null;
+    }
+
+    syncAiBrainSettings();
+    const opts = options && typeof options === 'object' ? options : {};
+    const renderDashboardNow = opts.renderDashboardNow === true;
+    const brainOptions = {
+        force: opts.force === true
+    };
+
+    const mathSignal = engineSnapshot && engineSnapshot.currentPrediction ? engineSnapshot.currentPrediction : null;
+    const recentHits = history.slice(-10)
+        .map(spin => `F${FON_PRIMARY_FACE_MAP[spin.num] || '?'}`)
+        .join(' -> ') || 'None';
+
+    const signal = await window.AiBrain.requestNeuralPrediction({
+        history,
+        strategy: currentGameplayStrategy,
+        netUnits: window.EngineCore && window.EngineCore.stats
+            ? window.EngineCore.stats.netUnits
+            : 0,
+        recentHits,
+        mathLabel: mathSignal ? (mathSignal.comboLabel || mathSignal.action || 'Math') : 'No math signal',
+        mathTarget: mathSignal ? mathSignal.targetFace : null,
+        mathConfidence: mathSignal && Number.isFinite(mathSignal.confidence) ? mathSignal.confidence : 0,
+        mathSignal
+    }, brainOptions);
+
+    if (signal) {
+        currentNeuralSignal = signal;
+        updateAiFusionSnapshot(currentNeuralSignal);
+    }
+
+    if (renderDashboardNow) {
+        renderDashboardSafe(window.currentAlerts || []);
+    }
+
+    return signal;
 }
 
 async function triggerAiAudit() {
@@ -141,6 +317,16 @@ function saveSessionData() {
     if (saveSessionTimeout) clearTimeout(saveSessionTimeout);
     saveSessionTimeout = setTimeout(() => {
         const aiState = window.AiBrain ? window.AiBrain.getState() : {};
+        const mergedAiState = {
+            aiEnabled: aiState.aiEnabled !== undefined ? aiState.aiEnabled : aiEnabled,
+            aiProvider: aiState.aiProvider || aiProvider,
+            aiApiKey: aiState.aiApiKey !== undefined ? aiState.aiApiKey : aiApiKey,
+            neuralPredictionEnabled: aiState.neuralPredictionEnabled !== undefined
+                ? aiState.neuralPredictionEnabled
+                : neuralPredictionEnabled,
+            aiSignalLedger: Array.isArray(aiState.aiSignalLedger) ? aiState.aiSignalLedger : aiSignalLedger,
+            runtimeState: aiState.runtimeState || aiRuntimeState
+        };
         const data = {
             history,
             activeBets,
@@ -155,13 +341,13 @@ function saveSessionData() {
             currentInputLayout,
             isHudColdMode,
             hudHistoryScope,
-            aiEnabled: aiState.aiEnabled,
-            aiProvider: aiState.aiProvider,
-            aiApiKey: aiState.aiApiKey,
+            aiEnabled: mergedAiState.aiEnabled,
+            aiProvider: mergedAiState.aiProvider,
+            aiApiKey: mergedAiState.aiApiKey,
             advancementLog,
-            neuralPredictionEnabled: aiState.neuralPredictionEnabled,
-            aiSignalLedger: aiState.aiSignalLedger,
-            aiRuntimeState: aiState.runtimeState,
+            neuralPredictionEnabled: mergedAiState.neuralPredictionEnabled,
+            aiSignalLedger: mergedAiState.aiSignalLedger,
+            aiRuntimeState: mergedAiState.runtimeState,
             currentPredictionStrategy,
             currentGameplayStrategy,
             globalSpinIdCounter
@@ -222,12 +408,20 @@ function loadSessionData() {
         if (data.hudHistoryScope) hudHistoryScope = data.hudHistoryScope;
         if (data.currentGameplayStrategy) currentGameplayStrategy = data.currentGameplayStrategy;
         if (data.globalSpinIdCounter !== undefined) globalSpinIdCounter = data.globalSpinIdCounter;
+        if (data.aiEnabled !== undefined) aiEnabled = data.aiEnabled === true;
+        if (typeof data.aiProvider === 'string' && data.aiProvider) aiProvider = data.aiProvider;
+        if (typeof data.aiApiKey === 'string') aiApiKey = data.aiApiKey;
+        if (data.neuralPredictionEnabled !== undefined) neuralPredictionEnabled = data.neuralPredictionEnabled === true;
+        if (Array.isArray(data.aiSignalLedger)) aiSignalLedger = data.aiSignalLedger;
+        if (data.aiRuntimeState && typeof data.aiRuntimeState === 'object') {
+            aiRuntimeState = { ...aiRuntimeState, ...data.aiRuntimeState };
+        }
         if (window.AiBrain) {
             window.AiBrain.updateSettings({
-                aiEnabled: data.aiEnabled,
-                aiProvider: data.aiProvider,
-                aiApiKey: data.aiApiKey,
-                neuralPredictionEnabled: data.neuralPredictionEnabled
+                aiEnabled,
+                aiProvider,
+                aiApiKey,
+                neuralPredictionEnabled
             });
             // You might need to hydrate the ledger or runtime state if AiBrain needs it
         }
@@ -382,6 +576,7 @@ function performReset() {
         lastResponsePreview: '',
         lastUpdatedLabel: 'Never'
     };
+    syncAiBrainSettings();
     faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
     window.currentAlerts = [];
     engineSnapshot = createEmptyEngineSnapshot(0);
@@ -389,11 +584,12 @@ function performReset() {
     lastActionableTargetFace = null;
     lastActionableCheckpointSpin = 0;
 
-    engineStats = {
-        totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0,
-        bankrollHistory: [0], patternStats: {},
-        signalLog: []
-    };
+    if (window.EngineCore && typeof window.EngineCore.reset === 'function') {
+        window.EngineCore.reset();
+    }
+    if (window.AppStore && typeof window.AppStore.dispatch === 'function') {
+        window.AppStore.dispatch('session/reset');
+    }
 
     userStats = {
         totalWins: 0, totalLosses: 0, netUnits: 0,
@@ -418,12 +614,14 @@ function performReset() {
     resetAiChatUi();
     updateNeuralPredictionUi();
     saveSessionData();
+    syncAppStore();
 }
 
 // --- INIT ---
 window.onload = async () => {
     const hasSession = loadSessionData();
     cachedAddSpinBtn = document.getElementById('addSpinBtn');
+    registerUiRendererBridge();
 
     initDesktopGrid();
     renderFilterMenu();
@@ -445,8 +643,14 @@ window.onload = async () => {
         // Rebuild pattern config based on saved strategy
         rebuildPatternConfig();
         updateStopwatchDisplay();
-        await syncPredictionEngine();
-        reRenderHistory();
+        try {
+            await syncPredictionEngine();
+        } catch (error) {
+            console.error('Prediction engine sync failed during startup:', error);
+            window.currentAlerts = [];
+            activeBets = [];
+        }
+        renderHistorySafe({ history });
         setTimeout(() => {
             const sc = document.querySelector('#scrollContainer > div');
             if (sc) sc.scrollTop = sc.scrollHeight;
@@ -462,14 +666,24 @@ window.onload = async () => {
     updatePerimeterAnalytics();
     updateAnalyticsHUD();
     applyAnalyticsTabUI();
-    renderDashboard(window.currentAlerts || []);
+    renderDashboardSafe(window.currentAlerts || []);
     if (neuralPredictionEnabled && aiEnabled && aiApiKey) {
         void requestNeuralPrediction();
     }
 
-    document.getElementById('spinInput').focus();
+    const spinInputEl = document.getElementById('spinInput');
+    if (spinInputEl) {
+        // Keep the field strictly numeric even when pasting or using IME.
+        spinInputEl.addEventListener('input', () => {
+            const digitsOnly = spinInputEl.value.replace(/\D+/g, '').slice(0, 2);
+            if (spinInputEl.value !== digitsOnly) {
+                spinInputEl.value = digitsOnly;
+            }
+        });
+        spinInputEl.focus();
+    }
 
-    // Enter key listener is set once in HTML via onkeydown attribute
+    // Enter key listener is set once in HTML via onkeydown attribute.
 
     document.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
@@ -507,6 +721,8 @@ window.onload = async () => {
     window.addEventListener('beforeunload', () => {
         saveSessionData();
     });
+
+    syncAppStore();
 };
 
 function toggleHamburgerMenu() {
@@ -536,6 +752,9 @@ function toggleAccordion(id) {
 
 function toggleInputLayout() {
     currentInputLayout = currentInputLayout === 'grid' ? 'racetrack' : 'grid';
+    if (window.AppStore && typeof window.AppStore.dispatch === 'function') {
+        window.AppStore.dispatch('ui/setInputLayout', currentInputLayout);
+    }
 
     // Update label in Hamburger menu
     const label = document.getElementById('layoutLabel');
@@ -1128,10 +1347,29 @@ async function syncPredictionEngine() {
     engineSnapshot = snapshot;
 
     // Delegate execution to EngineCore
-    const result = await window.EngineCore.scanAll(history, snapshot, currentGameplayStrategy, patternConfig);
-    
-    window.currentAlerts = result.notifications || [];
-    activeBets = result.nextBets || [];
+    const rawResult = await window.EngineCore.scanAll(
+        history,
+        snapshot,
+        currentGameplayStrategy,
+        patternConfig,
+        { registry: window.StrategyRegistry || {} }
+    );
+    const adapted = window.EngineAdapter && typeof window.EngineAdapter.toSyncView === 'function'
+        ? window.EngineAdapter.toSyncView(rawResult)
+        : {
+            notifications: Array.isArray(rawResult && rawResult.notifications) ? rawResult.notifications : [],
+            nextBets: Array.isArray(rawResult && rawResult.nextBets) ? rawResult.nextBets : [],
+            valid: true,
+            errors: []
+        };
+
+    if (adapted.valid === false && Array.isArray(adapted.errors) && adapted.errors.length > 0) {
+        console.warn('Engine contract validation failed:', adapted.errors);
+    }
+
+    window.currentAlerts = adapted.notifications || [];
+    activeBets = adapted.nextBets || [];
+    syncAppStore();
 
     return window.currentAlerts;
 }
@@ -2133,6 +2371,29 @@ function updateNeuralPredictionUi() {
     }
 }
 
+function toggleNeuralPrediction() {
+    if (!aiEnabled || !aiApiKey) {
+        alert("Enable AI and connect an API key first.");
+        return;
+    }
+
+    neuralPredictionEnabled = !neuralPredictionEnabled;
+    neuralPredictionRequestId++;
+    aiPredictionCacheKey = '';
+    aiPredictionCacheSignal = null;
+    aiPredictionInFlight = null;
+
+    if (!neuralPredictionEnabled) {
+        currentNeuralSignal = null;
+        lastAiFusionSnapshot = null;
+    }
+
+    syncAiBrainSettings();
+    updateNeuralPredictionUi();
+    void refreshPredictionEngineUI();
+    saveSessionData();
+}
+
 
 /**
  * --- UI & SETTINGS HELPERS ---
@@ -2204,14 +2465,14 @@ function togglePatternFilter(key, isChecked = null) {
 
 function updateVisibility() {
     // 1. Re-render Dashboard (Cards)
-    renderDashboard(window.currentAlerts || []);
+    renderDashboardSafe(window.currentAlerts || []);
 
     // 2. Re-render History Table (Rows)
-    reRenderHistory();
+    renderHistorySafe({ history });
 
     // 3. Update Analytics if visible
     if (!document.getElementById('analyticsModal').classList.contains('hidden')) {
-        renderAnalytics();
+        renderAnalyticsSafe();
     }
 }
 
@@ -2227,15 +2488,25 @@ function handleGridClick(n) {
     void addSpin();
 }
 
+function parseSpinNumber(rawValue) {
+    const normalized = String(rawValue ?? '').trim();
+    if (!/^\d+$/.test(normalized)) return null;
+
+    const parsed = Number(normalized);
+    if (!Number.isInteger(parsed) || parsed < 0 || parsed > 36) return null;
+
+    return parsed;
+}
+
 function enqueueSpin(val) {
-    // Create a new promise that will resolve when *this specific spin* is done.
-    const spinCompletePromise = new Promise((resolve, reject) => {
-        spinProcessingQueue = spinProcessingQueue
-            .then(() => processSpinValue(val))
-            .then(resolve)  // Resolve the individual promise when processSpinValue completes
-            .catch(reject); // Reject the individual promise if processSpinValue fails
-    });
-    return spinCompletePromise;
+    spinProcessingQueue = spinProcessingQueue
+        .catch(error => {
+            // Recover the queue so one failed spin does not block all future input.
+            console.error('Recovered spin queue after an error:', error);
+        })
+        .then(() => processSpinValue(val));
+
+    return spinProcessingQueue;
 }
 
 async function addSpin() {
@@ -2245,9 +2516,9 @@ async function addSpin() {
     const raw = input.value.trim();
     if (raw === '') return;
 
-    const val = parseInt(raw, 10);
+    const val = parseSpinNumber(raw);
 
-    if (Number.isNaN(val) || val < 0 || val > 36) {
+    if (val === null) {
         input.value = '';
         // Add a visual shake effect for invalid input
         input.classList.remove('input-shake');
@@ -2271,48 +2542,50 @@ async function addSpin() {
 }
 async function undoSpin() {
     if (history.length === 0) return;
-    
+
     // 1. Remove the last spin
     history.pop();
-    
+
     // 2. Clone the remaining spins to rebuild state
     const remainingSpins = history.map(s => s.num);
-    
+
     // 3. Reset the core state
     resetData(true);
-    
+
     // 4. Re-run all remaining spins silently
     const inputField = document.getElementById('spinInput');
     if (inputField) inputField.disabled = true;
 
-    for (let i = 0; i < remainingSpins.length; i++) {
-        await processSpinValue(remainingSpins[i], { silent: true, preserveInput: true });
-    }
-
-    if (inputField) inputField.disabled = false;
-
-    // 5. Re-render everything
-    const historyBody = document.getElementById('historyBody');
-    if (historyBody) {
-        historyBody.innerHTML = '';
-        const fragment = document.createDocumentFragment();
-        for (let i = 0; i < history.length; i++) {
-            renderRow(history[i], fragment);
+    try {
+        for (let i = 0; i < remainingSpins.length; i++) {
+            await processSpinValue(remainingSpins[i], { silent: true, preserveInput: true });
         }
-        historyBody.appendChild(fragment);
-        requestAnimationFrame(layoutAllComboBridges);
-    }
 
-    renderGapStats();
-    await syncPredictionEngine();
-    await scanAllStrategies();
-    renderDashboard(window.currentAlerts || []);
-    renderAnalytics();
-    updatePerimeterAnalytics();
-    updateAnalyticsHUD();
-    updateVisibility();
-    refreshHighlights();
-    saveSessionData();
+        // 5. Re-render everything
+        const historyBody = document.getElementById('historyBody');
+        if (historyBody) {
+            historyBody.innerHTML = '';
+            const fragment = document.createDocumentFragment();
+            for (let i = 0; i < history.length; i++) {
+                renderRow(history[i], fragment);
+            }
+            historyBody.appendChild(fragment);
+            requestAnimationFrame(layoutAllComboBridges);
+        }
+
+        renderGapStats();
+        await syncPredictionEngine();
+        await scanAllStrategies();
+        renderDashboardSafe(window.currentAlerts || []);
+        renderAnalyticsSafe();
+        updatePerimeterAnalytics();
+        updateAnalyticsHUD();
+        updateVisibility();
+        refreshHighlights();
+        saveSessionData();
+    } finally {
+        if (inputField) inputField.disabled = false;
+    }
 }
 
 
@@ -2344,7 +2617,18 @@ async function processSpinValue(val, options = {}) {
 
     // 1. RESOLVE PREVIOUS BETS
     // RESOLVE ALL BETS (Active & Background) via EngineCore
-    const resolvedBets = window.EngineCore.resolveTurn(val, matchedFaceMask, activeBets, currentGameplayStrategy, updateUserStats);
+    const resolvedBets = window.EngineCore.resolveTurn(
+        val,
+        matchedFaceMask,
+        activeBets,
+        currentGameplayStrategy,
+        updateUserStats,
+        {
+            historyLength: currentSpinIndex,
+            faceMasks: FACE_MASKS,
+            faces: FACES
+        }
+    );
     activeBets = [];
 
     // 2. ADD TO HISTORY
@@ -2357,21 +2641,41 @@ async function processSpinValue(val, options = {}) {
         id: ++globalSpinIdCounter
     };
     history.push(spinObj);
+    if (window.AppStore && typeof window.AppStore.dispatch === 'function') {
+        const safeSpin = window.EngineContract && typeof window.EngineContract.sanitizeSpinObject === 'function'
+            ? window.EngineContract.sanitizeSpinObject(spinObj, currentSpinIndex)
+            : spinObj;
+        window.AppStore.dispatch('history/append', safeSpin);
+    }
     settleAiSignalLedger();
     refreshAdvancementStates();
 
     // 3. SCAN FOR NEW PATTERNS
-    let alerts = await scanAllStrategies();
+    let alerts = [];
+    try {
+        alerts = await scanAllStrategies();
+    } catch (error) {
+        console.error('Strategy scan failed for this spin:', error);
+        alerts = window.currentAlerts || [];
+    }
 
     if (neuralPredictionEnabled) {
         // Run AI in background to keep math engine fast & responsive
-        void requestNeuralPrediction({ renderDashboardNow: true });
+        requestNeuralPrediction({ renderDashboardNow: true }).catch(error => {
+            console.error('Neural prediction request failed:', error);
+        });
         alerts = window.currentAlerts || [];
     }
 
     // 4. PREPARE NEW SIGNALS FOR DISPLAY (Next Spin's Bets)
     // These are what show up on the dashboard, but we also want to show them in the table row
-    if (neuralPredictionEnabled && currentNeuralSignal) {
+    if (window.EngineAdapter && typeof window.EngineAdapter.toSpinSignals === 'function') {
+        spinObj.newSignals = window.EngineAdapter.toSpinSignals(activeBets, {
+            neuralPredictionEnabled,
+            currentNeuralSignal,
+            buildPredictionLogSignal
+        });
+    } else if (neuralPredictionEnabled && currentNeuralSignal) {
         spinObj.newSignals = [buildPredictionLogSignal(currentNeuralSignal)];
     } else if (activeBets.length > 0) {
         spinObj.newSignals = activeBets.map(b => ({
@@ -2389,7 +2693,7 @@ async function processSpinValue(val, options = {}) {
 
     if (!options.silent) {
         renderRow(spinObj);
-        renderDashboard(alerts);
+        renderDashboardSafe(alerts);
         debounceHeavyUIUpdates();
     }
 
@@ -2403,6 +2707,7 @@ async function processSpinValue(val, options = {}) {
     
     if (!options.silent) {
         saveSessionData();
+        syncAppStore();
     }
 
     return alerts;
@@ -2412,7 +2717,7 @@ let heavyUIUpdateTimeout = null;
 function debounceHeavyUIUpdates() {
     if (heavyUIUpdateTimeout) clearTimeout(heavyUIUpdateTimeout);
     heavyUIUpdateTimeout = setTimeout(() => {
-        if (!document.getElementById('analyticsModal').classList.contains('hidden')) renderAnalytics();
+        if (!document.getElementById('analyticsModal').classList.contains('hidden')) renderAnalyticsSafe();
         if (!document.getElementById('betsModal').classList.contains('hidden')) renderUserAnalytics();
         
         updatePerimeterAnalytics();
@@ -2428,8 +2733,9 @@ function debounceHeavyUIUpdates() {
 function checkFatigue(patternName) {
     const currentSpin = history.length;
     const windowStart = Math.max(0, currentSpin - 50);
+    const coreStats = window.EngineCore && window.EngineCore.stats ? window.EngineCore.stats : { signalLog: [] };
 
-    const recentSignals = engineStats.signalLog.filter(s =>
+    const recentSignals = coreStats.signalLog.filter(s =>
         s.patternName === patternName && s.spinIndex >= windowStart
     );
 
@@ -2519,7 +2825,7 @@ function setAnalyticsDisplayStrategy(strategy) {
         }
     }
     
-    renderAnalytics();
+    renderAnalyticsSafe();
 }
 
 function updatePatternHeatmap(patternData) {
@@ -2569,7 +2875,8 @@ function updatePatternHeatmap(patternData) {
 }
 
 function openPatternLog(patternName) {
-    const logs = engineStats.signalLog.filter(s => s.patternName === patternName);
+    const coreStats = window.EngineCore && window.EngineCore.stats ? window.EngineCore.stats : { signalLog: [] };
+    const logs = coreStats.signalLog.filter(s => s.patternName === patternName);
     logs.sort((a, b) => a.spinIndex - b.spinIndex);
     
     let runningROI = 0;
@@ -2655,7 +2962,7 @@ function switchAnalyticsTab(tab) {
         }
     });
 
-    if (tab === 'strategy') renderAnalytics();
+    if (tab === 'strategy') renderAnalyticsSafe();
     if (tab === 'intelligence') changeIntelMode(currentIntelligenceMode);
     if (tab === 'advancements') renderAdvancementLog();
 }
@@ -2960,7 +3267,7 @@ function updateUserBetLog() {
 function toggleBetConfirmation(index) {
     if (activeBets[index]) {
         activeBets[index].confirmed = !activeBets[index].confirmed;
-        renderDashboard(window.currentAlerts || []);
+        renderDashboardSafe(window.currentAlerts || []);
     }
 }
 
@@ -3385,6 +3692,7 @@ function resetData(skipConfirm = false) {
             lastResponsePreview: '',
             lastUpdatedLabel: 'Never'
         };
+        syncAiBrainSettings();
         window.currentAlerts = [];
         engineSnapshot = createEmptyEngineSnapshot(0);
         lastActionableComboLabel = null;
@@ -3397,8 +3705,8 @@ function resetData(skipConfirm = false) {
         faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
 
         document.getElementById('historyBody').innerHTML = '';
-        renderDashboard([]);
-        renderAnalytics();
+        renderDashboardSafe([]);
+        renderAnalyticsSafe();
         renderUserAnalytics();
         renderGapStats();
         resetAiChatUi();
@@ -3412,11 +3720,26 @@ function resetData(skipConfirm = false) {
             const am = document.getElementById('analyticsModal');
             if (!am.classList.contains('hidden')) am.classList.add('hidden');
         }
+        if (window.AppStore && typeof window.AppStore.dispatch === 'function') {
+            window.AppStore.dispatch('session/reset');
+        }
         saveSessionData();
+        syncAppStore();
     }
 }
 
 function updateAiUiState() {
+    if (window.AiBrain && typeof window.AiBrain.getState === 'function') {
+        const state = window.AiBrain.getState();
+        aiEnabled = state.aiEnabled !== undefined ? state.aiEnabled : aiEnabled;
+        aiProvider = state.aiProvider || aiProvider;
+        aiApiKey = state.aiApiKey !== undefined ? state.aiApiKey : aiApiKey;
+        neuralPredictionEnabled = state.neuralPredictionEnabled !== undefined
+            ? state.neuralPredictionEnabled
+            : neuralPredictionEnabled;
+        currentNeuralSignal = state.currentNeuralSignal !== undefined ? state.currentNeuralSignal : currentNeuralSignal;
+    }
+
     const switchBtn = document.getElementById('aiMasterSwitch');
     const switchKnob = document.getElementById('aiSwitchKnob');
     const vaultSection = document.getElementById('aiVaultSection');
@@ -3486,10 +3809,11 @@ function updateAiUiState() {
         lastAiFusionSnapshot = null;
         void refreshPredictionEngineUI();
     }
+    syncAiBrainSettings();
     updateNeuralPredictionUi();
     const analyticsModal = document.getElementById('analyticsModal');
     if (analyticsModal && !analyticsModal.classList.contains('hidden')) {
-        renderAnalytics();
+        renderAnalyticsSafe();
     }
 }
 
@@ -3658,9 +3982,12 @@ function generateAiPrompt() {
     const recentSpins = history.slice(-60).map(s => s.num).join(', ');
     const recentHits = history.slice(-10).map(s => `F${FON_PRIMARY_FACE_MAP[s.num] || '?'}`).join(' -> ') || 'None yet';
     const gaps = Object.entries(faceGaps).map(([face, gap]) => `F${face}:${gap}`).join(', ');
-    const stats = `Wins: ${engineStats.totalWins}, Losses: ${engineStats.totalLosses}, Net: ${engineStats.netUnits}`;
-    const totalSignals = engineStats.totalWins + engineStats.totalLosses;
-    const hitRate = totalSignals === 0 ? 0 : Math.round((engineStats.totalWins / totalSignals) * 100);
+    const coreStats = window.EngineCore && window.EngineCore.stats
+        ? window.EngineCore.stats
+        : { totalWins: 0, totalLosses: 0, netUnits: 0 };
+    const stats = `Wins: ${coreStats.totalWins}, Losses: ${coreStats.totalLosses}, Net: ${coreStats.netUnits}`;
+    const totalSignals = coreStats.totalWins + coreStats.totalLosses;
+    const hitRate = totalSignals === 0 ? 0 : Math.round((coreStats.totalWins / totalSignals) * 100);
     const combos = PERIMETER_COMBOS.map(c => c.label).join(', ');
 
     return `ROLE: You are an expert Roulette "Table Boss" and data forensic analyst.
@@ -3845,6 +4172,7 @@ function importSpins(input) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = async function (e) {
+        let inputField = null;
         try {
             const data = JSON.parse(e.target.result);
             let bulkSpins = [];
@@ -3860,11 +4188,11 @@ function importSpins(input) {
             if (bulkSpins.length > 0) {
                 // Pause UI and reset core memory arrays
                 resetData(true);
-                
+
                 // --- BULK IMPORT LOOP ---
-                const inputField = document.getElementById('spinInput');
+                inputField = document.getElementById('spinInput');
                 if (inputField) inputField.disabled = true;
-                
+
                 for (let i = 0; i < bulkSpins.length; i++) {
                     let val = bulkSpins[i];
                     // Handle objects {num: X} or direct numbers
@@ -3872,8 +4200,8 @@ function importSpins(input) {
                         val = val.num;
                     }
                     
-                    const parsed = parseInt(val, 10);
-                    if (isNaN(parsed) || parsed < 0 || parsed > 36) continue;
+                    const parsed = parseSpinNumber(val);
+                    if (parsed === null) continue;
                     
                     // Call the full logic pipeline silently (bypasses layout rendering)
                     await processSpinValue(parsed, { silent: true, preserveInput: true });
@@ -3900,8 +4228,8 @@ function importSpins(input) {
                 renderGapStats();
                 await syncPredictionEngine();
                 await scanAllStrategies();
-                renderDashboard(window.currentAlerts || []);
-                renderAnalytics();
+                renderDashboardSafe(window.currentAlerts || []);
+                renderAnalyticsSafe();
                 updatePerimeterAnalytics();
                 updateAnalyticsHUD();
                 updateVisibility();
@@ -3921,6 +4249,8 @@ function importSpins(input) {
             }
         } catch (err) {
             alert("Error reading file: " + err.message);
+        } finally {
+            if (inputField) inputField.disabled = false;
         }
     };
     reader.readAsText(file);
