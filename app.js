@@ -1707,7 +1707,7 @@ function updateAnalyticsHUD() {
 
         let html = `
             <div class="space-y-0.5">
-                <div class="grid grid-cols-[50px_minmax(0,1fr)_32px] items-center gap-1.5 px-0.5 pb-1 text-[8px] uppercase tracking-[0.12em] text-white/28 border-b border-white/10">
+                <div class="grid grid-cols-[56px_minmax(0,1fr)_42px] items-center gap-1.5 px-0.5 pb-1 text-[9px] uppercase tracking-[0.12em] text-white/60 border-b border-white/20">
                     <div class="font-bold">${colLabel}</div>
                     <div class="text-center font-bold">Hits</div>
                     <div class="text-right font-bold">${col3Title}</div>
@@ -1715,18 +1715,18 @@ function updateAnalyticsHUD() {
         `;
 
         if (sampleSize === 0) {
-            html += `<div class="py-4 text-center text-white/35 italic">Awaiting spins...</div>`;
+            html += `<div class="py-4 text-center text-white/55 italic">Awaiting spins...</div>`;
         } else {
             seqStats.forEach(s => {
                 const val2 = isHudColdMode ? (100 - s.pct) : s.pct;
                 const highlight = val2 > 20;
-                const opacity = highlight ? '1' : '0.5';
-                const valColor = highlight ? themeColor : '#8E8E93';
+                const opacity = highlight ? '1' : '0.82';
+                const valColor = highlight ? themeColor : 'rgba(220,220,225,0.85)';
                 html += `
-                    <div class="grid grid-cols-[50px_minmax(0,1fr)_32px] items-center gap-1.5 px-0.5 py-1">
-                        <div class="text-[10px] font-black tracking-[0.08em]" style="color:${s.color}; opacity:${opacity}">${s.label}</div>
-                        <div class="text-center font-mono text-[10px] text-gray-200" style="opacity:${opacity}">${s.hits}</div>
-                        <div class="text-right font-mono text-[10px] font-bold" style="color:${valColor}; opacity:${opacity}">${val2}%</div>
+                    <div class="grid grid-cols-[56px_minmax(0,1fr)_42px] items-center gap-1.5 px-0.5 py-1 rounded-md">
+                        <div class="text-[11px] font-black tracking-[0.08em]" style="color:${s.color}; opacity:${opacity}">${s.label}</div>
+                        <div class="text-center font-mono text-[11px] text-white/90" style="opacity:${opacity}">${s.hits}</div>
+                        <div class="text-right font-mono text-[11px] font-bold" style="color:${valColor}; opacity:${opacity}">${val2}%</div>
                     </div>
                 `;
             });
@@ -1751,7 +1751,7 @@ function updateAnalyticsHUD() {
 
         let html = `
             <div class="space-y-0.5">
-                <div class="grid grid-cols-[34px_minmax(0,1fr)_32px] items-center gap-1.5 px-0.5 pb-1 text-[8px] uppercase tracking-[0.12em] text-white/28 border-b border-white/10">
+                <div class="grid grid-cols-[46px_minmax(0,1fr)_42px] items-center gap-1.5 px-0.5 pb-1 text-[9px] uppercase tracking-[0.12em] text-white/60 border-b border-white/20">
                     <div class="font-bold">Combo</div>
                     <div class="text-center font-bold">H / S</div>
                     <div class="text-right font-bold">${col3Title}</div>
@@ -1759,19 +1759,19 @@ function updateAnalyticsHUD() {
         `;
 
         if (sampleSize === 0) {
-            html += `<div class="py-4 text-center text-white/35 italic">Awaiting spins...</div>`;
+            html += `<div class="py-4 text-center text-white/55 italic">Awaiting spins...</div>`;
         } else {
             displayCombos.forEach(c => {
                 const ratioSampleSize = Number.isFinite(c.sampleSize) ? c.sampleSize : sampleSize;
                 const val1 = `${c.hits}/${ratioSampleSize}`;
                 const val2 = isHudColdMode ? c.coldPercent : c.hotPercent;
-                const opacity = (isHudColdMode ? val2 > 80 : val2 > 20) ? '1' : '0.5';
-                const valColor = (isHudColdMode ? val2 > 80 : val2 > 20) ? themeColor : '#8E8E93';
+                const opacity = (isHudColdMode ? val2 > 80 : val2 > 20) ? '1' : '0.82';
+                const valColor = (isHudColdMode ? val2 > 80 : val2 > 20) ? themeColor : 'rgba(220,220,225,0.85)';
                 html += `
-                    <div class="grid grid-cols-[34px_minmax(0,1fr)_32px] items-center gap-1.5 px-0.5 py-1">
-                        <div class="text-[12px] font-black tracking-[0.08em]" style="color:${c.color}; opacity:${opacity}">${c.label}</div>
-                        <div class="text-center font-mono text-[10px] text-gray-200" style="opacity:${opacity}">${val1}</div>
-                        <div class="text-right font-mono text-[10px] font-bold" style="color:${valColor}; opacity:${opacity}">${val2}%</div>
+                    <div class="grid grid-cols-[46px_minmax(0,1fr)_42px] items-center gap-1.5 px-0.5 py-1 rounded-md">
+                        <div class="text-[11px] font-black tracking-[0.08em]" style="color:${c.color}; opacity:${opacity}">${c.label}</div>
+                        <div class="text-center font-mono text-[11px] text-white/90" style="opacity:${opacity}">${val1}</div>
+                        <div class="text-right font-mono text-[11px] font-bold" style="color:${valColor}; opacity:${opacity}">${val2}%</div>
                     </div>
                 `;
             });

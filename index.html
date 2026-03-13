@@ -47,13 +47,13 @@
         <div class="flex gap-2 items-center">
 
             <button onclick="openAiChat()" id="headerAiBtn"
-                class="ios-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-[#bf5af2]/10 hover:bg-[#bf5af2]/20 text-[#bf5af2] font-semibold rounded-lg border border-[#bf5af2]/30 flex items-center justify-center gap-0 sm:gap-2 text-xs shadow-[0_0_10px_rgba(191,90,242,0.15)] transition-all">
+                class="ios-btn top-nav-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-[#bf5af2]/10 hover:bg-[#bf5af2]/20 text-[#bf5af2] font-semibold rounded-lg border border-[#bf5af2]/30 flex items-center justify-center gap-0 sm:gap-2 text-xs shadow-[0_0_10px_rgba(191,90,242,0.15)] transition-all">
                 <i class="fas fa-brain"></i> <span class="hidden sm:inline">AI CHAT</span>
             </button>
 
             <div id="patternFilterShell" class="relative">
                 <button id="patternsToggleBtn" onclick="togglePatternFilterPopover()"
-                    class="ios-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#BF5AF2] font-semibold rounded-lg border border-[#BF5AF2]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs pattern-toggle-btn">
+                    class="ios-btn top-nav-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#BF5AF2] font-semibold rounded-lg border border-[#BF5AF2]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs pattern-toggle-btn">
                     <i class="fas fa-filter"></i>
                     <span class="hidden sm:inline">PATTERNS</span>
                 </button>
@@ -72,25 +72,26 @@
                 </div>
             </div>
 
-            <button onclick="toggleModal('betsModal'); renderUserAnalytics();"
-                class="ios-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#0A84FF] font-semibold rounded-lg border border-[#0A84FF]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs">
+            <button id="headerBetsBtn" onclick="toggleModal('betsModal'); renderUserAnalytics();"
+                class="ios-btn top-nav-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#0A84FF] font-semibold rounded-lg border border-[#0A84FF]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs">
                 <i class="fas fa-list-check"></i> <span class="hidden sm:inline">BETS</span>
             </button>
 
-            <button onclick="toggleModal('analyticsModal'); renderAnalytics();"
-                class="ios-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#FFD60A] font-semibold rounded-lg border border-[#FFD60A]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs">
+            <button id="headerStatsBtn" onclick="toggleModal('analyticsModal'); renderAnalytics();"
+                class="ios-btn top-nav-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#FFD60A] font-semibold rounded-lg border border-[#FFD60A]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs">
                 <i class="fas fa-chart-line"></i> <span class="hidden sm:inline">STATS</span>
             </button>
 
             <button onclick="toggleAnalyticsHUD()" id="hudToggleBtn"
-                class="ios-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#30D158] font-semibold rounded-lg border border-[#30D158]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs">
+                class="ios-btn top-nav-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#30D158] font-semibold rounded-lg border border-[#30D158]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs">
                 <i class="fas fa-chart-pie"></i> <span class="hidden sm:inline">ANALYTICS</span>
             </button>
 
             <!-- HAMBURGER MENU -->
             <div class="relative ml-2 border-l border-white/10 pl-2">
                 <button onclick="toggleHamburgerMenu()"
-                    class="ios-btn h-8 w-8 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-lg border border-white/20 flex items-center justify-center relative z-50">
+                    id="headerMenuBtn"
+                    class="ios-btn top-nav-btn h-8 w-8 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-lg border border-white/20 flex items-center justify-center relative z-50">
                     <i class="fas fa-bars"></i>
                 </button>
             </div>
@@ -464,7 +465,7 @@
     </div>
 
     <!-- ANALYTICS HUD (FLOATING) -->
-    <div id="analyticsHUD" class="hidden fixed z-[40] flex-col glass-menu overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.8)] border border-white/10" style="width: 200px; top: 80px; right: 16px;">
+    <div id="analyticsHUD" class="hidden fixed z-[40] flex-col glass-menu overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.8)] border border-white/10" style="width: 260px; top: 80px; right: 16px;">
         <div id="hudHeader" class="p-2 border-b border-white/10 flex justify-between items-center cursor-move select-none bg-white/5">
             <span class="text-[9px] font-black tracking-[0.16em] uppercase text-[#30D158] flex items-center">
                 <i class="fas fa-satellite-dish mr-1"></i> Live Feed
