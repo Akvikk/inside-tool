@@ -212,13 +212,20 @@
         <div class="flex-1 flex flex-col relative w-full bg-transparent overflow-hidden" id="scrollContainer">
             <div class="flex-1 overflow-y-auto custom-scroll">
                 <table class="history-table">
+                    <colgroup>
+                        <col style="width: 8%;">
+                        <col style="width: 10%;">
+                        <col style="width: 12%;">
+                        <col style="width: 25%;">
+                        <col style="width: 45%;">
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th class="w-[8%] text-center">#</th>
-                            <th class="w-[10%] text-center">SPIN</th>
-                            <th class="w-[12%] text-center">FACE</th>
-                            <th class="w-[25%] text-center" id="historyComboHeader">COMBO</th>
-                            <th class="w-[45%] text-center">PREDICTION</th>
+                            <th class="text-center">#</th>
+                            <th class="text-center">SPIN</th>
+                            <th class="text-center">FACE</th>
+                            <th class="text-center" id="historyComboHeader">COMBO</th>
+                            <th class="text-center">PREDICTION</th>
                         </tr>
                     </thead>
                     <tbody id="historyBody"></tbody>

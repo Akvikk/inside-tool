@@ -983,7 +983,16 @@ async function evaluatePredictionEngine(allSpins = history) {
                 ? `Prediction Engine ${percent}% (${processed}/${total})`
                 : 'Prediction Engine 100%';
 
-            console.log(message);
+            // --- REFRESH BRIDGES ON RESIZE ---
+let resizeTimeout;
+window.addEventListener('resize', () => {
+    if (resizeTimeout) clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        layoutAllComboBridges();
+    }, 150);
+});
+
+console.log('App initialization complete');
 
             const checkpointSummary = document.getElementById('intelCheckpointSummary');
             if (checkpointSummary) checkpointSummary.innerText = message;
@@ -2483,8 +2492,7 @@ function enqueueSpin(val) {
 
 async function addSpin() {
     const input = document.getElementById('spinInput');
-    const addBtn = document.getElementById('addSpinBtn');
-    if (!input || input.disabled) return;
+    if (!input) return;
 
     const raw = input.value.trim();
     if (raw === '') return;
@@ -2493,30 +2501,25 @@ async function addSpin() {
 
     if (Number.isNaN(val) || val < 0 || val > 36) {
         input.value = '';
+        // Add a visual shake effect for invalid input
         input.classList.remove('input-shake');
-        void input.offsetWidth;
+        void input.offsetWidth; // Trigger reflow
         input.classList.add('input-shake');
         input.focus();
         return;
     }
     
-    input.disabled = true;
-    if (addBtn) addBtn.disabled = true;
-    document.body.classList.add('processing');
-    
+    // Immediately clear the input for the next entry.
     input.value = ''; 
-    
-    try {
-        await enqueueSpin(val);
-    } catch (error) {
-        console.error("Error processing spin:", error);
-        // Optionally, provide user feedback about the error
-    } finally {
-        input.disabled = false;
-        if (addBtn) addBtn.disabled = false;
-        document.body.classList.remove('processing');
-        input.focus();
-    }
+    input.focus();
+
+    // Enqueue the spin for processing in the background.
+    // Do not `await` this call. Let it run asynchronously.
+    // This makes the UI responsive and prevents hangs.
+    enqueueSpin(val).catch(error => {
+        console.error("Error processing spin in background:", error);
+        // Here you could show a toast or other non-blocking error message to the user
+    });
 }
 async function undoSpin() {
     if (history.length === 0) return;
@@ -3338,7 +3341,7 @@ function renderRow(spin, container = null) {
         <td class="text-center"><div class="num-box ${bgClass}">${spin.num}</div></td>
         <td class="text-center relative z-[5]">${faceHTML}</td>
         <td class="text-center relative overflow-visible z-[1]">${comboHTML}</td>
-        <td class="pl-4">${finalHTML}</td>
+        <td class="text-center prediction-cell">${finalHTML}</td>
     `;
     
     if (container) {
@@ -4230,3 +4233,17 @@ function resetStopwatch() {
         btn.classList.add('bg-[#30D158]/20', 'text-[#30D158]', 'border-[#30D158]/30');
     }
 }
+
+// UI Listener for Prediction Engine Progress (Decoupled)
+window.addEventListener('predictionProgress', (e) => {
+    const { percent, message, processed, total } = e.detail;
+    const checkpointSummary = document.getElementById('intelCheckpointSummary');
+    if (checkpointSummary) checkpointSummary.innerText = message;
+
+    const checkpointMeta = document.getElementById('intelNextCheckpointMeta');
+    if (checkpointMeta) {
+        checkpointMeta.innerText = total > 0
+            ? `${processed}/${total} spins processed`
+            : 'Awaiting spins';
+    }
+});

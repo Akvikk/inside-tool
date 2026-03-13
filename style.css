@@ -525,7 +525,6 @@ button.bg-gradient-to-b {
     background: linear-gradient(to bottom, #ff1a33, #b3001b) !important;
     border: 1px solid rgba(255, 100, 100, 0.4) !important;
     color: white !important;
-    box-shadow: 0 0 25px rgba(255, 26, 51, 0.45) !important;
     font-weight: 900 !important;
     letter-spacing: 0.12em !important;
     text-transform: uppercase !important;
@@ -576,6 +575,7 @@ button.bg-gradient-to-b:active {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
+    table-layout: fixed; /* Force respect for column widths */
 }
 
 .history-table th {
@@ -596,12 +596,24 @@ button.bg-gradient-to-b:active {
 }
 
 .history-table td {
-    padding: 10px;
+    padding: 10px 5px;
     vertical-align: middle;
     text-align: center;
-    /* Ensured content is also matched strictly */
     border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    /* Removed overflow:hidden to prevent bridge clipping */
 }
+
+.history-table td.combo-cell {
+    position: relative;
+}
+
+.history-table td.prediction-cell {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 0; /* Ensures ellipsis works in table-layout: fixed */
+}
+
 
 /* Table rows flash crimson slightly on enter, then settle */
 @keyframes rowEnter {
@@ -619,7 +631,6 @@ button.bg-gradient-to-b:active {
 
 .history-row {
     animation: rowEnter 0.35s cubic-bezier(0.19, 1, 0.22, 1) forwards;
-    position: relative;
     border-bottom: 1px solid rgba(255, 255, 255, 0.015) !important;
 }
 
@@ -627,7 +638,11 @@ button.bg-gradient-to-b:active {
     background-color: rgba(255, 255, 255, 0.03) !important;
 }
 
-.history-row::before {
+.history-table td:first-child {
+    position: relative;
+}
+
+.history-table td:first-child::before {
     content: "";
     position: absolute;
     left: 0;

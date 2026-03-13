@@ -131,6 +131,7 @@ function clamp(value, min, max) {
 }
 
 function emitPredictionProgress(percent, detail = {}) {
+    // Pure data reporter - no DOM lookups allowed here
     const processed = Number.isFinite(detail.processed) ? detail.processed : 0;
     const total = Number.isFinite(detail.total) ? detail.total : 0;
     const message = total > 0
@@ -138,17 +139,12 @@ function emitPredictionProgress(percent, detail = {}) {
         : `Prediction Engine ${percent}%`;
 
     console.log(message);
-
-    if (typeof document === 'undefined') return;
-
-    const checkpointSummary = document.getElementById('intelCheckpointSummary');
-    if (checkpointSummary) checkpointSummary.innerText = message;
-
-    const checkpointMeta = document.getElementById('intelNextCheckpointMeta');
-    if (checkpointMeta) {
-        checkpointMeta.innerText = total > 0
-            ? `${processed}/${total} spins processed`
-            : 'Awaiting spins';
+    
+    // Dispatch as a CustomEvent for UI to listen to if it chooses
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('predictionProgress', { 
+            detail: { percent, processed, total, message } 
+        }));
     }
 }
 
