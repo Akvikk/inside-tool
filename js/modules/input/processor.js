@@ -160,13 +160,20 @@
         if (window.refreshAdvancementStates) window.refreshAdvancementStates();
 
         // 3. SCAN FOR NEW PATTERNS
-        let alerts = [];
+        let scanResult = { nextBets: [], resultsByStrategy: {} };
         try {
-            alerts = window.scanAllStrategies ? await window.scanAllStrategies({ skipStoreSync: options.skipStoreSync === true || options.silent === true }) : [];
+            if (window.scanAllStrategies) {
+                scanResult = await window.scanAllStrategies({ 
+                    skipStoreSync: options.skipStoreSync === true || options.silent === true 
+                });
+            }
         } catch (error) {
             console.error('Strategy scan failed for this spin:', error);
-            alerts = window.currentAlerts || [];
         }
+
+        // Bridge: Capture the engine's produced bets for dashboard display and next turn resolution
+        state.activeBets = scanResult.nextBets || [];
+        state.engineSnapshot = scanResult; 
 
         if (state.neuralPredictionEnabled && !options.silent && options.skipNeural !== true) {
             // Run AI in background to keep math engine fast & responsive
@@ -202,7 +209,7 @@
 
         if (!options.silent) {
             if (window.renderRow) window.renderRow(spinObj);
-            if (window.renderDashboardSafe) window.renderDashboardSafe(alerts);
+            if (window.renderDashboardSafe) window.renderDashboardSafe(scanResult.nextBets);
             if (window.debounceHeavyUIUpdates) window.debounceHeavyUIUpdates();
         }
 

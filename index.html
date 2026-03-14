@@ -7,7 +7,17 @@
     <title>INSIDE tool</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        /* HIDE SCROLLBARS GLOBALLY */
+        * {
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge */
+        }
+        *::-webkit-scrollbar {
+            display: none; /* Chrome/Safari/Webkit */
+        }
+    </style>
 </head>
 
 <body class="h-screen flex flex-col text-sm selection:bg-blue-500/30">
@@ -646,13 +656,11 @@
     <script src="js/modules/engine/prediction.js"></script>
     <script src="js/modules/engine/contract.js"></script>
     <script src="js/modules/engine/adapter.js"></script>
+    <script src="js/modules/engine/store.js"></script>
 
     <!-- STRATEGIES -->
     <script src="js/strategies/strategy.series.js"></script>
     <script src="js/strategies/strategy.combo.js"></script>
-
-    <!-- STORE -->
-    <script src="js/modules/engine/store.js"></script>
 
     <!-- UI -->
     <script src="js/modules/ui/renderers.js"></script>

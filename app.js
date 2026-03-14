@@ -599,6 +599,59 @@ window.resetStopwatch = function () {
     if (text) text.innerText = 'Start';
 };
 
+// --- RESTORED GLOBAL BRIDGES & UTILITIES ---
+window.scanAllStrategies = function(options = {}) {
+    if (window.EngineCore && typeof window.EngineCore.scanAll === 'function' && window.state) {
+        return window.EngineCore.scanAll(
+            window.state.history, 
+            window.state.engineSnapshot || {}, 
+            window.state.currentGameplayStrategy || 'series', 
+            window.state.patternConfig || {},
+            options
+        );
+    }
+    console.warn('EngineCore.scanAll not found.');
+    return [];
+};
+
+window.syncAppStore = function() {
+    if (window.AppStore && typeof window.AppStore.dispatch === 'function' && window.state) {
+        window.AppStore.dispatch('engine/sync', window.state);
+    }
+};
+
+window.updateUserStats = function(isWin, bet, spinIndex, unitChange) {
+    if (!window.state || !window.state.userStats) return;
+    const uStats = window.state.userStats;
+
+    if (isWin) {
+        uStats.totalWins++;
+    } else {
+        uStats.totalLosses++;
+    }
+    uStats.netUnits += unitChange;
+    uStats.bankrollHistory.push(uStats.netUnits);
+
+    uStats.betLog.unshift({
+        id: uStats.totalWins + uStats.totalLosses,
+        pattern: bet.patternName,
+        target: `F${bet.targetFace}`,
+        spinNum: spinIndex + 1,
+        result: isWin ? 'WIN' : 'LOSS',
+        units: unitChange
+    });
+};
+
+let heavyUpdateTimeout = null;
+window.debounceHeavyUIUpdates = function() {
+    if (heavyUpdateTimeout) clearTimeout(heavyUpdateTimeout);
+    heavyUpdateTimeout = setTimeout(() => {
+        if (window.renderAnalytics) window.renderAnalytics();
+        if (window.renderUserAnalytics) window.renderUserAnalytics();
+        if (window.HudManager && window.HudManager.update) window.HudManager.update();
+    }, 100);
+};
+
 // --- ANALYTICS & RENDERING ---
 window.switchAnalyticsTab = function (tab) {
     if (!state) return;
