@@ -1,11 +1,12 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createSandbox, loadScript } = require('./helpers/browserSandbox');
+const { SCRIPT_PATHS } = require('./helpers/projectScripts');
 
 test('EngineAdapter returns contract-validated sync view', () => {
     const ctx = createSandbox();
-    loadScript(ctx, 'engine-contract.js');
-    loadScript(ctx, 'engine-adapter.js');
+    loadScript(ctx, SCRIPT_PATHS.contract);
+    loadScript(ctx, SCRIPT_PATHS.adapter);
 
     const view = ctx.EngineAdapter.toSyncView({
         notifications: [{ type: 'active', strategy: 'Sequence' }],
@@ -20,7 +21,7 @@ test('EngineAdapter returns contract-validated sync view', () => {
 
 test('EngineAdapter builds spin signals consistently', () => {
     const ctx = createSandbox();
-    loadScript(ctx, 'engine-adapter.js');
+    loadScript(ctx, SCRIPT_PATHS.adapter);
 
     const signals = ctx.EngineAdapter.toSpinSignals(
         [{ patternName: '(123)', targetFace: 3, status: 'GO' }],
@@ -29,4 +30,3 @@ test('EngineAdapter builds spin signals consistently', () => {
     assert.equal(signals.length, 1);
     assert.equal(signals[0].patternName, '(123)');
 });
-

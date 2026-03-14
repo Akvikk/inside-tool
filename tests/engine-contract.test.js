@@ -1,10 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createSandbox, loadScript } = require('./helpers/browserSandbox');
+const { SCRIPT_PATHS } = require('./helpers/projectScripts');
 
 test('EngineContract sanitizes malformed sync result safely', () => {
     const ctx = createSandbox();
-    loadScript(ctx, 'engine-contract.js');
+    loadScript(ctx, SCRIPT_PATHS.contract);
 
     const sanitized = ctx.EngineContract.sanitizeSyncResult({
         notifications: [{ type: 'active', strategy: 44, count: '3' }, null],
@@ -21,7 +22,7 @@ test('EngineContract sanitizes malformed sync result safely', () => {
 
 test('EngineContract validates sync result shape', () => {
     const ctx = createSandbox();
-    loadScript(ctx, 'engine-contract.js');
+    loadScript(ctx, SCRIPT_PATHS.contract);
 
     const valid = ctx.EngineContract.validateSyncResult({
         notifications: [{ type: 'ACTIVE', strategy: 'Sequence' }],
@@ -36,4 +37,3 @@ test('EngineContract validates sync result shape', () => {
     assert.equal(invalid.valid, false);
     assert.equal(invalid.errors.length > 0, true);
 });
-

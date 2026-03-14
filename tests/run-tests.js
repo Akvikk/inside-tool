@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const assert = require('assert/strict');
 const { createSandbox, loadScript } = require('./helpers/browserSandbox');
+const { SCRIPT_PATHS, REQUIRED_SCRIPTS_BEFORE_APP } = require('./helpers/projectScripts');
 const {
     readLocalScripts,
     collectFunctionNames,
@@ -10,24 +11,6 @@ const {
     collectDefinedIds,
     collectDuplicateWindowFunctionAssignments
 } = require('./helpers/uiSmoke');
-
-const SCRIPT_PATHS = {
-    state: 'js/modules/engine/state.js',
-    core: 'js/modules/engine/core.js',
-    prediction: 'js/modules/engine/prediction.js',
-    contract: 'js/modules/engine/contract.js',
-    adapter: 'js/modules/engine/adapter.js',
-    store: 'js/modules/engine/store.js',
-    series: 'js/strategies/strategy.series.js',
-    combo: 'js/strategies/strategy.combo.js',
-    renderers: 'js/modules/ui/renderers.js',
-    modals: 'js/modules/ui/modals.js',
-    hudManager: 'js/modules/ui/hud-manager.js',
-    controller: 'js/modules/ui/controller.js',
-    processor: 'js/modules/input/processor.js',
-    brain: 'js/modules/ai/brain.js',
-    app: 'app.js'
-};
 
 async function testEngineContract() {
     const ctx = createSandbox();
@@ -173,25 +156,9 @@ async function testUiSmoke() {
     const scriptEntries = readLocalScripts(projectRoot, htmlCode);
     const tags = scriptEntries.map(entry => entry.relativePath);
     const appIndex = tags.indexOf(SCRIPT_PATHS.app);
-    const requiredBeforeApp = [
-        SCRIPT_PATHS.state,
-        SCRIPT_PATHS.core,
-        SCRIPT_PATHS.prediction,
-        SCRIPT_PATHS.contract,
-        SCRIPT_PATHS.adapter,
-        SCRIPT_PATHS.store,
-        SCRIPT_PATHS.series,
-        SCRIPT_PATHS.combo,
-        SCRIPT_PATHS.renderers,
-        SCRIPT_PATHS.modals,
-        SCRIPT_PATHS.hudManager,
-        SCRIPT_PATHS.controller,
-        SCRIPT_PATHS.processor,
-        SCRIPT_PATHS.brain
-    ];
 
     assert.ok(appIndex >= 0, 'app.js script tag missing');
-    requiredBeforeApp.forEach(scriptPath => {
+    REQUIRED_SCRIPTS_BEFORE_APP.forEach(scriptPath => {
         const scriptIndex = tags.indexOf(scriptPath);
         assert.ok(scriptIndex >= 0 && scriptIndex < appIndex, `${scriptPath} must load before app.js`);
     });

@@ -1,10 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createSandbox, loadScript } = require('./helpers/browserSandbox');
+const { SCRIPT_PATHS } = require('./helpers/projectScripts');
 
 test('AppStore handles core dispatch actions', () => {
     const ctx = createSandbox();
-    loadScript(ctx, 'store.js');
+    loadScript(ctx, SCRIPT_PATHS.store);
 
     ctx.AppStore.dispatch('history/set', [{ num: 12 }]);
     ctx.AppStore.dispatch('ui/setStrategy', 'combo');
@@ -16,4 +17,3 @@ test('AppStore handles core dispatch actions', () => {
     assert.equal(state.activeBets.length, 1);
     assert.equal(state.alerts.length, 1);
 });
-

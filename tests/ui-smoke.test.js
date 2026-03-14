@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { REQUIRED_SCRIPTS_BEFORE_APP } = require('./helpers/projectScripts');
 const {
     readLocalScripts,
     collectFunctionNames,
@@ -23,25 +24,8 @@ const combinedCode = scriptEntries.map(entry => entry.code).join('\n');
 
 test('script order keeps safety boundary before app bootstrap', () => {
     const appIndex = scriptPaths.indexOf('app.js');
-    const requiredBeforeApp = [
-        'js/modules/engine/state.js',
-        'js/modules/engine/core.js',
-        'js/modules/engine/prediction.js',
-        'js/modules/engine/contract.js',
-        'js/modules/engine/adapter.js',
-        'js/modules/engine/store.js',
-        'js/strategies/strategy.series.js',
-        'js/strategies/strategy.combo.js',
-        'js/modules/ui/renderers.js',
-        'js/modules/ui/modals.js',
-        'js/modules/ui/hud-manager.js',
-        'js/modules/ui/controller.js',
-        'js/modules/input/processor.js',
-        'js/modules/ai/brain.js'
-    ];
-
     assert.ok(appIndex >= 0, 'app.js script tag missing');
-    requiredBeforeApp.forEach(scriptPath => {
+    REQUIRED_SCRIPTS_BEFORE_APP.forEach(scriptPath => {
         const scriptIndex = scriptPaths.indexOf(scriptPath);
         assert.ok(scriptIndex >= 0 && scriptIndex < appIndex, `${scriptPath} must load before app.js`);
     });

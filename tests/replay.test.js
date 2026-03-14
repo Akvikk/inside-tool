@@ -3,6 +3,7 @@ const path = require('path');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createSandbox, loadScript } = require('./helpers/browserSandbox');
+const { SCRIPT_PATHS } = require('./helpers/projectScripts');
 
 function buildSnapshotFromAnalysis(analysis, spinCount) {
     if (!analysis || !analysis.targetFace || analysis.action === 'WAIT') {
@@ -27,12 +28,12 @@ test('Replay fixture remains engine-contract safe across ticks', async () => {
     const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 
     const ctx = createSandbox();
-    loadScript(ctx, 'predictionEngine.js');
-    loadScript(ctx, 'strategies/strategy.series.js');
-    loadScript(ctx, 'strategies/strategy.combo.js');
-    loadScript(ctx, 'engine-core.js');
-    loadScript(ctx, 'engine-contract.js');
-    loadScript(ctx, 'engine-adapter.js');
+    loadScript(ctx, SCRIPT_PATHS.prediction);
+    loadScript(ctx, SCRIPT_PATHS.series);
+    loadScript(ctx, SCRIPT_PATHS.combo);
+    loadScript(ctx, SCRIPT_PATHS.core);
+    loadScript(ctx, SCRIPT_PATHS.contract);
+    loadScript(ctx, SCRIPT_PATHS.adapter);
 
     const patternConfig = ctx.StrategyRegistry.series.buildPatternConfig(true);
     const history = [];
@@ -89,4 +90,3 @@ test('Replay fixture remains engine-contract safe across ticks', async () => {
 
     assert.equal(history.length, fixture.spins.length);
 });
-
