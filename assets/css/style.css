@@ -693,7 +693,7 @@ button.bg-gradient-to-b:active {
 }
 
 .history-table td {
-    padding: 10px 5px;
+    padding: 2px 5px;
     vertical-align: middle;
     text-align: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.02);
@@ -729,6 +729,7 @@ button.bg-gradient-to-b:active {
 .history-row {
     animation: rowEnter 0.35s cubic-bezier(0.19, 1, 0.22, 1) forwards;
     border-bottom: 1px solid rgba(255, 255, 255, 0.015) !important;
+    min-height: 0;
 }
 
 .history-row:hover {

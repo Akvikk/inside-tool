@@ -371,7 +371,7 @@ window.renderRow = function (spin, targetContainer) {
     if (spin.faces && spin.faces.length > 0) {
         let faceTags = spin.faces.map(fId => {
             let fStyle = window.FACES ? window.FACES[fId] : { color: '#fff', border: '#fff', bg: '#000' };
-            return `<span class="face-tag mb-1 mr-1" data-spin-id="${spin.id}" data-face-id="${fId}" style="color:${fStyle.color}; border:1px solid ${fStyle.border}; background:${fStyle.bg};">F${fId}</span>`;
+            return `<span class="face-tag mb-0.5 mr-1" data-spin-id="${spin.id}" data-face-id="${fId}" style="color:${fStyle.color}; border:1px solid ${fStyle.border}; background:${fStyle.bg};">F${fId}</span>`;
         }).join('');
         faceHTML = `<div class="flex flex-wrap justify-center">${faceTags}</div>`;
     }
@@ -479,7 +479,7 @@ window.layoutComboBridge = function (spinId) {
     };
     const targetPoint = {
         x: badgeRect.left - cellRect.left,
-        y: 0 // Badge is 'top-0', so relative to cell top it is exactly 0
+        y: 0 // Badge is perfectly absolute top-0, relative to cell it evaluates exactly at the seam 
     };
 
     const nextGeom = { p1: prevPoint, p2: currPoint, t: targetPoint, color: color };
@@ -550,14 +550,14 @@ window.drawComboBridge = function (layer, geom) {
         p.setAttribute('stroke', geom.color);
         p.setAttribute('stroke-width', '2.5');
         p.setAttribute('stroke-opacity', '1.0');
-        p.style.filter = `drop-shadow(0 0 6px ${geom.color})`;
+        p.style.filter = `drop-shadow(0 0 8px ${geom.color})`;
     });
     
     dot.setAttribute('cx', t.x);
     dot.setAttribute('cy', t.y);
     dot.setAttribute('fill', geom.color);
     dot.setAttribute('r', '3');
-    dot.style.filter = `drop-shadow(0 0 10px ${geom.color})`;
+    dot.style.filter = `drop-shadow(0 0 12px ${geom.color})`;
 }
 
 window.animateComboBridge = function (layer, fromGeom, toGeom, duration = 260) {
