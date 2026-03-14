@@ -1143,7 +1143,7 @@ function toggleInputLayout() {
 function fitAnalyticsHUD() {
     const hud = document.getElementById('analyticsHUD');
     const header = document.getElementById('hudHeader');
-    const body = document.getElementById('hudStats');
+    const body = hud ? hud.querySelector('.flex-1.flex.flex-col.overflow-hidden.relative') : null;
     if (!hud || !header || !body || hud.classList.contains('hidden')) return;
 
     requestAnimationFrame(() => {
@@ -1201,12 +1201,6 @@ function initAnalyticsHUD() {
         if (type === 'drag' && e.target.closest('button')) return;
         if (e.cancelable) e.preventDefault();
         e.stopPropagation();
-
-        // Convert from right-anchored initial position to left-anchored dragging.
-        if (!hud.style.left || hud.style.left === 'auto') {
-            hud.style.left = `${hud.offsetLeft}px`;
-        }
-        hud.style.right = 'auto';
 
         interaction = {
             type,
@@ -1279,19 +1273,17 @@ function initAnalyticsHUD() {
 function toggleAnalyticsHUD() {
     const hud = document.getElementById('analyticsHUD');
     const btn = document.getElementById('hudToggleBtn');
-    if (!hud || !btn) return;
 
     if (hud.classList.contains('hidden')) {
         hud.classList.remove('hidden');
         hud.classList.add('flex');
-        btn.classList.add('bg-white/10', 'is-active');
-        initAnalyticsHUD();  // ensure drag/resize is wired up
+        btn.classList.add('bg-white/10');
         updateAnalyticsHUD();
         fitAnalyticsHUD();
     } else {
         hud.classList.add('hidden');
         hud.classList.remove('flex');
-        btn.classList.remove('bg-white/10', 'is-active');
+        btn.classList.remove('bg-white/10');
     }
 }
 
@@ -1318,66 +1310,6 @@ function toggleHudColdMode() {
 
 function getPatternFilterEnabledCount() {
     return Object.keys(patternConfig).reduce((count, key) => count + (patternConfig[key] !== false ? 1 : 0), 0);
-}
-
-function initPatternFilterDrag() {
-    const popover = document.getElementById('patternFilterPopover');
-    const header = popover ? popover.querySelector('.pattern-popover-head') : null;
-
-    if (!popover || !header) return;
-    if (popover.dataset.dragInitialized === 'true') return;
-    popover.dataset.dragInitialized = 'true';
-
-    let isDragging = false;
-    let startX = 0, startY = 0;
-    let initialLeft = 0, initialTop = 0;
-
-    header.addEventListener('pointerdown', (e) => {
-        if (e.button !== 0) return;
-        
-        // Convert from absolute to fixed to allow dragging outside parent boundaries
-        if (getComputedStyle(popover).position !== 'fixed') {
-            const rect = popover.getBoundingClientRect();
-            document.body.appendChild(popover);
-            popover.style.position = 'fixed';
-            popover.style.zIndex = '9999';
-            popover.style.top = `${rect.top}px`;
-            popover.style.left = `${rect.left}px`;
-            popover.style.right = 'auto'; 
-        }
-
-        isDragging = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        initialLeft = popover.offsetLeft;
-        initialTop = popover.offsetTop;
-        
-        header.setPointerCapture(e.pointerId);
-        document.body.classList.add('hud-no-select');
-    });
-
-    window.addEventListener('pointermove', (e) => {
-        if (!isDragging) return;
-        
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-        
-        const maxLeft = Math.max(8, window.innerWidth - popover.offsetWidth - 8);
-        const maxTop = Math.max(8, window.innerHeight - popover.offsetHeight - 8);
-        
-        let newLeft = initialLeft + dx;
-        let newTop = initialTop + dy;
-        
-        popover.style.left = `${Math.min(maxLeft, Math.max(8, newLeft))}px`;
-        popover.style.top = `${Math.min(maxTop, Math.max(8, newTop))}px`;
-    });
-
-    window.addEventListener('pointerup', (e) => {
-        if (!isDragging) return;
-        isDragging = false;
-        header.releasePointerCapture(e.pointerId);
-        document.body.classList.remove('hud-no-select');
-    });
 }
 
 function closePatternFilterPopover() {
@@ -1440,6 +1372,9 @@ function getHudScopeSummary() {
     if (hudHistoryScope === 'recent') {
         return history.length > 0
             ? `Last ${Math.min(HUD_RECENT_WINDOW, history.length)} Spins`
+            : `Last ${HUD_RECENT_WINDOW} Spins`;
+    }
+    return history.length > 0 ? `All ${history.length} Spins` : 'All History';
             : `Last ${HUD_RECENT_WINDOW} Spins`;
     }
     return history.length > 0 ? `All ${history.length} Spins` : 'All History';
@@ -2082,9 +2017,9 @@ function updateAnalyticsHUD() {
 
     const hudLabel = document.getElementById('hudWindowValue');
     const hudScopeBtn = document.getElementById('hudScopeBtn');
-
+    
     const themeColor = isHudColdMode ? '#06b6d4' : '#30D158';
-
+    
     if (hudLabel) {
         hudLabel.innerText = getHudScopeSummary();
         hudLabel.style.color = themeColor;
@@ -2104,11 +2039,11 @@ function updateAnalyticsHUD() {
             ? `${themeColor}22`
             : 'rgba(255,255,255,0.10)';
     }
-
+    
     // Update Header Title based on mode
     const headerTitle = hud.querySelector('#hudHeader span');
     if (headerTitle) {
-        headerTitle.innerHTML = isHudColdMode
+        headerTitle.innerHTML = isHudColdMode 
             ? `<i class="fas fa-snowflake mr-1"></i> Cold Tracker`
             : `<i class="fas fa-satellite-dish mr-1"></i> Live Feed`;
         headerTitle.className = `text-[9px] font-bold tracking-[0.18em] uppercase ${isHudColdMode ? 'text-[#06b6d4]' : 'text-[#30D158]'}`;
@@ -2118,118 +2053,57 @@ function updateAnalyticsHUD() {
     const content = document.getElementById('hudStats');
     if (!content) return;
 
-    const windowSize = getHudWindowSetting();
-    const isSeries = currentGameplayStrategy === 'series';
+    const stats = calculatePerimeterStats(history, getHudWindowSetting());
+    if (!stats || !stats.counts) return;
+    const comboStats = getComboCoverageStats(stats);
+    const sampleSize = comboStats.length > 0 ? comboStats[0].sampleSize : 0;
 
-    if (isSeries) {
-        // --- SERIES MODE: show sequence hit stats ---
-        const window_ = hudHistoryScope === 'recent' ? history.slice(-windowSize) : history;
-        const sampleSize = window_.length;
-        const colLabel = 'Seq';
-        const col3Title = isHudColdMode ? 'Miss%' : 'Hit%';
-
-        // Count how many times each sequence's target face appeared after the trigger pair
-        const seriesStrat = window.StrategyRegistry && window.StrategyRegistry.series;
-        const SEQ_LIST   = seriesStrat && seriesStrat.SEQUENCES ? seriesStrat.SEQUENCES : [];
-        const SEQ_COLORS = seriesStrat && seriesStrat.SEQUENCE_COLORS ? seriesStrat.SEQUENCE_COLORS : [];
-        const seqStats = SEQ_LIST.map((seq, i) => {
-            let hits = 0;
-            for (let j = 2; j < window_.length; j++) {
-                const fA = window_[j - 2]?.faces?.includes(seq.a);
-                const fB = window_[j - 1]?.faces?.includes(seq.b);
-                const fT = window_[j]?.faces?.includes(seq.target);
-                if (fA && fB && fT) hits++;
-            }
-            const pct = sampleSize < 3 ? 0 : Math.round((hits / Math.max(1, sampleSize - 2)) * 100);
-            return {
-                label: seq.name,
-                color: SEQ_COLORS[i % SEQ_COLORS.length],
-                hits,
-                pct
-            };
-        });
-
-        if (isHudColdMode) {
-            seqStats.sort((a, b) => a.pct - b.pct);
-        } else {
-            seqStats.sort((a, b) => b.pct - a.pct || b.hits - a.hits);
-        }
-
-        let html = `
-            <div class="space-y-0.5">
-                <div class="grid grid-cols-[56px_minmax(0,1fr)_42px] items-center gap-1.5 px-0.5 pb-1 text-[9px] uppercase tracking-[0.12em] text-white/60 border-b border-white/20">
-                    <div class="font-bold">${colLabel}</div>
-                    <div class="text-center font-bold">Hits</div>
-                    <div class="text-right font-bold">${col3Title}</div>
-                </div>
-        `;
-
-        if (sampleSize === 0) {
-            html += `<div class="py-4 text-center text-white/55 italic">Awaiting spins...</div>`;
-        } else {
-            seqStats.forEach(s => {
-                const val2 = isHudColdMode ? (100 - s.pct) : s.pct;
-                const highlight = val2 > 20;
-                const opacity = highlight ? '1' : '0.82';
-                const valColor = highlight ? themeColor : 'rgba(220,220,225,0.85)';
-                html += `
-                    <div class="grid grid-cols-[56px_minmax(0,1fr)_42px] items-center gap-1.5 px-0.5 py-1 rounded-md">
-                        <div class="text-[11px] font-black tracking-[0.08em]" style="color:${s.color}; opacity:${opacity}">${s.label}</div>
-                        <div class="text-center font-mono text-[11px] text-white/90" style="opacity:${opacity}">${s.hits}</div>
-                        <div class="text-right font-mono text-[11px] font-bold" style="color:${valColor}; opacity:${opacity}">${val2}%</div>
-                    </div>
-                `;
-            });
-        }
-        html += `</div>`;
-        content.innerHTML = html;
+    // Sort Combos based on Mode
+    let displayCombos = comboStats.slice();
+    if (isHudColdMode) {
+        displayCombos.sort((a, b) => b.coldPercent - a.coldPercent || b.sampleMisses - a.sampleMisses || a.hits - b.hits);
     } else {
-        // --- COMBO MODE: original perimeter combo logic ---
-        const stats = calculatePerimeterStats(history, windowSize);
-        if (!stats || !stats.counts) return;
-        const comboStats = getComboCoverageStats(stats);
-        const sampleSize = comboStats.length > 0 ? comboStats[0].sampleSize : 0;
-
-        let displayCombos = comboStats.slice();
-        if (isHudColdMode) {
-            displayCombos.sort((a, b) => b.coldPercent - a.coldPercent || b.sampleMisses - a.sampleMisses || a.hits - b.hits);
-        } else {
-            displayCombos.sort((a, b) => b.hotPercent - a.hotPercent || b.hits - a.hits || a.sampleMisses - b.sampleMisses);
-        }
-
-        const col3Title = isHudColdMode ? 'C%' : 'H%';
-
-        let html = `
-            <div class="space-y-0.5">
-                <div class="grid grid-cols-[46px_minmax(0,1fr)_42px] items-center gap-1.5 px-0.5 pb-1 text-[9px] uppercase tracking-[0.12em] text-white/60 border-b border-white/20">
-                    <div class="font-bold">Combo</div>
-                    <div class="text-center font-bold">H / S</div>
-                    <div class="text-right font-bold">${col3Title}</div>
-                </div>
-        `;
-
-        if (sampleSize === 0) {
-            html += `<div class="py-4 text-center text-white/55 italic">Awaiting spins...</div>`;
-        } else {
-            displayCombos.forEach(c => {
-                const ratioSampleSize = Number.isFinite(c.sampleSize) ? c.sampleSize : sampleSize;
-                const val1 = `${c.hits}/${ratioSampleSize}`;
-                const val2 = isHudColdMode ? c.coldPercent : c.hotPercent;
-                const opacity = (isHudColdMode ? val2 > 80 : val2 > 20) ? '1' : '0.82';
-                const valColor = (isHudColdMode ? val2 > 80 : val2 > 20) ? themeColor : 'rgba(220,220,225,0.85)';
-                html += `
-                    <div class="grid grid-cols-[46px_minmax(0,1fr)_42px] items-center gap-1.5 px-0.5 py-1 rounded-md">
-                        <div class="text-[11px] font-black tracking-[0.08em]" style="color:${c.color}; opacity:${opacity}">${c.label}</div>
-                        <div class="text-center font-mono text-[11px] text-white/90" style="opacity:${opacity}">${val1}</div>
-                        <div class="text-right font-mono text-[11px] font-bold" style="color:${valColor}; opacity:${opacity}">${val2}%</div>
-                    </div>
-                `;
-            });
-        }
-        html += `</div>`;
-        content.innerHTML = html;
+        displayCombos.sort((a, b) => b.hotPercent - a.hotPercent || b.hits - a.hits || a.sampleMisses - b.sampleMisses);
     }
 
+    const col2Title = 'H / S';
+    const col3Title = isHudColdMode ? 'C%' : 'H%';
+
+    let html = `
+        <div class="space-y-0.5">
+            <div class="grid grid-cols-[34px_minmax(0,1fr)_32px] items-center gap-1.5 px-0.5 pb-1 text-[8px] uppercase tracking-[0.12em] text-white/28 border-b border-white/10">
+                <div class="font-bold">Combo</div>
+                <div class="text-center font-bold">${col2Title}</div>
+                <div class="text-right font-bold">${col3Title}</div>
+            </div>
+    `;
+
+    if (sampleSize === 0) {
+        html += `
+            <div class="py-4 text-center text-white/35 italic">Awaiting spins...</div>
+        `;
+    }
+
+    if (sampleSize > 0) {
+        displayCombos.forEach(c => {
+            const ratioSampleSize = Number.isFinite(c.sampleSize) ? c.sampleSize : sampleSize;
+            const val1 = `${c.hits}/${ratioSampleSize}`;
+            const val2 = isHudColdMode ? c.coldPercent : c.hotPercent;
+            const opacity = (isHudColdMode ? val2 > 80 : val2 > 20) ? '1' : '0.5';
+            const valColor = (isHudColdMode ? val2 > 80 : val2 > 20) ? themeColor : '#8E8E93';
+
+            html += `
+                <div class="grid grid-cols-[34px_minmax(0,1fr)_32px] items-center gap-1.5 px-0.5 py-1">
+                    <div class="text-[12px] font-black tracking-[0.08em]" style="color:${c.color}; opacity:${opacity}">${c.label}</div>
+                    <div class="text-center font-mono text-[10px] text-gray-200" style="opacity:${opacity}">${val1}</div>
+                    <div class="text-right font-mono text-[10px] font-bold" style="color:${valColor}; opacity:${opacity}">${val2}%</div>
+                </div>
+            `;
+        });
+    }
+
+    html += `</div>`;
+    content.innerHTML = html;
     fitAnalyticsHUD();
 }
 
