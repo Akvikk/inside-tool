@@ -131,7 +131,7 @@ function renderStrategicBrainSummary() {
     }
 }
 
-window.triggerAiAudit = async function(btn) {
+window.triggerAiAudit = async function (btn) {
     if (!btn) return;
     const originalText = btn.innerText;
     btn.innerText = 'AUDITING...';
@@ -197,7 +197,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 // --- ESSENTIAL UI POLYFILLS ---
-window.loadSessionData = function() {
+window.loadSessionData = function () {
     try {
         const raw = localStorage.getItem('insideTool_session_v2');
         if (!raw) return false;
@@ -243,39 +243,56 @@ window.renderGapStats = function () {
     }
 };
 
-window.renderDashboardSafe = function (alerts) {
-    const dash = document.getElementById('dashboard');
-    if (!dash) return;
+window.renderPredictionCell = function (spin) {
+    const signals = spin.newSignals || [];
+    if (signals.length === 0) return '<span class="text-gray-600">-</span>';
 
-    let cards = [];
-    const activeBets = state.activeBets || [];
+    return signals.map(sig => {
+        const color = sig.status === 'SIT' ? 'text-gray-500' : 'text-[#30D158]';
+        const confText = sig.confidence ? `<span class="text-[9px] opacity-60 ml-1">(${sig.confidence}%)</span>` : '';
+        const sourceIcon = sig.signalSource === 'ai' ? '<i class="fas fa-brain text-[10px] mr-1 text-[#bf5af2]"></i>' : '<i class="fas fa-microchip text-[10px] mr-1 text-blue-400"></i>';
 
-    activeBets.forEach((bet, index) => {
-        const subtitle = bet.subtitle || (bet.comboLabel ? `${bet.comboLabel} combo` : bet.patternName);
-        const accent = bet.accentColor || '#FF3B30';
-        const bgStyle = bet.confirmed
-            ? `background: linear-gradient(135deg, ${accent}50, ${accent}15)`
-            : `background: linear-gradient(135deg, ${accent}25, ${accent}05)`;
-        const borderStyle = bet.confirmed ? `border-color: ${accent}` : `border-color: ${accent}40`;
-
-        cards.push(`
-            <div class="min-w-[250px] h-[64px] px-3 py-2 rounded-lg border flex items-center justify-between cursor-pointer select-none transition-all hover:brightness-110"
-                 ondblclick="window.toggleBetConfirmation && window.toggleBetConfirmation(${index})"
-                 style="border-left: 3px solid ${accent}; ${borderStyle}; ${bgStyle}; box-shadow: 0 4px 15px ${accent}15;">
-                <div class="min-w-0">
-                    <div class="text-[15px] leading-tight font-black text-white tracking-wide drop-shadow-sm">BET F${bet.targetFace}</div>
-                    <div class="text-[11px] leading-tight text-white/80 font-semibold mt-0.5">${subtitle}</div>
-                </div>
+        return `
+            <div class="flex items-center text-[10px] font-bold ${color} mb-1">
+                ${sourceIcon}
+                <span>F${sig.targetFace}</span>
+                ${confText}
+                <span class="ml-1.5 px-1 rounded bg-white/5 border border-white/5">${sig.status}</span>
             </div>
-        `);
-    });
+        `;
+    }).join('');
+};
 
-    if (cards.length === 0) {
-        dash.innerHTML = `<div class="dashboard-empty w-full text-center text-[10px] font-medium text-[#8E8E93]/60 border border-dashed border-white/5 rounded-xl p-2 select-none tracking-wide flex items-center justify-center h-[60px]"><span>AWAITING SIGNALS...</span></div>`;
-        return;
-    }
+window.renderComboCell = function (spin) {
+    const prevSpin = state.history[spin.index - 1];
+    if (!prevSpin) return '<span class="text-gray-600">-</span>';
 
-    dash.innerHTML = cards.join('');
+    const registry = window.StrategyRegistry || {};
+    const stratKey = state.currentGameplayStrategy || 'series';
+    const strategy = registry[stratKey];
+
+    if (!strategy || typeof strategy.detectBridge !== 'function') return '<span class="text-gray-600">-</span>';
+
+    const prevMask = window.FON_MASK_MAP ? window.FON_MASK_MAP[prevSpin.num] : 0;
+    const currMask = window.FON_MASK_MAP ? window.FON_MASK_MAP[spin.num] : 0;
+    const bridge = strategy.detectBridge(prevMask, currMask, window.FACE_MASKS);
+
+    if (!bridge) return '<span class="text-gray-600">-</span>';
+
+    // Store bridge data on the row for the drawing logic
+    return `
+        <div class="combo-link-layer pointer-events-none" 
+             data-prev-spin-id="${prevSpin.id}" 
+             data-prev-face="${bridge.matchedPrevFace}" 
+             data-curr-face="${bridge.matchedCurrFace}"
+             data-color="${bridge.color}"></div>
+        <div class="flex justify-center">
+            <span class="combo-badge px-2 py-0.5 rounded-full text-[9px] font-black uppercase border" 
+                  style="color:${bridge.color}; border-color:${bridge.color}40; background:${bridge.color}15;">
+                ${bridge.label}
+            </span>
+        </div>
+    `;
 };
 
 window.renderRow = function (spin) {
@@ -314,7 +331,7 @@ window.renderRow = function (spin) {
     if (sc) { setTimeout(() => { sc.scrollTop = sc.scrollHeight; }, 50); }
 };
 
-window.reRenderHistory = function() {
+window.reRenderHistory = function () {
     const tbody = document.getElementById('historyBody');
     if (!tbody) return;
     tbody.innerHTML = '';
@@ -328,7 +345,7 @@ window.reRenderHistory = function() {
     }
 };
 
-window.rebuildSessionFromSpins = async function(spins, options = {}) {
+window.rebuildSessionFromSpins = async function (spins, options = {}) {
     // 1. Hard reset of state
     if (window.state) {
         window.state.history = [];
@@ -361,7 +378,7 @@ window.rebuildSessionFromSpins = async function(spins, options = {}) {
 };
 
 // --- COMBO BRIDGE RENDERERS (VISUAL UI) ---
-window.layoutComboBridge = function(spinId) {
+window.layoutComboBridge = function (spinId) {
     const row = document.getElementById(`row-${spinId}`);
     if (!row) return;
 
@@ -406,13 +423,13 @@ window.layoutComboBridge = function(spinId) {
     layer._comboGeom = nextGeom;
 }
 
-window.layoutAllComboBridges = function() {
+window.layoutAllComboBridges = function () {
     if (window.state && window.state.history) {
         window.state.history.forEach(spin => window.layoutComboBridge(spin.id));
     }
 }
 
-window.ensureComboBridgeElements = function(layer) {
+window.ensureComboBridgeElements = function (layer) {
     let svg = layer.querySelector('svg');
     if (!svg) {
         layer.innerHTML = `
@@ -432,7 +449,7 @@ window.ensureComboBridgeElements = function(layer) {
     };
 }
 
-window.drawComboBridge = function(layer, geom) {
+window.drawComboBridge = function (layer, geom) {
     const { svg, path1, path2, dot } = window.ensureComboBridgeElements(layer);
     const minX = Math.min(geom.p1.x, geom.p2.x, geom.t.x) - 10;
     const maxX = Math.max(geom.p1.x, geom.p2.x, geom.t.x) + 6;
@@ -466,7 +483,7 @@ window.drawComboBridge = function(layer, geom) {
     dot.setAttribute('fill', geom.color);
 }
 
-window.animateComboBridge = function(layer, fromGeom, toGeom, duration = 260) {
+window.animateComboBridge = function (layer, fromGeom, toGeom, duration = 260) {
     if (layer._comboAnimFrame) cancelAnimationFrame(layer._comboAnimFrame);
     const startTime = performance.now();
     const easeInOutCubic = (x) => x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
@@ -603,12 +620,12 @@ window.resetStopwatch = function () {
 };
 
 // --- RESTORED GLOBAL BRIDGES & UTILITIES ---
-window.scanAllStrategies = function(options = {}) {
+window.scanAllStrategies = function (options = {}) {
     if (window.EngineCore && typeof window.EngineCore.scanAll === 'function' && window.state) {
         return window.EngineCore.scanAll(
-            window.state.history, 
-            window.state.engineSnapshot || {}, 
-            window.state.currentGameplayStrategy || 'series', 
+            window.state.history,
+            window.state.engineSnapshot || {},
+            window.state.currentGameplayStrategy || 'series',
             window.state.patternConfig || {},
             options
         );
@@ -617,13 +634,13 @@ window.scanAllStrategies = function(options = {}) {
     return [];
 };
 
-window.syncAppStore = function() {
+window.syncAppStore = function () {
     if (window.AppStore && typeof window.AppStore.dispatch === 'function' && window.state) {
         window.AppStore.dispatch('engine/sync', window.state);
     }
 };
 
-window.updateUserStats = function(isWin, bet, spinIndex, unitChange) {
+window.updateUserStats = function (isWin, bet, spinIndex, unitChange) {
     if (!window.state || !window.state.userStats) return;
     const uStats = window.state.userStats;
 
@@ -646,7 +663,7 @@ window.updateUserStats = function(isWin, bet, spinIndex, unitChange) {
 };
 
 let heavyUpdateTimeout = null;
-window.debounceHeavyUIUpdates = function() {
+window.debounceHeavyUIUpdates = function () {
     if (heavyUpdateTimeout) clearTimeout(heavyUpdateTimeout);
     heavyUpdateTimeout = setTimeout(() => {
         if (window.renderAnalytics) window.renderAnalytics();
@@ -957,7 +974,7 @@ window.importSpins = function (input) {
                 if (window.rebuildSessionFromSpins) {
                     if (window.toggleHamburgerMenu) window.toggleHamburgerMenu();
                     await window.rebuildSessionFromSpins(data.spins);
-                    
+
                     const inputField = document.getElementById('spinInput');
                     if (inputField) {
                         inputField.value = '';
@@ -975,7 +992,65 @@ window.importSpins = function (input) {
     input.value = '';
 };
 
-// Prevent immediate console errors for remaining placeholders
-window.changePredictionStrategy = function (val) { console.log("Changed strategy to", val); };
+// --- AI CHAT MODULE ---
+window.sendAiChatMessage = async function () {
+    const input = document.getElementById('aiChatInput');
+    const historyContainer = document.getElementById('aiChatHistory');
+    if (!input || !historyContainer || !input.value.trim()) return;
+
+    const message = input.value.trim();
+    input.value = '';
+
+    // 1. Render User Message
+    historyContainer.innerHTML += `
+        <div class="flex justify-end">
+            <div class="bg-[#bf5af2]/20 border border-[#bf5af2]/30 text-white p-3 rounded-xl rounded-tr-sm max-w-[85%] text-xs shadow-md">
+                ${message}
+            </div>
+        </div>
+    `;
+    historyContainer.scrollTop = historyContainer.scrollHeight;
+
+    // 2. Render Loading State
+    const typingId = 'typing-' + Date.now();
+    historyContainer.innerHTML += `
+        <div id="${typingId}" class="flex justify-start">
+            <div class="bg-white/5 border border-white/10 text-white/60 p-3 rounded-xl rounded-tl-sm max-w-[85%] text-xs italic animate-pulse">
+                Consulting local brain...
+            </div>
+        </div>
+    `;
+    historyContainer.scrollTop = historyContainer.scrollHeight;
+
+    // 3. Formulate Prompt & Fetch
+    try {
+        if (!window.AiBrain) throw new Error("AI module unavailable.");
+        const context = window.state ? `Recent history: ${window.state.history.slice(-12).map(s => s.num).join(', ')}. Net: ${window.state.userStats ? window.state.userStats.netUnits : 0}u.` : "";
+
+        const responseText = await window.AiBrain.requestAiText(
+            `ROLE: Elite Roulette Table Boss.\nCONTEXT: ${context}\nUSER: ${message}`,
+            { requestMode: 'chat', maxOutputTokens: 250 }
+        );
+
+        document.getElementById(typingId).remove();
+        historyContainer.innerHTML += `
+            <div class="flex justify-start">
+                <div class="bg-black/40 border border-white/10 text-white p-3 rounded-xl rounded-tl-sm max-w-[85%] text-xs shadow-md leading-relaxed whitespace-pre-wrap">${responseText.trim()}</div>
+            </div>
+        `;
+    } catch (error) {
+        document.getElementById(typingId).remove();
+        historyContainer.innerHTML += `<div class="flex justify-start"><div class="bg-[#ff1a33]/20 border border-[#ff1a33]/30 text-[#ff1a33] p-3 rounded-xl rounded-tl-sm max-w-[85%] text-xs shadow-md">Error: ${error.message}</div></div>`;
+    }
+    historyContainer.scrollTop = historyContainer.scrollHeight;
+};
+
+// --- MISC. SETTINGS ---
+window.changePredictionStrategy = function (val) {
+    if (window.state) {
+        window.state.currentGameplayStrategy = val;
+        if (window.scanAllStrategies) window.scanAllStrategies();
+    }
+};
 window.openAiConfigModal = function () { toggleModal('aiConfigModal'); };
 window.openAiChat = function () { toggleModal('aiChatModal'); };

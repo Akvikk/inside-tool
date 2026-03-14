@@ -174,6 +174,8 @@
         // Bridge: Capture the engine's produced bets for dashboard display and next turn resolution
         state.activeBets = scanResult.nextBets || [];
         state.engineSnapshot = scanResult; 
+        console.log('[ENGINE] Scan Result:', scanResult);
+        console.log('[ENGINE] Active Bets:', state.activeBets);
 
         if (state.neuralPredictionEnabled && !options.silent && options.skipNeural !== true) {
             // Run AI in background to keep math engine fast & responsive
