@@ -578,6 +578,22 @@
         </div>
     </div>
 
+    <div id="hindsightModal"
+        class="fixed inset-0 z-[90] bg-black/60 backdrop-blur-md hidden flex items-center justify-center p-4"
+        onclick="HindsightModal.close()">
+        <div class="glass-menu modal-surface w-full max-w-lg p-6 space-y-5" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center">
+                <h2 class="text-white font-bold text-lg">🧠 AI Hindsight Review</h2>
+                <button onclick="HindsightModal.close()" class="text-gray-400 hover:text-white transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="hindsightContent" class="custom-scroll overflow-y-auto max-h-[60vh]">
+                <!-- AI content will be rendered here -->
+            </div>
+        </div>
+    </div>
+
     <!-- ANALYTICS HUD (FLOATING) -->
     <div id="analyticsHUD" class="hidden fixed z-[40] flex-col glass-menu overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.8)] border border-white/10" style="width: 260px; top: 80px; right: 16px;">
         <div id="hudHeader" class="p-2 border-b border-white/10 flex justify-between items-center cursor-move select-none bg-white/5">
@@ -585,6 +601,7 @@
                 <i class="fas fa-satellite-dish mr-1"></i> Live Feed
             </span>
             <div class="flex items-center gap-1.5">
+                <button onclick="openHindsightModal()" class="px-1.5 h-4 flex items-center justify-center rounded bg-white/10 border border-white/10 text-[10px] font-bold text-[#bf5af2] hover:text-white transition-colors" title="AI Hindsight Review"><i class="fas fa-brain"></i></button>
                 <button onclick="toggleHudColdMode()" id="hudColdBtn" class="px-1.5 h-4 flex items-center justify-center rounded bg-white/10 border border-white/10 text-[10px] font-bold text-gray-500 hover:text-white transition-colors" title="Toggle cold/hot mode"><i class="fas fa-snowflake"></i></button>
                 <button onclick="toggleHudHistoryScope()" id="hudScopeBtn" class="px-1.5 h-4 flex items-center justify-center rounded bg-white/10 border border-white/10 text-[8px] font-bold text-white/70 hover:text-white transition-colors" title="Toggle recent/all scope">ALL</button>
                 <button onclick="toggleAnalyticsHUD()" class="text-gray-500 hover:text-white transition-colors text-[10px]"><i class="fas fa-times"></i></button>
