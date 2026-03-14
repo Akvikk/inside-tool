@@ -1,72 +1,4 @@
-// --- CONFIGURATION ---
-const RED_NUMS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
-const PERIMETER_RULE_KEY = 'Perimeter Rule';
-const PREDICTION_PERIMETER_PATTERN = 'Prediction Perimeter';
-const AI_TAKEOVER_PATTERN = 'AI Takeover';
-const ENGINE_PRIMARY_WINDOW = 14;
-const ENGINE_CONFIRMATION_WINDOW = 5;
-const HUD_RECENT_WINDOW = 14;
-const GEMINI_MODEL = 'gemini-2.5-flash';
-const AI_RELAY_BASE_URL = 'http://127.0.0.1:8787/api/ai';
-const AI_RELAY_SENTINEL = '__inside_tool_secure_relay__';
-const INTELLIGENCE_VIEW_KEY = 'insideTool.intelligenceViewMode';
-const INTELLIGENCE_VIEWS = ['brief', 'diagnostic', 'minimal'];
-const PATTERN_FILTER_META_COMBO = Object.fromEntries(
-    PERIMETER_COMBOS.map(combo => [combo.label, {
-        label: combo.label,
-        hint: `Track ${combo.label} inside the prediction engine and dashboard flow.`,
-        icon: 'fa-link',
-        accent: combo.color
-    }])
-);
-// NOTE: PATTERN_FILTER_META_SERIES is now owned by strategies/strategy.series.js
-// and accessible via window.StrategyRegistry.series.PATTERN_FILTER_META
 
-// --- STATE MANAGEMENT ---
-let currentInputLayout = 'grid'; // 'grid' or 'racetrack'
-const RACETRACK_ORDER = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
-
-let history = [];
-let activeBets = [];
-let globalSpinIdCounter = 0;
-let spinProcessingQueue = Promise.resolve();
-let faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-let predictionPerimeterWindow = 14;
-let perimeterRuleEnabled = true;
-// --- OTHER STATE ---
-let advancementLog = [];
-let chatMessageHistory = [];
-let aiEnabled = false;
-let aiProvider = 'gemini';
-let aiApiKey = '';
-let neuralPredictionEnabled = false;
-let currentNeuralSignal = null;
-let neuralPredictionRequestId = 0;
-let aiSignalLedger = [];
-let lastAiFusionSnapshot = null;
-let aiPredictionCacheKey = '';
-let aiPredictionCacheSignal = null;
-let aiPredictionInFlight = null;
-let aiApiKeyVisible = false;
-let aiRelayAvailable = false;
-let aiRuntimeState = {
-    status: 'IDLE',
-    provider: 'gemini',
-    lastError: '',
-    lastRequestMode: '',
-    lastLatencyMs: 0,
-    lastPromptPreview: '',
-    lastResponsePreview: '',
-    lastUpdatedLabel: 'Never'
-};
-
-// Constants PERIMETER_COMBOS and FACES are already defined in predictionEngine.js
-// Removing duplicate declarations to prevent SyntaxError
-
-// Global Pattern Configuration - The Source of Truth
-// Built dynamically based on active strategy via rebuildPatternConfig()
-// Uses StrategyRegistry so that each strategy owns its own key definitions
-let patternConfig = {};
 
 function hasSecureAiConnection() {
     return aiApiKey === AI_RELAY_SENTINEL;
@@ -985,7 +917,7 @@ window.onload = async () => {
         engineSnapshot = createEmptyEngineSnapshot(0);
     }
 
-    settleAiSignalLedger();
+    window.AiBrain.settleLedger(history);
     refreshAdvancementStates();
     updateAiFusionSnapshot(currentNeuralSignal);
     updatePerimeterAnalytics();
@@ -2550,24 +2482,7 @@ function recordAiSignalInLedger(signal) {
     }
 }
 
-function settleAiSignalLedger() {
-    aiSignalLedger.forEach(entry => {
-        [1, 3, 5].forEach(horizon => {
-            const key = `outcome${horizon}`;
-            if (entry[key] !== null) return;
-            if (history.length < entry.issuedAfterSpin + horizon) return;
 
-            let hit = false;
-            for (let index = entry.issuedAfterSpin; index < entry.issuedAfterSpin + horizon; index++) {
-                if (spinContainsFace(history[index], entry.targetFace)) {
-                    hit = true;
-                    break;
-                }
-            }
-            entry[key] = hit ? 'HIT' : 'MISS';
-        });
-    });
-}
 
 function refreshAdvancementStates() {
     advancementLog = advancementLog.map(entry => ({
@@ -2881,7 +2796,7 @@ async function processSpinValue(val, options = {}) {
         window.AppStore.dispatch('history/append', safeSpin);
     }
     await refreshAiRelayStatus({ silent: true, updateUi: true });
-    settleAiSignalLedger();
+    window.AiBrain.settleLedger(history);
     refreshAdvancementStates();
 
     // 3. SCAN FOR NEW PATTERNS
