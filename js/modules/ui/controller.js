@@ -1,6 +1,5 @@
-import { state } from '../engine/state.js';
-
-(function() {
+(function () {
+    const state = window.state;
     // --- PUBLIC INTERFACE ---
     window.UiController = {
         init,
@@ -17,37 +16,43 @@ import { state } from '../engine/state.js';
         }
 
         // Show modal immediately with a loading state
-        window.HindsightModal.show(); 
+        window.HindsightModal.open();
 
         try {
             // These stats need to be gathered from the engine and user history
-            const history = window.history || [];
-            // Assumes these functions are exposed globally, which is consistent with other parts of the codebase.
-            const userStats = window.getUserStats ? window.getUserStats() : { netUnits: 0, betLog: [] };
-            const engineStats = window.getEngineStats ? window.getEngineStats() : { totalWins: 0, totalLosses: 0, signalLog: [] };
+            const history = state.history || [];
+            const userStats = state.userStats || { netUnits: 0, betLog: [] };
+            const engineStats = window.EngineCore ? window.EngineCore.stats : { totalWins: 0, totalLosses: 0, signalLog: [] };
 
             const analysis = await window.AiBrain.requestFullSessionReview(history, userStats, engineStats);
 
             if (analysis.error) {
                 throw new Error(analysis.error);
             }
-            
+
             // Reformat the critique for display
+            let tacticalHTML = '';
+            if (analysis.critique && analysis.critique.critiques) {
+                tacticalHTML = analysis.critique.critiques.map(c => `
+                    <div class="bg-white/5 border border-white/10 rounded-lg p-3 mb-2">
+                        <div class="font-bold text-white text-sm mb-1">${c.title}</div>
+                        <div class="text-xs text-white/70 leading-relaxed">${c.suggestion}</div>
+                    </div>
+                `).join('');
+            } else {
+                tacticalHTML = `<p class="text-sm text-white/70">No tactical critique provided.</p>`;
+            }
+
             const formattedAnalysis = {
                 actualProfit: analysis.actualNet,
                 potentialProfit: analysis.potentialNet,
-                tacticalCritique: analysis.critique.critiques.map(c => `<strong>${c.title}:</strong> ${c.suggestion}`).join('<br>')
+                tacticalCritique: tacticalHTML
             };
 
-            window.HindsightModal.show(formattedAnalysis);
+            window.HindsightModal.render(formattedAnalysis);
         } catch (error) {
             console.error("Error during AI Hindsight review:", error);
-            const errorAnalysis = {
-                actualProfit: 'N/A',
-                potentialProfit: 'N/A',
-                tacticalCritique: `An error occurred: ${error.message}`
-            };
-            window.HindsightModal.show(errorAnalysis);
+            window.HindsightModal.render({ error: error.message });
         }
     }
 
@@ -61,7 +66,9 @@ import { state } from '../engine/state.js';
     function handleGridClick(n) {
         // This will be moved later
         document.getElementById('spinInput').value = n;
-        void addSpin();
+        if (window.InputProcessor) {
+            void window.InputProcessor.addSpin();
+        }
     }
 
     function buildRacetrackSVG() {

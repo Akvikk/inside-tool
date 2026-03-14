@@ -1,7 +1,6 @@
 
-import { state } from '../engine/state.js';
-
-(function() {
+(function () {
+    const state = window.state;
     window.InputProcessor = {
         init,
         addSpin,
@@ -69,9 +68,9 @@ import { state } from '../engine/state.js';
             input.focus();
             return;
         }
-        
+
         // Immediately clear the input for the next entry.
-        input.value = ''; 
+        input.value = '';
         input.focus();
 
         // Enqueue the spin for processing in the background.
@@ -92,7 +91,7 @@ import { state } from '../engine/state.js';
         const remainingSpins = state.history.map(s => s.num);
 
         // 3. Rebuild in background so large histories don't lock the UI.
-        await rebuildSessionFromSpins(remainingSpins, { scrollToEnd: false });
+        if (window.rebuildSessionFromSpins) await window.rebuildSessionFromSpins(remainingSpins, { scrollToEnd: false });
     }
 
     async function processSpinValue(val, options = {}) {
@@ -107,18 +106,18 @@ import { state } from '../engine/state.js';
             }
         }
 
-        const matchedFaces = Object.prototype.hasOwnProperty.call(FON_MAP, val)
-            ? FON_MAP[val].slice()
+        const matchedFaces = Object.prototype.hasOwnProperty.call(window.FON_MAP, val)
+            ? window.FON_MAP[val].slice()
             : [];
-        const matchedFaceMask = Object.prototype.hasOwnProperty.call(FON_MASK_MAP, val)
-            ? FON_MASK_MAP[val]
+        const matchedFaceMask = Object.prototype.hasOwnProperty.call(window.FON_MASK_MAP, val)
+            ? window.FON_MASK_MAP[val]
             : 0;
 
         // Update Gaps for ALL matching faces
         for (let f = 1; f <= 5; f++) state.faceGaps[f]++;
         matchedFaces.forEach(f => state.faceGaps[f] = 0);
         if (!options.silent) {
-            renderGapStats();
+            if (window.renderGapStats) window.renderGapStats();
         }
 
         const currentSpinIndex = state.history.length;
@@ -130,11 +129,11 @@ import { state } from '../engine/state.js';
             matchedFaceMask,
             state.activeBets,
             state.currentGameplayStrategy,
-            updateUserStats,
+            window.updateUserStats || function () { },
             {
                 historyLength: currentSpinIndex,
-                faceMasks: FACE_MASKS,
-                faces: FACES
+                faceMasks: window.FACE_MASKS,
+                faces: window.FACES
             }
         );
         state.activeBets = [];
@@ -155,14 +154,14 @@ import { state } from '../engine/state.js';
                 : spinObj;
             window.AppStore.dispatch('history/append', safeSpin);
         }
-        await refreshAiRelayStatus({ silent: true, updateUi: true });
+        if (window.refreshAiRelayStatus) await window.refreshAiRelayStatus({ silent: true, updateUi: true });
         window.AiBrain.settleLedger(state.history);
-        refreshAdvancementStates();
+        if (window.refreshAdvancementStates) window.refreshAdvancementStates();
 
         // 3. SCAN FOR NEW PATTERNS
         let alerts = [];
         try {
-            alerts = await scanAllStrategies({ skipStoreSync: options.skipStoreSync === true || options.silent === true });
+            alerts = window.scanAllStrategies ? await window.scanAllStrategies({ skipStoreSync: options.skipStoreSync === true || options.silent === true }) : [];
         } catch (error) {
             console.error('Strategy scan failed for this spin:', error);
             alerts = window.currentAlerts || [];
@@ -170,7 +169,7 @@ import { state } from '../engine/state.js';
 
         if (state.neuralPredictionEnabled && !options.silent && options.skipNeural !== true) {
             // Run AI in background to keep math engine fast & responsive
-            requestNeuralPrediction({ renderDashboardNow: true }).catch(error => {
+            if (window.requestNeuralPrediction) window.requestNeuralPrediction({ renderDashboardNow: true }).catch(error => {
                 console.error('Neural prediction request failed:', error);
             });
             alerts = window.currentAlerts || [];
@@ -182,10 +181,10 @@ import { state } from '../engine/state.js';
             spinObj.newSignals = window.EngineAdapter.toSpinSignals(state.activeBets, {
                 neuralPredictionEnabled: state.neuralPredictionEnabled,
                 currentNeuralSignal: state.currentNeuralSignal,
-                buildPredictionLogSignal
+                buildPredictionLogSignal: window.buildPredictionLogSignal
             });
         } else if (state.neuralPredictionEnabled && state.currentNeuralSignal) {
-            spinObj.newSignals = [buildPredictionLogSignal(state.currentNeuralSignal)];
+            if (window.buildPredictionLogSignal) spinObj.newSignals = [window.buildPredictionLogSignal(state.currentNeuralSignal)];
         } else if (state.activeBets.length > 0) {
             spinObj.newSignals = state.activeBets.map(b => ({
                 patternName: b.patternName,
@@ -201,9 +200,9 @@ import { state } from '../engine/state.js';
         }
 
         if (!options.silent) {
-            renderRow(spinObj);
-            renderDashboardSafe(alerts);
-            debounceHeavyUIUpdates();
+            if (window.renderRow) window.renderRow(spinObj);
+            if (window.renderDashboardSafe) window.renderDashboardSafe(alerts);
+            if (window.debounceHeavyUIUpdates) window.debounceHeavyUIUpdates();
         }
 
         if (!options.preserveInput) {
@@ -213,10 +212,10 @@ import { state } from '../engine/state.js';
                 inputField.focus();
             }
         }
-        
+
         if (!options.silent) {
-            saveSessionData();
-            syncAppStore();
+            if (window.saveSessionData) window.saveSessionData();
+            if (window.syncAppStore) window.syncAppStore();
         }
 
         return alerts;

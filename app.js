@@ -1,9 +1,9 @@
+const state = window.state;
 
 async function requestTacticalAudit() {
     if (!window.AiBrain || typeof window.AiBrain.requestTacticalAudit !== 'function') {
         return { error: 'AI module unavailable.' };
     }
-    syncAiBrainSettings();
     return window.AiBrain.requestTacticalAudit({
         history: state.history,
         netUnits: window.EngineCore && window.EngineCore.stats
@@ -17,7 +17,6 @@ async function requestNeuralPrediction(options = {}) {
         return null;
     }
 
-    syncAiBrainSettings();
     const opts = options && typeof options === 'object' ? options : {};
     const renderDashboardNow = opts.renderDashboardNow === true;
     const brainOptions = {
@@ -26,7 +25,7 @@ async function requestNeuralPrediction(options = {}) {
 
     const mathSignal = state.engineSnapshot && state.engineSnapshot.currentPrediction ? state.engineSnapshot.currentPrediction : null;
     const recentHits = state.history.slice(-10)
-        .map(spin => `F${FON_PRIMARY_FACE_MAP[spin.num] || '?'}`)
+        .map(spin => `F${window.FON_PRIMARY_FACE_MAP[spin.num] || '?'}`)
         .join(' -> ') || 'None';
 
     const signal = await window.AiBrain.requestNeuralPrediction({
@@ -44,11 +43,11 @@ async function requestNeuralPrediction(options = {}) {
 
     if (signal) {
         state.currentNeuralSignal = signal;
-        updateAiFusionSnapshot(state.currentNeuralSignal);
+        if (window.updateAiFusionSnapshot) window.updateAiFusionSnapshot(state.currentNeuralSignal);
     }
 
     if (renderDashboardNow) {
-        renderDashboardSafe(window.currentAlerts || []);
+        if (window.renderDashboardSafe) window.renderDashboardSafe(window.currentAlerts || []);
     }
 
     return signal;
@@ -60,7 +59,7 @@ function buildStrategicBrainSummary() {
         : { totalWins: 0, totalLosses: 0, netUnits: 0 };
     const totalSignals = coreStats.totalWins + coreStats.totalLosses;
     const hitRate = totalSignals === 0 ? 0 : Math.round((coreStats.totalWins / totalSignals) * 100);
-    const recentFaces = state.history.slice(-8).map(spin => FON_PRIMARY_FACE_MAP[spin.num] || 0).filter(Boolean);
+    const recentFaces = state.history.slice(-8).map(spin => window.FON_PRIMARY_FACE_MAP[spin.num] || 0).filter(Boolean);
     const faceCounts = recentFaces.reduce((acc, face) => {
         acc[face] = (acc[face] || 0) + 1;
         return acc;
