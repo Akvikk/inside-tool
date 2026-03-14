@@ -272,13 +272,15 @@ window.renderDashboardSafe = function (items) {
             : `background: linear-gradient(135deg, ${accent}25, ${accent}05)`;
         const borderStyle = bet.confirmed ? `border-color: ${accent}` : `border-color: ${accent}40`;
 
+        // Screenshot sync: Add hit rate stats
+        const hitRate = bet.hitRate ? `${bet.hitRate}% Hit Rate` : 'Evaluating...';
+        const hits = bet.hits !== undefined ? `${bet.hits}/${bet.totalHits || 14} Hits` : '';
+
         cards.push(`
-            <div class="min-w-[250px] h-[64px] px-3 py-2 rounded-lg border flex items-center justify-between cursor-pointer select-none transition-all hover:brightness-110"
-                 style="border-left: 3px solid ${accent}; ${borderStyle}; ${bgStyle}; box-shadow: 0 4px 15px ${accent}15;">
-                <div class="min-w-0">
-                    <div class="text-[15px] leading-tight font-black text-white tracking-wide drop-shadow-sm">BET F${bet.targetFace}</div>
-                    <div class="text-[11px] leading-tight text-white/80 font-semibold mt-0.5">${subtitle}</div>
-                </div>
+            <div class="min-w-[250px] h-[72px] px-4 py-2 rounded-lg border flex flex-col justify-center cursor-pointer select-none transition-all hover:brightness-110"
+                 style="border-left: 4px solid ${accent}; ${borderStyle}; ${bgStyle}; box-shadow: 0 4px 20px ${accent}20;">
+                <div class="text-[14px] leading-tight font-black text-white tracking-wide drop-shadow-sm uppercase">BET F${bet.targetFace}</div>
+                <div class="text-[10px] leading-tight text-white/70 font-bold mt-1 font-mono">${hits} (${hitRate})</div>
             </div>
         `);
     });
@@ -292,23 +294,34 @@ window.renderDashboardSafe = function (items) {
 };
 
 window.renderPredictionCell = function (spin) {
+    const lines = [];
+
+    // 1. Render Resolved Results (History of this spin's impact)
+    if (spin.resolvedBets && spin.resolvedBets.length > 0) {
+        spin.resolvedBets.forEach(bet => {
+            const icon = bet.isWin ? '<i class="fas fa-check-circle text-[#30D158] mr-2"></i>' : '<i class="fas fa-times-circle text-[#FF453A] mr-2"></i>';
+            const status = bet.isWin ? 'WIN' : 'LOSS';
+            const color = bet.isWin ? 'text-[#30D158]' : 'text-[#FF453A]';
+            lines.push(`
+                <div class="flex items-center text-[10px] font-mono font-bold ${color} mb-1 opacity-90">
+                    ${icon}${status}: F${bet.targetFace} (${bet.patternName || 'Perimeter'})
+                </div>
+            `);
+        });
+    }
+
+    // 2. Render Active Signals (What this spin just triggered)
     const signals = spin.newSignals || [];
-    if (signals.length === 0) return '<span class="text-gray-600">-</span>';
-
-    return signals.map(sig => {
-        const color = sig.status === 'SIT' ? 'text-gray-500' : 'text-[#30D158]';
-        const confText = sig.confidence ? `<span class="text-[9px] opacity-60 ml-1">(${sig.confidence}%)</span>` : '';
-        const sourceIcon = sig.signalSource === 'ai' ? '<i class="fas fa-brain text-[10px] mr-1 text-[#bf5af2]"></i>' : '<i class="fas fa-microchip text-[10px] mr-1 text-blue-400"></i>';
-
-        return `
-            <div class="flex items-center text-[10px] font-bold ${color} mb-1">
-                ${sourceIcon}
-                <span>F${sig.targetFace}</span>
-                ${confText}
-                <span class="ml-1.5 px-1 rounded bg-white/5 border border-white/5">${sig.status}</span>
+    signals.forEach(sig => {
+        lines.push(`
+            <div class="flex items-center text-[10px] font-mono font-bold text-gray-500 mb-1 tracking-tight">
+                Active Signal: ${sig.patternName || 'Prediction Perimeter'}
             </div>
-        `;
-    }).join('');
+        `);
+    });
+
+    if (lines.length === 0) return '<span class="text-gray-600 font-mono text-[10px]">-</span>';
+    return lines.join('');
 };
 
 window.renderComboCell = function (spin) {
@@ -325,18 +338,18 @@ window.renderComboCell = function (spin) {
     const currMask = window.FON_MASK_MAP ? window.FON_MASK_MAP[spin.num] : 0;
     const bridge = strategy.detectBridge(prevMask, currMask, window.FACE_MASKS);
 
-    if (!bridge) return '<span class="text-gray-600">-</span>';
+    if (!bridge) return '<span class="text-gray-600 font-mono text-[10px]">-</span>';
 
-    // Store bridge data on the row for the drawing logic
+    // SUPERIOR RESTORATION: Badge bridges the gap between rows
     return `
         <div class="combo-link-layer pointer-events-none" 
              data-prev-spin-id="${prevSpin.id}" 
              data-prev-face="${bridge.matchedPrevFace}" 
              data-curr-face="${bridge.matchedCurrFace}"
              data-color="${bridge.color}"></div>
-        <div class="flex justify-center">
-            <span class="combo-badge px-2 py-0.5 rounded-full text-[9px] font-black uppercase border" 
-                  style="color:${bridge.color}; border-color:${bridge.color}40; background:${bridge.color}15;">
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[10] flex items-center justify-center">
+            <span class="combo-badge px-3 py-1 rounded-md text-[10px] font-black font-mono tracking-widest border shadow-2xl transition-all duration-300" 
+                  style="color:${bridge.color}; border-color:${bridge.color}60; background-color:#030303; box-shadow: 0 0 20px ${bridge.color}60, inset 0 0 10px ${bridge.color}20;">
                 ${bridge.label}
             </span>
         </div>
@@ -371,7 +384,7 @@ window.renderRow = function (spin, targetContainer) {
         <td class="text-center"><div class="num-box ${bgClass}">${spin.num}</div></td>
         <td class="text-center relative z-[5]">${faceHTML}</td>
         <td class="text-center relative overflow-visible z-[1]">${comboHTML}</td>
-        <td class="pl-4">${predictionHTML}</td>
+        <td class="prediction-cell pl-4" style="text-align:left; vertical-align:top; white-space:normal !important; overflow:visible !important; border-left: 1px solid rgba(255,255,255,0.03);">${predictionHTML}</td>
     `;
     tbody.appendChild(tr);
 
@@ -487,9 +500,9 @@ window.ensureComboBridgeElements = function (layer) {
     if (!svg) {
         layer.innerHTML = `
             <svg class="overflow-visible">
-                <path class="combo-path-1" fill="none" stroke-linecap="round" stroke-width="2.5" stroke-opacity="0.85" />
-                <path class="combo-path-2" fill="none" stroke-linecap="round" stroke-width="2.5" stroke-opacity="0.85" />
-                <circle class="combo-dot" r="2.5" />
+                <path class="combo-path-1" fill="none" stroke-linecap="round" stroke-width="2.5" />
+                <path class="combo-path-2" fill="none" stroke-linecap="round" stroke-width="2.5" />
+                <circle class="combo-dot" r="3" />
             </svg>
         `;
         svg = layer.querySelector('svg');
@@ -504,17 +517,21 @@ window.ensureComboBridgeElements = function (layer) {
 
 window.drawComboBridge = function (layer, geom) {
     const { svg, path1, path2, dot } = window.ensureComboBridgeElements(layer);
-    const minX = Math.min(geom.p1.x, geom.p2.x, geom.t.x) - 10;
-    const maxX = Math.max(geom.p1.x, geom.p2.x, geom.t.x) + 6;
-    const minY = Math.min(geom.p1.y, geom.p2.y, geom.t.y) - 12;
-    const maxY = Math.max(geom.p1.y, geom.p2.y, geom.t.y) + 12;
-    const width = Math.max(24, maxX - minX);
-    const height = Math.max(24, maxY - minY);
+    
+    // High-spread capture
+    const minX = Math.min(geom.p1.x, geom.p2.x, geom.t.x) - 20;
+    const maxX = Math.max(geom.p1.x, geom.p2.x, geom.t.x) + 20;
+    const minY = Math.min(geom.p1.y, geom.p2.y, geom.t.y) - 20;
+    const maxY = Math.max(geom.p1.y, geom.p2.y, geom.t.y) + 20;
+    
+    const width = Math.max(40, maxX - minX);
+    const height = Math.max(40, maxY - minY);
 
     layer.style.left = `${minX}px`;
     layer.style.top = `${minY}px`;
     layer.style.width = `${width}px`;
     layer.style.height = `${height}px`;
+    
     svg.setAttribute('width', width);
     svg.setAttribute('height', height);
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
@@ -523,17 +540,24 @@ window.drawComboBridge = function (layer, geom) {
     const p2 = { x: geom.p2.x - minX, y: geom.p2.y - minY };
     const t = { x: geom.t.x - minX, y: geom.t.y - minY };
 
-    const c1x = p1.x + Math.max(12, Math.abs(t.x - p1.x) * 0.45);
-    const c2x = p2.x + Math.max(12, Math.abs(t.x - p2.x) * 0.45);
-    const cx = t.x - Math.max(10, Math.min(20, Math.abs(t.x - Math.min(p1.x, p2.x)) * 0.2));
-
-    path1.setAttribute('d', `M ${p1.x} ${p1.y} C ${c1x} ${p1.y}, ${cx} ${t.y}, ${t.x} ${t.y}`);
-    path2.setAttribute('d', `M ${p2.x} ${p2.y} C ${c2x} ${p2.y}, ${cx} ${t.y}, ${t.x} ${t.y}`);
-    path1.setAttribute('stroke', geom.color);
-    path2.setAttribute('stroke', geom.color);
+    // TRUE Y-SHAPE WITH STEM (Screenshot Accuracy)
+    const stemX = t.x - 12; // Length of the horizontal junction
+    path1.setAttribute('d', `M ${p1.x} ${p1.y} L ${stemX} ${t.y} L ${t.x} ${t.y}`);
+    path2.setAttribute('d', `M ${p2.x} ${p2.y} L ${stemX} ${t.y} L ${t.x} ${t.y}`);
+    
+    // Premium Vibrant Glow Styling
+    [path1, path2].forEach(p => {
+        p.setAttribute('stroke', geom.color);
+        p.setAttribute('stroke-width', '2.5');
+        p.setAttribute('stroke-opacity', '1.0');
+        p.style.filter = `drop-shadow(0 0 6px ${geom.color})`;
+    });
+    
     dot.setAttribute('cx', t.x);
     dot.setAttribute('cy', t.y);
     dot.setAttribute('fill', geom.color);
+    dot.setAttribute('r', '3');
+    dot.style.filter = `drop-shadow(0 0 10px ${geom.color})`;
 }
 
 window.animateComboBridge = function (layer, fromGeom, toGeom, duration = 260) {

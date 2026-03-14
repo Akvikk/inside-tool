@@ -146,16 +146,6 @@
             id: ++state.globalSpinIdCounter
         };
         state.history.push(spinObj);
-        if (options.skipStoreSync !== true && window.AppStore && typeof window.AppStore.dispatch === 'function') {
-            const safeSpin = window.EngineContract && typeof window.EngineContract.sanitizeSpinObject === 'function'
-                ? window.EngineContract.sanitizeSpinObject(spinObj, currentSpinIndex)
-                : spinObj;
-            window.AppStore.dispatch('history/append', safeSpin);
-        }
-        if (window.refreshAiRelayStatus) await window.refreshAiRelayStatus({ silent: true, updateUi: true });
-        window.AiBrain.settleLedger(state.history);
-        if (window.refreshAdvancementStates) window.refreshAdvancementStates();
-
         // 3. SCAN FOR NEW PATTERNS
         let scanResult = { nextBets: [], resultsByStrategy: {} };
         try {
@@ -171,6 +161,18 @@
         // Bridge: Capture the engine's produced bets for dashboard display and next turn resolution
         state.activeBets = scanResult.nextBets || [];
         state.engineSnapshot = scanResult;
+        
+        // CRITICAL: Attach active signals BEFORE the UI render dispatch
+        spinObj.newSignals = state.activeBets;
+
+        // 4. SYNC TO APP STORE (TRIGGER UI RENDER)
+        if (options.skipStoreSync !== true && window.AppStore && typeof window.AppStore.dispatch === 'function') {
+            const safeSpin = window.EngineContract && typeof window.EngineContract.sanitizeSpinObject === 'function'
+                ? window.EngineContract.sanitizeSpinObject(spinObj, currentSpinIndex)
+                : spinObj;
+            window.AppStore.dispatch('history/append', safeSpin);
+        }
+        
         console.log('[ENGINE] Scan Result:', scanResult);
         console.log('[ENGINE] Active Bets:', state.activeBets);
 
