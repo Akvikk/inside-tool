@@ -62,11 +62,11 @@
 
         // Determine if missing out
         const diff = potentialProfit - actualProfit;
-        const diffText = diff > 0 ?\`+\${diff}u Missed\` : \`Optimized\`;
+        const diffText = diff > 0 ? `+${diff}u Missed` : `Optimized`;
         const diffColor = diff > 0 ? 'text-[#FFD60A]' : 'text-[#30D158]';
 
         contentDiv.innerHTML = `
-            < div class="grid grid-cols-2 gap-4 mb-6" >
+            <div class="grid grid-cols-2 gap-4 mb-6">
                 <div class="frosted-plate p-4 text-center rounded-xl border border-white/5">
                     <div class="text-white/50 text-[10px] font-bold uppercase tracking-wider mb-1">Actual Net</div>
                     <div class="text-3xl font-bold ${actualProfit >= 0 ? 'text-[#30D158]' : 'text-[#FF453A]'}">${actualProfit >= 0 ? '+' : ''}${actualProfit}u</div>
@@ -76,7 +76,7 @@
                     <div class="text-3xl font-bold text-white">${potentialProfit >= 0 ? '+' : ''}${potentialProfit}u</div>
                     <div class="absolute bottom-1 right-2 text-[9px] font-bold uppercase tracking-wider ${diffColor}">${diffText}</div>
                 </div>
-            </div >
+            </div>
             <div class="space-y-4">
                 <h4 class="text-xs font-black tracking-widest text-[#bf5af2] uppercase flex items-center"><i class="fas fa-crosshairs mr-2"></i> Tactical Critique</h4>
                 <div class="space-y-3">

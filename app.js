@@ -131,12 +131,13 @@ function renderStrategicBrainSummary() {
     }
 }
 
-async function triggerAiAudit() {
-    const btn = event.currentTarget;
+window.triggerAiAudit = async function(btn) {
+    if (!btn) return;
     const originalText = btn.innerText;
     btn.innerText = 'AUDITING...';
     btn.disabled = true;
 
+    // This now correctly calls the mock function in brain.js
     const audit = await requestTacticalAudit();
     btn.innerText = originalText;
     btn.disabled = false;
@@ -159,13 +160,21 @@ async function triggerAiAudit() {
 }
 
 // --- RESTORED CORE APP GLUE & INITIALIZATION ---
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
     console.log("INSIDE TOOL: Bootstrapping modular architecture...");
 
     // 1. Initialize Active Modules
     if (window.InputProcessor) window.InputProcessor.init();
     if (window.UiController) window.UiController.init();
     if (window.HudManager) window.HudManager.init();
+
+    // 2. Load previous session if it exists
+    if (window.loadSessionData && window.loadSessionData()) {
+        console.log("Session data loaded.");
+        if (window.reRenderHistory) window.reRenderHistory();
+        if (window.scanAllStrategies) await window.scanAllStrategies();
+        if (window.HudManager) window.HudManager.update();
+    }
 
     // 2. Bind missing enter-key functionality
     const spinInput = document.getElementById('spinInput');
@@ -188,6 +197,21 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // --- ESSENTIAL UI POLYFILLS ---
+window.loadSessionData = function() {
+    try {
+        const raw = localStorage.getItem('insideTool_session_v2');
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        if (data.history) window.state.history = data.history;
+        if (data.faceGaps) window.state.faceGaps = data.faceGaps;
+        // NOTE: More state properties can be added here for persistence
+        return true;
+    } catch (e) {
+        console.error("Session load failed:", e);
+        return false;
+    }
+};
+
 window.saveSessionData = function () {
     try {
         localStorage.setItem('insideTool_session_v2', JSON.stringify({
@@ -286,6 +310,184 @@ window.renderRow = function (spin) {
     const sc = document.querySelector('#scrollContainer > div');
     if (sc) { setTimeout(() => { sc.scrollTop = sc.scrollHeight; }, 50); }
 };
+
+window.reRenderHistory = function() {
+    const tbody = document.getElementById('historyBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    if (window.state && window.state.history) {
+        window.state.history.forEach(spin => {
+            if (window.renderRow) window.renderRow(spin);
+        });
+    }
+    if (window.layoutAllComboBridges) {
+        requestAnimationFrame(window.layoutAllComboBridges);
+    }
+};
+
+window.rebuildSessionFromSpins = async function(spins, options = {}) {
+    // 1. Hard reset of state
+    if (window.state) {
+        window.state.history = [];
+        window.state.activeBets = [];
+        window.state.faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        window.state.globalSpinIdCounter = 0;
+        window.state.userStats = { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
+    }
+    if (window.EngineCore) window.EngineCore.reset();
+    const tbody = document.getElementById('historyBody');
+    if (tbody) tbody.innerHTML = '';
+
+    // 2. Reprocess spins silently
+    if (window.InputProcessor && window.InputProcessor.processSpinValue) {
+        for (const spinNum of spins) {
+            await window.InputProcessor.processSpinValue(spinNum, { silent: true, skipStoreSync: true });
+        }
+    }
+
+    // 3. Re-render the entire history table from the new state.history
+    if (window.reRenderHistory) window.reRenderHistory();
+
+    // 4. Final UI updates
+    if (window.renderGapStats) window.renderGapStats();
+    const alerts = window.scanAllStrategies ? await window.scanAllStrategies() : [];
+    if (window.renderDashboardSafe) window.renderDashboardSafe(alerts);
+    if (window.HudManager) window.HudManager.update();
+    if (window.saveSessionData) window.saveSessionData();
+    if (window.syncAppStore) window.syncAppStore();
+};
+
+// --- COMBO BRIDGE RENDERERS (VISUAL UI) ---
+window.layoutComboBridge = function(spinId) {
+    const row = document.getElementById(`row-${spinId}`);
+    if (!row) return;
+
+    const layer = row.querySelector('.combo-link-layer');
+    const badge = row.querySelector('.combo-badge');
+    const comboCell = row.querySelector('td:nth-child(4)');
+    if (!layer || !badge || !comboCell) return;
+
+    const prevSpinId = layer.dataset.prevSpinId;
+    const prevFace = parseInt(layer.dataset.prevFace, 10);
+    const currFace = parseInt(layer.dataset.currFace, 10);
+    const color = layer.dataset.color || '#ffffff';
+
+    if (!prevSpinId || Number.isNaN(prevFace) || Number.isNaN(currFace)) return;
+
+    const prevTag = document.querySelector(`.face-tag[data-spin-id="${prevSpinId}"][data-face-id="${prevFace}"]`);
+    const currTag = row.querySelector(`.face-tag[data-spin-id="${spinId}"][data-face-id="${currFace}"]`);
+    if (!prevTag || !currTag) return;
+
+    const cellRect = comboCell.getBoundingClientRect();
+    const prevRect = prevTag.getBoundingClientRect();
+    const currRect = currTag.getBoundingClientRect();
+    const badgeRect = badge.getBoundingClientRect();
+
+    const prevPoint = {
+        x: prevRect.right - cellRect.left + 2,
+        y: prevRect.top + prevRect.height / 2 - cellRect.top
+    };
+    const currPoint = {
+        x: currRect.right - cellRect.left + 2,
+        y: currRect.top + currRect.height / 2 - cellRect.top
+    };
+    const targetPoint = {
+        x: badgeRect.left - cellRect.left + 4,
+        y: badgeRect.top + badgeRect.height / 2 - cellRect.top
+    };
+
+    const nextGeom = { p1: prevPoint, p2: currPoint, t: targetPoint, color: color };
+    const prevGeom = layer._comboGeom || { p1: { ...targetPoint }, p2: { ...targetPoint }, t: { ...targetPoint }, color: color };
+
+    if (window.animateComboBridge) window.animateComboBridge(layer, prevGeom, nextGeom, 260);
+    layer._comboGeom = nextGeom;
+}
+
+window.layoutAllComboBridges = function() {
+    if (window.state && window.state.history) {
+        window.state.history.forEach(spin => window.layoutComboBridge(spin.id));
+    }
+}
+
+window.ensureComboBridgeElements = function(layer) {
+    let svg = layer.querySelector('svg');
+    if (!svg) {
+        layer.innerHTML = `
+            <svg class="overflow-visible">
+                <path class="combo-path-1" fill="none" stroke-linecap="round" stroke-width="2.5" stroke-opacity="0.85" />
+                <path class="combo-path-2" fill="none" stroke-linecap="round" stroke-width="2.5" stroke-opacity="0.85" />
+                <circle class="combo-dot" r="2.5" />
+            </svg>
+        `;
+        svg = layer.querySelector('svg');
+    }
+    return {
+        svg,
+        path1: layer.querySelector('.combo-path-1'),
+        path2: layer.querySelector('.combo-path-2'),
+        dot: layer.querySelector('.combo-dot')
+    };
+}
+
+window.drawComboBridge = function(layer, geom) {
+    const { svg, path1, path2, dot } = window.ensureComboBridgeElements(layer);
+    const minX = Math.min(geom.p1.x, geom.p2.x, geom.t.x) - 10;
+    const maxX = Math.max(geom.p1.x, geom.p2.x, geom.t.x) + 6;
+    const minY = Math.min(geom.p1.y, geom.p2.y, geom.t.y) - 12;
+    const maxY = Math.max(geom.p1.y, geom.p2.y, geom.t.y) + 12;
+    const width = Math.max(24, maxX - minX);
+    const height = Math.max(24, maxY - minY);
+
+    layer.style.left = `${minX}px`;
+    layer.style.top = `${minY}px`;
+    layer.style.width = `${width}px`;
+    layer.style.height = `${height}px`;
+    svg.setAttribute('width', width);
+    svg.setAttribute('height', height);
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+    const p1 = { x: geom.p1.x - minX, y: geom.p1.y - minY };
+    const p2 = { x: geom.p2.x - minX, y: geom.p2.y - minY };
+    const t = { x: geom.t.x - minX, y: geom.t.y - minY };
+
+    const c1x = p1.x + Math.max(12, Math.abs(t.x - p1.x) * 0.45);
+    const c2x = p2.x + Math.max(12, Math.abs(t.x - p2.x) * 0.45);
+    const cx = t.x - Math.max(10, Math.min(20, Math.abs(t.x - Math.min(p1.x, p2.x)) * 0.2));
+
+    path1.setAttribute('d', `M ${p1.x} ${p1.y} C ${c1x} ${p1.y}, ${cx} ${t.y}, ${t.x} ${t.y}`);
+    path2.setAttribute('d', `M ${p2.x} ${p2.y} C ${c2x} ${p2.y}, ${cx} ${t.y}, ${t.x} ${t.y}`);
+    path1.setAttribute('stroke', geom.color);
+    path2.setAttribute('stroke', geom.color);
+    dot.setAttribute('cx', t.x);
+    dot.setAttribute('cy', t.y);
+    dot.setAttribute('fill', geom.color);
+}
+
+window.animateComboBridge = function(layer, fromGeom, toGeom, duration = 260) {
+    if (layer._comboAnimFrame) cancelAnimationFrame(layer._comboAnimFrame);
+    const startTime = performance.now();
+    const easeInOutCubic = (x) => x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+    const lerp = (a, b, t) => a + (b - a) * t;
+
+    const tick = (now) => {
+        const raw = Math.min(1, (now - startTime) / duration);
+        const t = easeInOutCubic(raw);
+        const geom = {
+            p1: { x: lerp(fromGeom.p1.x, toGeom.p1.x, t), y: lerp(fromGeom.p1.y, toGeom.p1.y, t) },
+            p2: { x: lerp(fromGeom.p2.x, toGeom.p2.x, t), y: lerp(fromGeom.p2.y, toGeom.p2.y, t) },
+            t: { x: lerp(fromGeom.t.x, toGeom.t.x, t), y: lerp(fromGeom.t.y, toGeom.t.y, t) },
+            color: toGeom.color
+        };
+        if (window.drawComboBridge) window.drawComboBridge(layer, geom);
+        if (raw < 1) {
+            layer._comboAnimFrame = requestAnimationFrame(tick);
+        } else {
+            layer._comboAnimFrame = null;
+            layer._comboGeom = toGeom;
+        }
+    };
+    layer._comboAnimFrame = requestAnimationFrame(tick);
+}
 
 // --- RESTORED GLOBAL UI HANDLERS (MODALS, MENUS, STOPWATCH) ---
 window.addSpin = function () { if (window.InputProcessor) window.InputProcessor.addSpin(); };
@@ -397,12 +599,278 @@ window.resetStopwatch = function () {
     if (text) text.innerText = 'Start';
 };
 
-// Prevent immediate console errors for UI links not yet modularized
-window.renderUserAnalytics = function () { console.log("Analytics renderer pending rebuild..."); };
-window.renderAnalytics = function () { console.log("Analytics renderer pending rebuild..."); };
-window.switchAnalyticsTab = function (tab) { console.log("Switch tab to", tab); };
-window.setAnalyticsDisplayStrategy = function (strat) { console.log("Set display strategy to", strat); };
-window.changeIntelMode = function (mode) { console.log("Change intel mode to", mode); };
+// --- ANALYTICS & RENDERING ---
+window.switchAnalyticsTab = function (tab) {
+    if (!state) return;
+    state.currentAnalyticsTab = tab;
+    applyAnalyticsTabUI();
+    window.renderAnalytics();
+};
+
+window.setAnalyticsDisplayStrategy = function (strat) {
+    if (!state) return;
+    state.analyticsDisplayStrategy = strat;
+    const btnSeries = document.getElementById('analyticsBtnSeries');
+    const btnCombo = document.getElementById('analyticsBtnCombo');
+    const pillBg = document.getElementById('analyticsTogglePillBg');
+
+    if (strat === 'series') {
+        if (btnSeries) btnSeries.className = "flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 text-[#30D158] transition-colors relative z-10";
+        if (btnCombo) btnCombo.className = "flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 text-gray-400 transition-colors relative z-10";
+        if (pillBg) pillBg.style.transform = 'translateX(0)';
+    } else {
+        if (btnSeries) btnSeries.className = "flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 text-gray-400 transition-colors relative z-10";
+        if (btnCombo) btnCombo.className = "flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 text-[#30D158] transition-colors relative z-10";
+        if (pillBg) pillBg.style.transform = 'translateX(100%)';
+    }
+    renderStrategyAnalytics();
+};
+
+window.changeIntelMode = function (mode) {
+    if (!state) return;
+    state.currentIntelligenceMode = mode;
+    // Re-render will automatically pick up mode changes if intelligence panel is rebuilt
+};
+
+function applyAnalyticsTabUI() {
+    const tabs = ['strategy', 'intelligence', 'advancements'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        const panelId = t === 'strategy' ? 'strategyAnalyticsPanel' : `${t}Panel`;
+        const panel = document.getElementById(panelId);
+
+        if (btn) {
+            if (t === state.currentAnalyticsTab) {
+                btn.className = "pb-2 text-xs font-bold uppercase tracking-widest text-[#30D158] border-b-2 border-[#30D158] transition-all";
+            } else {
+                btn.className = "pb-2 text-xs font-bold uppercase tracking-widest text-gray-400 border-b-2 border-transparent transition-all";
+            }
+        }
+        if (panel) {
+            if (t === state.currentAnalyticsTab) {
+                panel.classList.remove('hidden');
+            } else {
+                panel.classList.add('hidden');
+            }
+        }
+    });
+}
+
+window.renderAnalytics = function () {
+    if (!state) return;
+    applyAnalyticsTabUI();
+    if (state.currentAnalyticsTab === 'strategy') {
+        renderStrategyAnalytics();
+    } else if (state.currentAnalyticsTab === 'intelligence') {
+        if (window.renderIntelligencePanel) window.renderIntelligencePanel();
+    }
+};
+
+function renderStrategyAnalytics() {
+    const coreStats = window.EngineCore && window.EngineCore.stats
+        ? window.EngineCore.stats
+        : { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {} };
+
+    const totalSignals = coreStats.totalWins + coreStats.totalLosses;
+    const hitRate = totalSignals === 0 ? 0 : Math.round((coreStats.totalWins / totalSignals) * 100);
+
+    const hrEl = document.getElementById('kpiHitRate');
+    if (hrEl) {
+        hrEl.innerText = hitRate + "%";
+        hrEl.className = `text-2xl font-bold tracking-tight ${hitRate >= 50 ? 'text-[#30D158]' : 'text-[#FF453A]'}`;
+    }
+
+    const netEl = document.getElementById('kpiNet');
+    if (netEl) {
+        netEl.innerText = (coreStats.netUnits > 0 ? '+' : '') + coreStats.netUnits;
+        netEl.className = `text-2xl font-bold tracking-tight ${coreStats.netUnits >= 0 ? 'text-[#30D158]' : 'text-[#FF453A]'}`;
+    }
+
+    const sigEl = document.getElementById('kpiSignals');
+    if (sigEl) sigEl.innerText = totalSignals;
+
+    const s = coreStats.currentStreak || 0;
+    const formEl = document.getElementById('kpiForm');
+    if (formEl) {
+        formEl.innerText = s > 0 ? `W${s}` : (s < 0 ? `L${Math.abs(s)}` : '-');
+        formEl.className = `text-2xl font-bold tracking-tight ${s > 0 ? 'text-[#30D158]' : (s < 0 ? 'text-[#FF453A]' : 'text-gray-400')}`;
+    }
+
+    drawAdvancedGraph(coreStats.bankrollHistory, coreStats.totalWins, coreStats.totalLosses, 'graphContainer');
+    updatePatternHeatmap(coreStats.patternStats);
+}
+
+window.renderUserAnalytics = function () {
+    if (!state) return;
+    const uStats = state.userStats || { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
+    const totalBets = uStats.totalWins + uStats.totalLosses;
+    const hitRate = totalBets === 0 ? 0 : Math.round((uStats.totalWins / totalBets) * 100);
+
+    const netEl = document.getElementById('userNet');
+    if (netEl) {
+        netEl.innerText = (uStats.netUnits > 0 ? '+' : '') + uStats.netUnits;
+        netEl.className = `text-4xl font-bold tracking-tight ${uStats.netUnits >= 0 ? 'text-[#30D158]' : 'text-[#FF453A]'}`;
+    }
+
+    const hrEl = document.getElementById('userHitRate');
+    if (hrEl) hrEl.innerText = hitRate + "%";
+
+    const totEl = document.getElementById('userTotal');
+    if (totEl) totEl.innerText = totalBets;
+
+    drawAdvancedGraph(uStats.bankrollHistory, uStats.totalWins, uStats.totalLosses, 'userGraphContainer');
+    updateUserBetLog(uStats.betLog);
+};
+
+function drawAdvancedGraph(historyArray, winCount, lossCount, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = '';
+    container.className = "flex flex-col h-full w-full rounded-b-xl overflow-hidden";
+
+    const chartDiv = document.createElement('div');
+    chartDiv.className = "relative h-[80%] w-full bg-black/20";
+    container.appendChild(chartDiv);
+
+    const hudDiv = document.createElement('div');
+    hudDiv.className = "h-[20%] w-full flex justify-between items-center px-4 text-[10px] font-bold bg-white/5 border-t border-white/5 backdrop-blur-sm";
+    hudDiv.innerHTML = `
+        <span class="text-[#4ade80] drop-shadow-sm tracking-wide">WINS: ${winCount || 0}</span>
+        <span class="text-[#e5e7eb] drop-shadow-sm tracking-wide">SPINS: ${historyArray ? Math.max(0, historyArray.length - 1) : 0}</span>
+        <span class="text-[#f87171] drop-shadow-sm tracking-wide">LOSSES: ${lossCount || 0}</span>
+    `;
+    container.appendChild(hudDiv);
+
+    if (!historyArray || historyArray.length < 2) {
+        chartDiv.innerHTML = `<div class="flex items-center justify-center h-full text-xs text-[#8E8E93] font-mono animate-pulse">Waiting for Data...</div>`;
+        return;
+    }
+
+    const vWidth = 600;
+    const vHeight = 200;
+    const padding = 10;
+
+    const maxVal = Math.max(...historyArray);
+    const minVal = Math.min(...historyArray);
+    let range = maxVal - minVal;
+    if (range === 0) range = 2;
+
+    const getX = i => (i / (historyArray.length - 1)) * (vWidth - 2 * padding) + padding;
+    const getY = v => vHeight - padding - ((v - minVal) / range) * (vHeight - 2 * padding);
+
+    let pathD = `M ${getX(0)} ${getY(historyArray[0])}`;
+    for (let i = 1; i < historyArray.length; i++) {
+        pathD += ` L ${getX(i)} ${getY(historyArray[i])}`;
+    }
+
+    const zeroY = getY(0);
+    let zeroOffset = 0;
+    if (maxVal > 0 && minVal < 0) {
+        zeroOffset = (maxVal / range) * 100;
+    } else if (minVal >= 0) {
+        zeroOffset = 100;
+    }
+
+    const svgContent = `
+        <svg viewBox="0 0 ${vWidth} ${vHeight}" width="100%" height="100%" preserveAspectRatio="none" style="overflow: visible;">
+            <defs>
+                <linearGradient id="profitGrad-${containerId}" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#4ade80" />
+                    <stop offset="${zeroOffset}%" stop-color="#4ade80" />
+                    <stop offset="${zeroOffset}%" stop-color="#f87171" />
+                    <stop offset="100%" stop-color="#f87171" />
+                </linearGradient>
+            </defs>
+            <line x1="${padding}" y1="${zeroY}" x2="${vWidth - padding}" y2="${zeroY}" 
+                  stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 6" opacity="0.3" vector-effect="non-scaling-stroke" />
+            <path d="${pathD}" fill="none" stroke="url(#profitGrad-${containerId})" 
+                  stroke-width="3" stroke-linecap="round" stroke-linejoin="round" 
+                  vector-effect="non-scaling-stroke" 
+                  style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));" />
+        </svg>
+    `;
+
+    chartDiv.innerHTML = svgContent;
+}
+
+function updatePatternHeatmap(patternData) {
+    const tbody = document.getElementById('heatmapBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    const patterns = Object.entries(patternData || {});
+
+    if (patterns.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-[#8E8E93] italic">No patterns recorded yet</td></tr>';
+        return;
+    }
+
+    patterns.sort((a, b) => {
+        const rA = a[1].wins / ((a[1].wins + a[1].losses) || 1);
+        const rB = b[1].wins / ((b[1].wins + b[1].losses) || 1);
+        return rB - rA;
+    });
+
+    patterns.forEach(([name, s]) => {
+        const total = s.wins + s.losses;
+        const rate = total === 0 ? 0 : Math.round((s.wins / total) * 100);
+        const color = rate >= 50 ? 'text-[#30D158]' : 'text-[#FF453A]';
+        const bar = rate >= 50 ? 'bg-[#30D158]' : 'bg-[#FF453A]';
+
+        tbody.innerHTML += `
+            <tr class="hover:bg-white/5 transition-colors">
+                <td class="p-3 font-semibold text-gray-200">
+                    <div class="flex items-center justify-between">
+                        <span class="tracking-wide">${name}</span>
+                        <button onclick="event.stopPropagation(); window.openPatternLog && window.openPatternLog('${name}')" class="text-[#8E8E93] hover:text-white cursor-pointer px-2 py-1 rounded-full hover:bg-white/10 transition-colors" title="View Log">
+                            <i class="fas fa-list-ul"></i>
+                        </button>
+                    </div>
+                </td>
+                <td class="p-3 text-right text-[#30D158] font-mono font-bold drop-shadow-sm">${s.wins}</td>
+                <td class="p-3 text-right text-[#FF453A] font-mono font-bold drop-shadow-sm">${s.losses}</td>
+                <td class="p-3 text-right w-24 relative">
+                    <div class="absolute inset-y-4 left-2 right-2 bg-[#3a3a3c] rounded-full overflow-hidden h-1.5 mt-2 shadow-inner">
+                        <div class="h-full ${bar}" style="width: ${rate}%"></div>
+                    </div>
+                    <span class="relative z-10 ${color} font-bold text-[10px] top-[-8px] right-[0px]">${rate}%</span>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+function updateUserBetLog(betLog) {
+    const tbody = document.getElementById('userBetsBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (!betLog || betLog.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-[#8E8E93] italic">No confirmed bets yet</td></tr>';
+        return;
+    }
+
+    betLog.forEach(log => {
+        const resClass = log.result === 'WIN' ? 'text-[#30D158]' : 'text-[#FF453A]';
+        const unitsText = log.units > 0 ? `+${log.units}` : log.units;
+        const targetText = String(log.target || '').replace('F', '');
+
+        tbody.innerHTML += `
+            <tr class="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
+                <td class="p-3 text-[#8E8E93] font-mono text-xs">#${log.id || '-'}</td>
+                <td class="p-3 font-bold text-gray-200 tracking-wide">${log.pattern || '-'}</td>
+                <td class="p-3 text-center font-bold text-white"><span class="bg-white/10 px-2 py-0.5 rounded-md border border-white/10 shadow-sm text-xs">F${targetText}</span></td>
+                <td class="p-3 text-right">
+                    <span class="text-[9px] text-[#8E8E93] mr-2">Spin ${log.spinNum || '-'}</span>
+                    <span class="font-bold ${resClass} text-sm drop-shadow-sm">${log.result || '-'} (${unitsText})</span>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// Prevent immediate console errors for remaining placeholders
 window.exportSpins = function () { alert("Export spins function moved to modular system."); };
 window.importSpins = function () { alert("Import spins function moved to modular system."); };
 window.changePredictionStrategy = function (val) { console.log("Changed strategy to", val); };

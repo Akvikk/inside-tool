@@ -50,7 +50,8 @@
                 class="ios-btn top-nav-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-[#bf5af2]/10 hover:bg-[#bf5af2]/20 text-[#bf5af2] font-semibold rounded-lg border border-[#bf5af2]/30 flex items-center justify-center gap-0 sm:gap-2 text-xs shadow-[0_0_10px_rgba(191,90,242,0.15)] transition-all">
                 <i class="fas fa-brain"></i>
                 <span class="hidden sm:inline">AI CHAT</span>
-                <span id="headerAiBtnStatusDot" class="ai-chat-status-dot h-2 w-2 rounded-full bg-current shadow-[0_0_10px_currentColor]"></span>
+                <span id="headerAiBtnStatusDot"
+                    class="ai-chat-status-dot h-2 w-2 rounded-full bg-current shadow-[0_0_10px_currentColor]"></span>
             </button>
 
             <div id="patternFilterShell" class="relative">
@@ -91,8 +92,7 @@
 
             <!-- HAMBURGER MENU -->
             <div class="relative ml-2 border-l border-white/10 pl-2">
-                <button onclick="toggleHamburgerMenu()"
-                    id="headerMenuBtn"
+                <button onclick="toggleHamburgerMenu()" id="headerMenuBtn"
                     class="ios-btn top-nav-btn h-8 w-8 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-lg border border-white/20 flex items-center justify-center relative z-50">
                     <i class="fas fa-bars"></i>
                 </button>
@@ -372,14 +372,22 @@
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-2">
                             <i class="fas fa-brain text-[#bf5af2] drop-shadow-[0_0_8px_rgba(191,90,242,0.5)]"></i>
-                            <span class="text-[10px] font-black tracking-widest text-white/40 uppercase">AI Tactical Brain</span>
+                            <span class="text-[10px] font-black tracking-widest text-white/40 uppercase">AI Tactical
+                                Brain</span>
                         </div>
-                        <div id="aiBrainScore" class="text-[14px] font-black text-[#bf5af2] opacity-0 transition-opacity duration-500">0%</div>
+                        <div id="aiBrainScore"
+                            class="text-[14px] font-black text-[#bf5af2] opacity-0 transition-opacity duration-500">0%
+                        </div>
                     </div>
-                    <div id="aiBrainVerdict" class="text-[11px] leading-relaxed text-white/80 italic line-clamp-2 min-h-[2.5em]">Awaiting session data for tactical audit...</div>
-                    <div id="aiBrainPivot" class="mt-2 text-[10px] font-bold text-[#bf5af2]/80 uppercase tracking-wider hidden">Pivot: SERIES DETECTED</div>
-                    
-                    <button onclick="triggerAiAudit()" class="mt-3 w-full py-2 bg-[#bf5af2]/10 hover:bg-[#bf5af2]/20 border border-[#bf5af2]/30 rounded text-[9px] font-black tracking-widest text-[#bf5af2] transition-all uppercase">
+                    <div id="aiBrainVerdict"
+                        class="text-[11px] leading-relaxed text-white/80 italic line-clamp-2 min-h-[2.5em]">Awaiting
+                        session data for tactical audit...</div>
+                    <div id="aiBrainPivot"
+                        class="mt-2 text-[10px] font-bold text-[#bf5af2]/80 uppercase tracking-wider hidden">Pivot:
+                        SERIES DETECTED</div>
+
+                    <button onclick="triggerAiAudit(this)"
+                        class="mt-3 w-full py-2 bg-[#bf5af2]/10 hover:bg-[#bf5af2]/20 border border-[#bf5af2]/30 rounded text-[9px] font-black tracking-widest text-[#bf5af2] transition-all uppercase">
                         Initialize Tactical Review
                     </button>
                 </div>
@@ -436,7 +444,8 @@
     <div id="patternDetailModal"
         class="fixed inset-0 z-[60] bg-black/60 backdrop-blur-md hidden flex items-center justify-center p-4"
         onclick="toggleModal('patternDetailModal')">
-        <div class="glass-menu modal-surface w-full max-w-xl flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+        <div class="glass-menu modal-surface w-full max-w-xl flex flex-col overflow-hidden"
+            onclick="event.stopPropagation()">
             <div id="patternDetailBody"></div>
         </div>
     </div>
@@ -475,7 +484,8 @@
 
             <div id="aiVaultSection" class="hidden space-y-4">
                 <div>
-                    <label for="aiProviderSelect" class="text-[10px] font-bold uppercase tracking-wider text-gray-300">AI
+                    <label for="aiProviderSelect"
+                        class="text-[10px] font-bold uppercase tracking-wider text-gray-300">AI
                         Provider</label>
                     <select id="aiProviderSelect"
                         class="mt-2 w-full bg-black/50 border border-white/10 rounded-lg text-white p-3 text-sm outline-none focus:border-[#0A84FF]/50 transition-colors">
@@ -595,16 +605,27 @@
     </div>
 
     <!-- ANALYTICS HUD (FLOATING) -->
-    <div id="analyticsHUD" class="hidden fixed z-[40] flex-col glass-menu overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.8)] border border-white/10" style="width: 260px; top: 80px; right: 16px;">
-        <div id="hudHeader" class="p-2 border-b border-white/10 flex justify-between items-center cursor-move select-none bg-white/5">
+    <div id="analyticsHUD"
+        class="hidden fixed z-[40] flex-col glass-menu overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.8)] border border-white/10"
+        style="width: 260px; top: 80px; right: 16px;">
+        <div id="hudHeader"
+            class="p-2 border-b border-white/10 flex justify-between items-center cursor-move select-none bg-white/5">
             <span class="text-[9px] font-black tracking-[0.16em] uppercase text-[#30D158] flex items-center">
                 <i class="fas fa-satellite-dish mr-1"></i> Live Feed
             </span>
             <div class="flex items-center gap-1.5">
-                <button onclick="openHindsightModal()" class="px-1.5 h-4 flex items-center justify-center rounded bg-white/10 border border-white/10 text-[10px] font-bold text-[#bf5af2] hover:text-white transition-colors" title="AI Hindsight Review"><i class="fas fa-brain"></i></button>
-                <button onclick="toggleHudColdMode()" id="hudColdBtn" class="px-1.5 h-4 flex items-center justify-center rounded bg-white/10 border border-white/10 text-[10px] font-bold text-gray-500 hover:text-white transition-colors" title="Toggle cold/hot mode"><i class="fas fa-snowflake"></i></button>
-                <button onclick="toggleHudHistoryScope()" id="hudScopeBtn" class="px-1.5 h-4 flex items-center justify-center rounded bg-white/10 border border-white/10 text-[8px] font-bold text-white/70 hover:text-white transition-colors" title="Toggle recent/all scope">ALL</button>
-                <button onclick="toggleAnalyticsHUD()" class="text-gray-500 hover:text-white transition-colors text-[10px]"><i class="fas fa-times"></i></button>
+                <button onclick="openHindsightModal()"
+                    class="px-1.5 h-4 flex items-center justify-center rounded bg-white/10 border border-white/10 text-[10px] font-bold text-[#bf5af2] hover:text-white transition-colors"
+                    title="AI Hindsight Review"><i class="fas fa-brain"></i></button>
+                <button onclick="toggleHudColdMode()" id="hudColdBtn"
+                    class="px-1.5 h-4 flex items-center justify-center rounded bg-white/10 border border-white/10 text-[10px] font-bold text-gray-500 hover:text-white transition-colors"
+                    title="Toggle cold/hot mode"><i class="fas fa-snowflake"></i></button>
+                <button onclick="toggleHudHistoryScope()" id="hudScopeBtn"
+                    class="px-1.5 h-4 flex items-center justify-center rounded bg-white/10 border border-white/10 text-[8px] font-bold text-white/70 hover:text-white transition-colors"
+                    title="Toggle recent/all scope">ALL</button>
+                <button onclick="toggleAnalyticsHUD()"
+                    class="text-gray-500 hover:text-white transition-colors text-[10px]"><i
+                        class="fas fa-times"></i></button>
             </div>
         </div>
         <div class="flex-1 flex flex-col overflow-hidden relative">
@@ -612,7 +633,8 @@
                 <div class="py-4 text-center text-white/30 italic">Awaiting telemetry...</div>
             </div>
         </div>
-        <div id="hudResizeHandle" class="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize flex items-center justify-center opacity-30 hover:opacity-100 transition-opacity">
+        <div id="hudResizeHandle"
+            class="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize flex items-center justify-center opacity-30 hover:opacity-100 transition-opacity">
             <i class="fas fa-caret-right rotate-45 text-[8px] text-white"></i>
         </div>
     </div>
@@ -624,7 +646,7 @@
     <script src="js/modules/engine/prediction.js"></script>
     <script src="js/modules/engine/contract.js"></script>
     <script src="js/modules/engine/adapter.js"></script>
-    
+
     <!-- STRATEGIES -->
     <script src="js/strategies/strategy.series.js"></script>
     <script src="js/strategies/strategy.combo.js"></script>

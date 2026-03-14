@@ -6,6 +6,7 @@
         addSpin,
         undoSpin,
         handleGridClick,
+        processSpinValue,
     };
 
     function init() {
