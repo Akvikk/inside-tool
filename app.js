@@ -177,6 +177,85 @@ window.triggerAiAudit = async function (btn) {
     }
 }
 
+// --- AUDIO ENGINE (SYNTHESIZED AMBIENCE) ---
+window.AudioEngine = (function() {
+    let ctx = null;
+
+    function init() {
+        if (!ctx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) ctx = new AudioContext();
+        }
+        if (ctx && ctx.state === 'suspended') ctx.resume();
+    }
+
+    function playChip() {
+        if (!ctx) init();
+        if (!ctx) return;
+
+        // Sharp, percussive click simulating a heavy plastic chip hitting felt
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.05);
+        
+        gain.gain.setValueAtTime(0.4, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        osc.start();
+        osc.stop(ctx.currentTime + 0.05);
+    }
+
+    function playWin() {
+        if (!ctx) init();
+        if (!ctx) return;
+        // Fast ascending metallic chord (C major arpeggio)
+        [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+            setTimeout(() => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.6);
+            }, i * 60);
+        });
+    }
+
+    function playLoss() {
+        if (!ctx) init();
+        if (!ctx) return;
+        // Low-frequency decaying thud
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(60, ctx.currentTime + 0.4);
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
+    }
+
+    return { init, playChip, playWin, playLoss };
+})();
+
+// Initialize audio context on first user interaction (Browser Policy Requirement)
+document.addEventListener('click', () => {
+    if (window.AudioEngine) window.AudioEngine.init();
+}, { once: true });
+
 // --- RESTORED CORE APP GLUE & INITIALIZATION ---
 window.addEventListener('DOMContentLoaded', async () => {
     console.log("INSIDE TOOL: Bootstrapping modular architecture...");
@@ -222,6 +301,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     // 3. Initial Rendering State
     if (window.renderGapStats) window.renderGapStats();
     if (window.renderDashboardSafe) window.renderDashboardSafe();
+    if (window.initComboBridgeAutoLayout) window.initComboBridgeAutoLayout();
+    if (window.scheduleComboBridgeRelayout) window.scheduleComboBridgeRelayout();
 
     const resetBtn = document.getElementById('confirmResetBtn');
     if (resetBtn) resetBtn.addEventListener('click', window.resetData);
@@ -275,6 +356,11 @@ window.renderGapStats = function () {
 };
 
 window.renderDashboardSafe = function (items) {
+    if (window.aiScrambleInterval) {
+        clearInterval(window.aiScrambleInterval);
+        window.aiScrambleInterval = null;
+    }
+
     const dash = document.getElementById('dashboard');
     if (!dash) return;
 
@@ -298,11 +384,16 @@ window.renderDashboardSafe = function (items) {
         const hitRate = bet.hitRate ? `${bet.hitRate}% Hit Rate` : 'Evaluating...';
         const hits = bet.hits !== undefined ? `${bet.hits}/${bet.totalHits || 14} Hits` : '';
 
+        const isAiLoading = bet.patternName === 'Neural Net' && bet.targetFace === '?';
+        const mainText = isAiLoading ? 'SYNCING NEURAL NET' : `BET F${bet.targetFace}`;
+        const subText = isAiLoading ? subtitle : `${hits} (${hitRate})`;
+        const titleClass = isAiLoading ? 'ai-scramble-text text-[#bf5af2]' : 'text-white';
+
         cards.push(`
             <div class="min-w-[250px] h-[72px] px-4 py-2 rounded-lg border flex flex-col justify-center cursor-pointer select-none transition-all hover:brightness-110 signal-card"
                  style="--border-base: ${borderBase}; --border-pulse: ${borderPulse}; --shadow-base: ${shadowBase}; --shadow-pulse: ${shadowPulse}; border-left: 4px solid ${accent}; ${bgStyle};">
-                <div class="text-[14px] leading-tight font-black text-white tracking-wide drop-shadow-sm uppercase">BET F${bet.targetFace}</div>
-                <div class="text-[10px] leading-tight text-white/70 font-bold mt-1 font-mono">${hits} (${hitRate})</div>
+                <div class="text-[14px] leading-tight font-black tracking-wide drop-shadow-sm uppercase ${titleClass}" data-text="${mainText}">${mainText}</div>
+                <div class="text-[10px] leading-tight text-white/70 font-bold mt-1 font-mono">${subText}</div>
             </div>
         `);
     });
@@ -313,6 +404,23 @@ window.renderDashboardSafe = function (items) {
     }
 
     dash.innerHTML = cards.join('');
+
+    // Initiate Hacker Terminal Scramble Effect
+    const scramblers = dash.querySelectorAll('.ai-scramble-text');
+    if (scramblers.length > 0) {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*!';
+        window.aiScrambleInterval = setInterval(() => {
+            scramblers.forEach(el => {
+                const original = el.dataset.text;
+                let scrambled = '';
+                for(let i = 0; i < original.length; i++) {
+                    if (original[i] === ' ') scrambled += ' ';
+                    else scrambled += Math.random() > 0.75 ? chars[Math.floor(Math.random() * chars.length)] : original[i];
+                }
+                el.innerText = scrambled;
+            });
+        }, 50);
+    }
 };
 
 window.renderPredictionCell = function (spin) {
@@ -351,41 +459,31 @@ window.renderComboCell = function (spin) {
     const stratKey = state.currentGameplayStrategy || 'series';
     const strategy = registry[stratKey];
     if (!strategy || typeof strategy.detectBridge !== 'function') return '<span class="text-gray-600">-</span>';
+    if (spin.index <= 0) return '<span class="text-gray-600 font-mono text-[10px]">-</span>';
 
     const currMask = window.FON_MASK_MAP ? window.FON_MASK_MAP[spin.num] : 0;
-    
-    // LOOKBACK SCAN (Up to 14 spins to match Premium Screenshot spans)
-    let bridge = null;
-    let prevSpin = null;
-    const lookbackDepth = 14;
-    for (let i = 1; i <= lookbackDepth; i++) {
-        const checkSpin = state.history[spin.index - i];
-        if (!checkSpin) break;
-        
-        const prevMask = window.FON_MASK_MAP ? window.FON_MASK_MAP[checkSpin.num] : 0;
-        const potentialBridge = strategy.detectBridge(prevMask, currMask, window.FACE_MASKS);
-        
-        if (potentialBridge) {
-            bridge = potentialBridge;
-            prevSpin = checkSpin;
-            break; // Found the most recent connection
-        }
-    }
+    const prevSpin = state.history[spin.index - 1];
+    if (!prevSpin) return '<span class="text-gray-600 font-mono text-[10px]">-</span>';
+
+    const prevMask = window.FON_MASK_MAP ? window.FON_MASK_MAP[prevSpin.num] : 0;
+    const bridge = strategy.detectBridge(prevMask, currMask, window.FACE_MASKS);
 
     if (!bridge || !prevSpin) return '<span class="text-gray-600 font-mono text-[10px]">-</span>';
 
-    // SUPERIOR RESTORATION: Badge bridges the gap between rows
+    // Combo badge + dynamic bridge between matched faces
     return `
-        <div class="combo-link-layer pointer-events-none" 
-             data-prev-spin-id="${prevSpin.id}" 
-             data-prev-face="${bridge.matchedPrevFace}" 
-             data-curr-face="${bridge.matchedCurrFace}"
-             data-color="${bridge.color}"></div>
-        <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[10] flex items-center justify-center">
-            <span class="combo-badge px-3 py-1 rounded-md text-[10px] font-black font-mono tracking-widest border shadow-2xl transition-all duration-300" 
-                  style="color:${bridge.color}; border-color:${bridge.color}60; background-color:#0c0c0e; box-shadow: 0 0 24px ${bridge.color}80, inset 0 0 12px ${bridge.color}30;">
-                ${bridge.label}
-            </span>
+        <div class="absolute inset-x-0 top-0 -translate-y-1/2 h-0 pointer-events-none select-none z-[1] flex items-center justify-center">
+            <div class="combo-link-layer absolute overflow-visible"
+                 data-prev-spin-id="${prevSpin.id}"
+                 data-prev-face="${bridge.matchedPrevFace}"
+                 data-curr-face="${bridge.matchedCurrFace}"
+                 data-color="${bridge.color}"></div>
+            <div class="relative z-[2] inline-flex items-center justify-center">
+                <span class="combo-badge relative px-3 py-1 rounded-md text-[10px] font-black font-mono tracking-widest border shadow-2xl transition-all duration-300"
+                      style="color:${bridge.color}; border-color:${bridge.color}55; background-color:#0b0b0d; box-shadow: 0 0 14px ${bridge.color}5a, inset 0 0 8px ${bridge.color}22;">
+                    ${bridge.label}
+                </span>
+            </div>
         </div>
     `;
 };
@@ -512,9 +610,18 @@ window.layoutComboBridge = function (spinId) {
         y: currRect.top + currRect.height / 2 - cellRect.top
     };
     const targetPoint = {
-        x: badgeRect.left - cellRect.left - 2, // Land perfectly inside the badge edge
+        x: badgeRect.left - cellRect.left + 4,
         y: badgeRect.top + badgeRect.height / 2 - cellRect.top
     };
+    const maxAllowedSpan = Math.max(comboCell.offsetHeight * 2.4, 140);
+    if (
+        Math.abs(prevPoint.y - targetPoint.y) > maxAllowedSpan ||
+        Math.abs(currPoint.y - targetPoint.y) > maxAllowedSpan
+    ) {
+        layer.innerHTML = '';
+        layer._comboGeom = null;
+        return;
+    }
 
     const nextGeom = { p1: prevPoint, p2: currPoint, t: targetPoint, color: color };
     const prevGeom = layer._comboGeom || { p1: { ...targetPoint }, p2: { ...targetPoint }, t: { ...targetPoint }, color: color };
@@ -529,37 +636,65 @@ window.layoutAllComboBridges = function () {
     }
 }
 
+window.scheduleComboBridgeRelayout = function () {
+    if (window._comboRelayoutFrame) cancelAnimationFrame(window._comboRelayoutFrame);
+    window._comboRelayoutFrame = requestAnimationFrame(() => {
+        window._comboRelayoutFrame = null;
+        if (window.layoutAllComboBridges) window.layoutAllComboBridges();
+    });
+};
+
+window.initComboBridgeAutoLayout = function () {
+    if (window._comboBridgeAutoLayoutInit) return;
+    window._comboBridgeAutoLayoutInit = true;
+
+    window.addEventListener('resize', window.scheduleComboBridgeRelayout, { passive: true });
+    window.addEventListener('orientationchange', window.scheduleComboBridgeRelayout, { passive: true });
+
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => {
+        if (window.scheduleComboBridgeRelayout) window.scheduleComboBridgeRelayout();
+    });
+
+    const scrollPane = document.querySelector('#scrollContainer > div');
+    const historyBody = document.getElementById('historyBody');
+    if (scrollPane) observer.observe(scrollPane);
+    if (historyBody) observer.observe(historyBody);
+    window._comboBridgeResizeObserver = observer;
+};
+
 window.ensureComboBridgeElements = function (layer) {
     let svg = layer.querySelector('svg');
     if (!svg) {
         layer.innerHTML = `
             <svg class="overflow-visible">
-                <path class="combo-path-1" fill="none" stroke-linecap="round" stroke-width="2.5" />
-                <path class="combo-path-2" fill="none" stroke-linecap="round" stroke-width="2.5" />
-                <circle class="combo-dot" r="3" />
+                <path class="combo-path-glow-1" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+                <path class="combo-path-glow-2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+                <path class="combo-path-core-1" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+                <path class="combo-path-core-2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
         `;
         svg = layer.querySelector('svg');
     }
     return {
         svg,
-        path1: layer.querySelector('.combo-path-1'),
-        path2: layer.querySelector('.combo-path-2'),
-        dot: layer.querySelector('.combo-dot')
+        glow1: layer.querySelector('.combo-path-glow-1'),
+        glow2: layer.querySelector('.combo-path-glow-2'),
+        core1: layer.querySelector('.combo-path-core-1'),
+        core2: layer.querySelector('.combo-path-core-2')
     };
 }
 
 window.drawComboBridge = function (layer, geom) {
-    const { svg, path1, path2, dot } = window.ensureComboBridgeElements(layer);
-    
-    // High-spread capture
-    const minX = Math.min(geom.p1.x, geom.p2.x, geom.t.x) - 20;
-    const maxX = Math.max(geom.p1.x, geom.p2.x, geom.t.x) + 20;
-    const minY = Math.min(geom.p1.y, geom.p2.y, geom.t.y) - 20;
-    const maxY = Math.max(geom.p1.y, geom.p2.y, geom.t.y) + 20;
-    
-    const width = Math.max(40, maxX - minX);
-    const height = Math.max(40, maxY - minY);
+    const { svg, glow1, glow2, core1, core2 } = window.ensureComboBridgeElements(layer);
+
+    const minX = Math.min(geom.p1.x, geom.p2.x, geom.t.x) - 10;
+    const maxX = Math.max(geom.p1.x, geom.p2.x, geom.t.x) + 6;
+    const minY = Math.min(geom.p1.y, geom.p2.y, geom.t.y) - 10;
+    const maxY = Math.max(geom.p1.y, geom.p2.y, geom.t.y) + 10;
+
+    const width = Math.max(24, maxX - minX);
+    const height = Math.max(24, maxY - minY);
 
     layer.style.left = `${minX}px`;
     layer.style.top = `${minY}px`;
@@ -574,24 +709,40 @@ window.drawComboBridge = function (layer, geom) {
     const p2 = { x: geom.p2.x - minX, y: geom.p2.y - minY };
     const t = { x: geom.t.x - minX, y: geom.t.y - minY };
 
-    // TRUE Y-SHAPE WITH STEM (Screenshot Accuracy: Sharp junction meeting dot)
-    const stemX = t.x - 6; // longer stem for that premium 'crows foot' feel
-    path1.setAttribute('d', `M ${p1.x} ${p1.y} L ${stemX} ${t.y} L ${t.x} ${t.y}`);
-    path2.setAttribute('d', `M ${p2.x} ${p2.y} L ${stemX} ${t.y} L ${t.x} ${t.y}`);
-    
-    // Premium Vibrant Glow Styling
-    [path1, path2].forEach(p => {
+    const makePath = (p) => {
+        const spanX = Math.max(18, t.x - p.x);
+        const dy = t.y - p.y;
+        const c1x = p.x + Math.max(10, Math.min(26, spanX * 0.52));
+        const c2x = t.x - Math.max(6, Math.min(14, spanX * 0.28));
+        const c1y = p.y + dy * 0.08;
+        const c2y = t.y - dy * 0.08;
+        return `M ${p.x} ${p.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${t.x} ${t.y}`;
+    };
+
+    const d1 = makePath(p1);
+    const d2 = makePath(p2);
+
+    const connectorReach = Math.max(24, t.x - Math.min(p1.x, p2.x));
+    const responsiveScale = Math.max(0.62, Math.min(1, connectorReach / 150));
+    const coreWidth = (2.2 * responsiveScale).toFixed(2);
+    const glowWidth = (4.4 * responsiveScale).toFixed(2);
+    const coreOpacity = Math.max(0.78, Math.min(0.95, 0.78 + responsiveScale * 0.16)).toFixed(2);
+    const glowOpacity = Math.max(0.22, Math.min(0.35, 0.18 + responsiveScale * 0.17)).toFixed(2);
+    const blurPx = Math.max(2, Math.round(4 * responsiveScale));
+
+    [glow1, glow2].forEach((p, idx) => {
+        p.setAttribute('d', idx === 0 ? d1 : d2);
         p.setAttribute('stroke', geom.color);
-        p.setAttribute('stroke-width', '2.5');
-        p.setAttribute('stroke-opacity', '1.0');
-        p.style.filter = `drop-shadow(0 0 8px ${geom.color})`;
+        p.setAttribute('stroke-width', glowWidth);
+        p.setAttribute('stroke-opacity', glowOpacity);
+        p.style.filter = `drop-shadow(0 0 ${blurPx}px ${geom.color})`;
     });
-    
-    dot.setAttribute('cx', t.x);
-    dot.setAttribute('cy', t.y);
-    dot.setAttribute('fill', geom.color);
-    dot.setAttribute('r', '3');
-    dot.style.filter = `drop-shadow(0 0 12px ${geom.color})`;
+    [core1, core2].forEach((p, idx) => {
+        p.setAttribute('d', idx === 0 ? d1 : d2);
+        p.setAttribute('stroke', geom.color);
+        p.setAttribute('stroke-width', coreWidth);
+        p.setAttribute('stroke-opacity', coreOpacity);
+    });
 }
 
 window.animateComboBridge = function (layer, fromGeom, toGeom, duration = 260) {
@@ -662,6 +813,7 @@ window.toggleInputLayout = function () {
     if (window.UiController && window.UiController.initDesktopGrid) {
         window.UiController.initDesktopGrid();
     }
+    if (window.scheduleComboBridgeRelayout) window.scheduleComboBridgeRelayout();
 };
 
 window.togglePatternFilterPopover = function () {
@@ -1289,12 +1441,26 @@ window.sendAiChatMessage = async function () {
     const typingId = 'typing-' + Date.now();
     historyContainer.innerHTML += `
         <div id="${typingId}" class="flex justify-start">
-            <div class="bg-white/5 border border-white/10 text-white/60 p-3 rounded-xl rounded-tl-sm max-w-[85%] text-xs italic animate-pulse">
+            <div class="bg-white/5 border border-white/10 text-white/60 p-3 rounded-xl rounded-tl-sm max-w-[85%] text-xs italic animate-pulse ai-chat-scramble-text" data-text="Consulting local brain...">
                 Consulting local brain...
             </div>
         </div>
     `;
     historyContainer.scrollTop = historyContainer.scrollHeight;
+
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*!';
+    const scrambleInterval = setInterval(() => {
+        const el = document.querySelector(`#${typingId} .ai-chat-scramble-text`);
+        if (el) {
+            const original = el.dataset.text;
+            let scrambled = '';
+            for(let i = 0; i < original.length; i++) {
+                if (original[i] === ' ') scrambled += ' ';
+                else scrambled += Math.random() > 0.75 ? chars[Math.floor(Math.random() * chars.length)] : original[i];
+            }
+            el.innerText = scrambled;
+        }
+    }, 50);
 
     // 3. Formulate Prompt & Fetch
     try {
@@ -1306,6 +1472,7 @@ window.sendAiChatMessage = async function () {
             { requestMode: 'chat', maxOutputTokens: 250 }
         );
 
+        clearInterval(scrambleInterval);
         document.getElementById(typingId).remove();
         historyContainer.innerHTML += `
             <div class="flex justify-start">
@@ -1313,6 +1480,7 @@ window.sendAiChatMessage = async function () {
             </div>
         `;
     } catch (error) {
+        clearInterval(scrambleInterval);
         document.getElementById(typingId).remove();
         historyContainer.innerHTML += `<div class="flex justify-start"><div class="bg-[#ff1a33]/20 border border-[#ff1a33]/30 text-[#ff1a33] p-3 rounded-xl rounded-tl-sm max-w-[85%] text-xs shadow-md">Error: ${error.message}</div></div>`;
     }

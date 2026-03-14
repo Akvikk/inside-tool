@@ -136,6 +136,16 @@
         );
         state.activeBets = [];
 
+        // 1.5 AMBIENT AUDIO FEEDBACK
+        if (!options.silent && resolvedBets.length > 0 && window.AudioEngine) {
+            const hasWin = resolvedBets.some(b => b.isWin);
+            if (hasWin) {
+                window.AudioEngine.playWin();
+            } else {
+                window.AudioEngine.playLoss();
+            }
+        }
+
         // 2. ADD TO HISTORY
         const spinObj = {
             num: val,
@@ -220,6 +230,9 @@
 
     function handleGridClick(n) {
         document.getElementById('spinInput').value = n;
+        if (window.AudioEngine) {
+            window.AudioEngine.playChip();
+        }
         void addSpin();
     }
 })();
