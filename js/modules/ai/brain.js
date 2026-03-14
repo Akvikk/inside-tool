@@ -38,12 +38,7 @@
             return JSON.parse(text);
         } catch (e) {
             console.error("Failed to parse JSON from AI response:", text);
-            // Fallback to unstructured text parse
-            return {
-                critiques: [
-                    { title: "Review", suggestion: text.replace(/```json/g, '').replace(/```/g, '').trim() }
-                ]
-            };
+            return null;
         }
     }
 
@@ -81,6 +76,16 @@ TASK: Provide 2 ultra-dense tactical critiques in JSON format using the schema.`
                 responseSchema: getHindsightSchema()
             });
             const aiCritique = extractJson(responseText);
+            
+            if (!aiCritique) {
+                return {
+                    actualNet: telemetry.actualNet,
+                    potentialNet: telemetry.potentialNet,
+                    critique: {
+                        critiques: [{ title: "Review", suggestion: responseText.replace(/```json/g, '').replace(/```/g, '').trim() }]
+                    }
+                };
+            }
 
             return {
                 actualNet: telemetry.actualNet,
@@ -153,11 +158,42 @@ TASK: Provide 2 ultra-dense tactical critiques in JSON format using the schema.`
     }
 
     async function requestTacticalAudit(context) {
-        return {
-            predictabilityScore: 85,
-            verdict: "Audit complete. System stable.",
-            profitPivot: "Monitor edge."
-        };
+        const state = window.state;
+        if (!state.aiEnabled) return { error: "AI is disabled in settings." };
+
+        const recentSpins = (context.history || []).slice(-15).map(s => s.num).join(', ');
+        const prompt = `ROLE: Elite Roulette Table Boss.
+CONTEXT: 
+- Last 15 hits: ${recentSpins}
+- Net Units: ${context.netUnits}
+
+TASK: Provide a tactical audit of the current table state.
+SCHEMA:
+{
+  "predictabilityScore": number (0-100),
+  "verdict": "string, 1-2 short sentences",
+  "profitPivot": "string, 1 short actionable advice"
+}`;
+
+        try {
+            const responseText = await requestAiText(prompt, {
+                requestMode: 'tactical-audit',
+                temperature: 0.3,
+                maxOutputTokens: 150,
+                responseMimeType: 'application/json'
+            });
+            const data = extractJson(responseText);
+            if (data && data.verdict) return data;
+            
+            return {
+                predictabilityScore: 50,
+                verdict: responseText.replace(/```json/g, '').replace(/```/g, '').trim(),
+                profitPivot: "Review engine stats."
+            };
+        } catch (error) {
+            console.error('AI Tactical Audit failed:', error);
+            return { error: error.message };
+        }
     }
 
     async function requestNeuralPrediction(context, options = {}) {

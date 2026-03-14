@@ -225,7 +225,7 @@
             if (window.syncAppStore) window.syncAppStore();
         }
 
-        return alerts;
+        return scanResult;
     }
 
     function handleGridClick(n) {

@@ -1470,7 +1470,7 @@ input[type=number] {
 
 /* --- REDESIGNED ANALYTICS HUD (PROGRADE) --- */
 #analyticsHUD {
-    position: relative;
+    position: fixed;
     isolation: isolate;
     background: rgba(12, 12, 12, 0.95);
     backdrop-filter: blur(30px) saturate(150%);
@@ -1500,6 +1500,11 @@ input[type=number] {
     border-radius: 8px 8px 0 0;
     border-bottom: 1px solid rgba(212, 175, 55, 0.3);
     background: #050505;
+    touch-action: none;
+}
+
+#hudResizeHandle {
+    touch-action: none;
 }
 
 #hudScopeBtn {

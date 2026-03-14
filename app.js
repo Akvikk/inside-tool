@@ -160,11 +160,11 @@ window.triggerAiAudit = async function (btn) {
     btn.innerText = originalText;
     btn.disabled = false;
 
-    if (audit && !audit.error) {
-        const verdictEl = document.getElementById('aiBrainVerdict');
-        const scoreEl = document.getElementById('aiBrainScore');
-        const pivotEl = document.getElementById('aiBrainPivot');
+    const verdictEl = document.getElementById('aiBrainVerdict');
+    const scoreEl = document.getElementById('aiBrainScore');
+    const pivotEl = document.getElementById('aiBrainPivot');
 
+    if (audit && !audit.error) {
         if (verdictEl) verdictEl.innerText = audit.verdict || "Audit complete.";
         if (scoreEl) {
             scoreEl.innerText = `${audit.predictabilityScore || 0}%`;
@@ -174,6 +174,8 @@ window.triggerAiAudit = async function (btn) {
             pivotEl.innerText = `Pivot Suggestion: ${audit.profitPivot}`;
             pivotEl.classList.remove('hidden');
         }
+    } else if (audit && audit.error) {
+        if (verdictEl) verdictEl.innerText = `Error: ${audit.error}`;
     }
 }
 
@@ -284,6 +286,11 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (window.reRenderHistory) window.reRenderHistory();
         if (window.scanAllStrategies) await window.scanAllStrategies();
         if (window.HudManager) window.HudManager.update();
+
+        // 2.5 Re-authenticate AI silently if enabled
+        if (window.state && window.state.aiEnabled && window.state.aiApiKey) {
+            if (window.saveAiConfig) await window.saveAiConfig(true);
+        }
     }
 
     // 2. Bind missing enter-key functionality
@@ -303,6 +310,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (window.renderDashboardSafe) window.renderDashboardSafe();
     if (window.initComboBridgeAutoLayout) window.initComboBridgeAutoLayout();
     if (window.scheduleComboBridgeRelayout) window.scheduleComboBridgeRelayout();
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
 
     const resetBtn = document.getElementById('confirmResetBtn');
     if (resetBtn) resetBtn.addEventListener('click', window.resetData);
@@ -316,6 +324,10 @@ window.loadSessionData = function () {
         const data = JSON.parse(raw);
         if (data.history) window.state.history = data.history;
         if (data.faceGaps) window.state.faceGaps = data.faceGaps;
+        if (data.aiEnabled !== undefined) window.state.aiEnabled = data.aiEnabled;
+        if (data.aiApiKey) window.state.aiApiKey = data.aiApiKey;
+        if (data.aiProvider) window.state.aiProvider = data.aiProvider;
+        if (data.neuralPredictionEnabled !== undefined) window.state.neuralPredictionEnabled = data.neuralPredictionEnabled;
         // NOTE: More state properties can be added here for persistence
         return true;
     } catch (e) {
@@ -328,7 +340,11 @@ window.saveSessionData = function () {
     try {
         localStorage.setItem('insideTool_session_v2', JSON.stringify({
             history: state.history,
-            faceGaps: state.faceGaps
+            faceGaps: state.faceGaps,
+            aiEnabled: state.aiEnabled,
+            aiApiKey: state.aiApiKey,
+            aiProvider: state.aiProvider,
+            neuralPredictionEnabled: state.neuralPredictionEnabled
         }));
     } catch (e) {
         console.warn("Session save failed:", e);
@@ -1487,6 +1503,172 @@ window.sendAiChatMessage = async function () {
     historyContainer.scrollTop = historyContainer.scrollHeight;
 };
 
+// --- AI CONFIG MODAL LOGIC ---
+window.toggleAiMasterSwitch = function() {
+    if (!state) return;
+    state.aiEnabled = !state.aiEnabled;
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleNeuralPrediction = function() {
+    if (!state) return;
+    state.neuralPredictionEnabled = !state.neuralPredictionEnabled;
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleAiApiKeyVisibility = function() {
+    const input = document.getElementById('aiApiKeyInput');
+    const icon = document.getElementById('toggleAiKeyVisibilityIcon');
+    if (!input || !icon) return;
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+};
+
+window.saveAiConfig = async function(silent = false) {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    const btn = document.getElementById('saveAiBtn');
+    
+    if (!silent) {
+        state.aiApiKey = keyInput ? keyInput.value.trim() : '';
+        state.aiProvider = providerSelect ? providerSelect.value : 'gemini';
+    }
+    
+    if (!state.aiApiKey) return;
+    
+    if (btn && !silent) btn.innerText = 'VERIFYING...';
+    
+    try {
+        const response = await fetch(`${state.AI_RELAY_BASE_URL}/connect`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: state.aiProvider, apiKey: state.aiApiKey })
+        });
+        const data = await response.json();
+        
+        if (response.ok && data.connected) {
+            state.aiRelayAvailable = true;
+            if (btn && !silent) {
+                btn.innerText = 'CONNECTED';
+                setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            }
+        } else {
+            throw new Error(data.error || 'Failed to connect');
+        }
+    } catch (error) {
+        console.error('AI Connection Error:', error);
+        state.aiRelayAvailable = false;
+        if (btn && !silent) {
+            btn.innerText = 'FAILED';
+            setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            alert('AI Connection Failed: ' + error.message);
+        }
+    }
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.clearAiConfig = async function() {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    if (keyInput) keyInput.value = '';
+    state.aiApiKey = '';
+    state.aiRelayAvailable = false;
+    
+    try {
+        await fetch(`${state.AI_RELAY_BASE_URL}/disconnect`, { method: 'POST' });
+    } catch(e) {}
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.updateAiConfigModalUI = function() {
+    if (!state) return;
+    
+    const masterSwitch = document.getElementById('aiMasterSwitch');
+    const knob = document.getElementById('aiSwitchKnob');
+    const statusText = document.getElementById('aiMasterStatusText');
+    const vaultSection = document.getElementById('aiVaultSection');
+    const hindsightToggle = document.getElementById('aiHindsightToggle');
+    const statusBadge = document.getElementById('aiStatusBadge');
+    
+    if (masterSwitch && knob && statusText && vaultSection) {
+        if (state.aiEnabled) {
+            masterSwitch.classList.replace('bg-white/10', 'bg-[#30D158]/20');
+            masterSwitch.classList.replace('border-white/20', 'border-[#30D158]/30');
+            knob.classList.replace('bg-gray-400', 'bg-[#30D158]');
+            knob.style.transform = 'translateX(24px)';
+            statusText.innerText = 'Enabled';
+            vaultSection.classList.remove('hidden');
+        } else {
+            masterSwitch.classList.replace('bg-[#30D158]/20', 'bg-white/10');
+            masterSwitch.classList.replace('border-[#30D158]/30', 'border-white/20');
+            knob.classList.replace('bg-[#30D158]', 'bg-gray-400');
+            knob.style.transform = 'translateX(0)';
+            statusText.innerText = 'Disabled';
+            vaultSection.classList.add('hidden');
+        }
+    }
+    
+    if (hindsightToggle) {
+        const hKnob = hindsightToggle.querySelector('div');
+        if (state.neuralPredictionEnabled) {
+            hindsightToggle.classList.replace('bg-white/10', 'bg-[#bf5af2]/30');
+            hindsightToggle.classList.replace('border-white/20', 'border-[#bf5af2]/50');
+            if (hKnob) {
+                hKnob.classList.replace('bg-gray-500', 'bg-[#bf5af2]');
+                hKnob.style.transform = 'translateX(20px)';
+                hKnob.style.boxShadow = '0 0 8px rgba(191,90,242,0.6)';
+            }
+        } else {
+            hindsightToggle.classList.replace('bg-[#bf5af2]/30', 'bg-white/10');
+            hindsightToggle.classList.replace('border-[#bf5af2]/50', 'border-white/20');
+            if (hKnob) {
+                hKnob.classList.replace('bg-[#bf5af2]', 'bg-gray-500');
+                hKnob.style.transform = 'translateX(0)';
+                hKnob.style.boxShadow = 'none';
+            }
+        }
+    }
+    
+    if (statusBadge) {
+        if (state.aiRelayAvailable) {
+            statusBadge.innerText = 'CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-[#30D158]/20 px-2.5 py-1 rounded-md text-[#30D158] shadow-inner';
+        } else {
+            statusBadge.innerText = 'NOT CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner';
+        }
+    }
+
+    const headerAiBtn = document.getElementById('headerAiBtn');
+    if (headerAiBtn) {
+        if (state.aiRelayAvailable) {
+            headerAiBtn.classList.add('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        } else if (state.aiEnabled) {
+            headerAiBtn.classList.add('ai-offline');
+            headerAiBtn.classList.remove('ai-connected');
+        } else {
+            headerAiBtn.classList.remove('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        }
+    }
+};
+
 // --- MISC. SETTINGS ---
 window.changePredictionStrategy = function (val) {
     if (window.state) {
@@ -1494,5 +1676,2313 @@ window.changePredictionStrategy = function (val) {
         if (window.scanAllStrategies) window.scanAllStrategies();
     }
 };
-window.openAiConfigModal = function () { toggleModal('aiConfigModal'); };
+window.openAiConfigModal = function () { 
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    if (keyInput) keyInput.value = window.state.aiApiKey || '';
+    if (providerSelect) providerSelect.value = window.state.aiProvider || 'gemini';
+    toggleModal('aiConfigModal'); 
+};
+window.openAiChat = function () { toggleModal('aiChatModal'); };
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleNeuralPrediction = function() {
+    if (!state) return;
+    state.neuralPredictionEnabled = !state.neuralPredictionEnabled;
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleAiApiKeyVisibility = function() {
+    const input = document.getElementById('aiApiKeyInput');
+    const icon = document.getElementById('toggleAiKeyVisibilityIcon');
+    if (!input || !icon) return;
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+};
+
+window.saveAiConfig = async function(silent = false) {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    const btn = document.getElementById('saveAiBtn');
+    
+    if (!silent) {
+        state.aiApiKey = keyInput ? keyInput.value.trim() : '';
+        state.aiProvider = providerSelect ? providerSelect.value : 'gemini';
+    }
+    
+    if (!state.aiApiKey) return;
+    
+    if (btn && !silent) btn.innerText = 'VERIFYING...';
+    
+    try {
+        const response = await fetch(`${state.AI_RELAY_BASE_URL}/connect`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: state.aiProvider, apiKey: state.aiApiKey })
+        });
+        const data = await response.json();
+        
+        if (response.ok && data.connected) {
+            state.aiRelayAvailable = true;
+            if (btn && !silent) {
+                btn.innerText = 'CONNECTED';
+                setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            }
+        } else {
+            throw new Error(data.error || 'Failed to connect');
+        }
+    } catch (error) {
+        console.error('AI Connection Error:', error);
+        state.aiRelayAvailable = false;
+        if (btn && !silent) {
+            btn.innerText = 'FAILED';
+            setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            alert('AI Connection Failed: ' + error.message);
+        }
+    }
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.clearAiConfig = async function() {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    if (keyInput) keyInput.value = '';
+    state.aiApiKey = '';
+    state.aiRelayAvailable = false;
+    
+    try {
+        await fetch(`${state.AI_RELAY_BASE_URL}/disconnect`, { method: 'POST' });
+    } catch(e) {}
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.updateAiConfigModalUI = function() {
+    if (!state) return;
+    
+    const masterSwitch = document.getElementById('aiMasterSwitch');
+    const knob = document.getElementById('aiSwitchKnob');
+    const statusText = document.getElementById('aiMasterStatusText');
+    const vaultSection = document.getElementById('aiVaultSection');
+    const hindsightToggle = document.getElementById('aiHindsightToggle');
+    const statusBadge = document.getElementById('aiStatusBadge');
+    
+    if (masterSwitch && knob && statusText && vaultSection) {
+        if (state.aiEnabled) {
+            masterSwitch.classList.replace('bg-white/10', 'bg-[#30D158]/20');
+            masterSwitch.classList.replace('border-white/20', 'border-[#30D158]/30');
+            knob.classList.replace('bg-gray-400', 'bg-[#30D158]');
+            knob.style.transform = 'translateX(24px)';
+            statusText.innerText = 'Enabled';
+            vaultSection.classList.remove('hidden');
+        } else {
+            masterSwitch.classList.replace('bg-[#30D158]/20', 'bg-white/10');
+            masterSwitch.classList.replace('border-[#30D158]/30', 'border-white/20');
+            knob.classList.replace('bg-[#30D158]', 'bg-gray-400');
+            knob.style.transform = 'translateX(0)';
+            statusText.innerText = 'Disabled';
+            vaultSection.classList.add('hidden');
+        }
+    }
+    
+    if (hindsightToggle) {
+        const hKnob = hindsightToggle.querySelector('div');
+        if (state.neuralPredictionEnabled) {
+            hindsightToggle.classList.replace('bg-white/10', 'bg-[#bf5af2]/30');
+            hindsightToggle.classList.replace('border-white/20', 'border-[#bf5af2]/50');
+            if (hKnob) {
+                hKnob.classList.replace('bg-gray-500', 'bg-[#bf5af2]');
+                hKnob.style.transform = 'translateX(20px)';
+                hKnob.style.boxShadow = '0 0 8px rgba(191,90,242,0.6)';
+            }
+        } else {
+            hindsightToggle.classList.replace('bg-[#bf5af2]/30', 'bg-white/10');
+            hindsightToggle.classList.replace('border-[#bf5af2]/50', 'border-white/20');
+            if (hKnob) {
+                hKnob.classList.replace('bg-[#bf5af2]', 'bg-gray-500');
+                hKnob.style.transform = 'translateX(0)';
+                hKnob.style.boxShadow = 'none';
+            }
+        }
+    }
+    
+    if (statusBadge) {
+        if (state.aiRelayAvailable) {
+            statusBadge.innerText = 'CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-[#30D158]/20 px-2.5 py-1 rounded-md text-[#30D158] shadow-inner';
+        } else {
+            statusBadge.innerText = 'NOT CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner';
+        }
+    }
+
+    const headerAiBtn = document.getElementById('headerAiBtn');
+    if (headerAiBtn) {
+        if (state.aiRelayAvailable) {
+            headerAiBtn.classList.add('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        } else if (state.aiEnabled) {
+            headerAiBtn.classList.add('ai-offline');
+            headerAiBtn.classList.remove('ai-connected');
+        } else {
+            headerAiBtn.classList.remove('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        }
+    }
+};
+
+// --- MISC. SETTINGS ---
+window.changePredictionStrategy = function (val) {
+    if (window.state) {
+        window.state.currentGameplayStrategy = val;
+        if (window.scanAllStrategies) window.scanAllStrategies();
+    }
+};
+window.openAiConfigModal = function () { 
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    if (keyInput) keyInput.value = window.state.aiApiKey || '';
+    if (providerSelect) providerSelect.value = window.state.aiProvider || 'gemini';
+    toggleModal('aiConfigModal'); 
+};
+window.openAiChat = function () { toggleModal('aiChatModal'); };
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleNeuralPrediction = function() {
+    if (!state) return;
+    state.neuralPredictionEnabled = !state.neuralPredictionEnabled;
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleAiApiKeyVisibility = function() {
+    const input = document.getElementById('aiApiKeyInput');
+    const icon = document.getElementById('toggleAiKeyVisibilityIcon');
+    if (!input || !icon) return;
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+};
+
+window.saveAiConfig = async function(silent = false) {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    const btn = document.getElementById('saveAiBtn');
+    
+    if (!silent) {
+        state.aiApiKey = keyInput ? keyInput.value.trim() : '';
+        state.aiProvider = providerSelect ? providerSelect.value : 'gemini';
+    }
+    
+    if (!state.aiApiKey) return;
+    
+    if (btn && !silent) btn.innerText = 'VERIFYING...';
+    
+    try {
+        const response = await fetch(`${state.AI_RELAY_BASE_URL}/connect`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: state.aiProvider, apiKey: state.aiApiKey })
+        });
+        const data = await response.json();
+        
+        if (response.ok && data.connected) {
+            state.aiRelayAvailable = true;
+            if (btn && !silent) {
+                btn.innerText = 'CONNECTED';
+                setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            }
+        } else {
+            throw new Error(data.error || 'Failed to connect');
+        }
+    } catch (error) {
+        console.error('AI Connection Error:', error);
+        state.aiRelayAvailable = false;
+        if (btn && !silent) {
+            btn.innerText = 'FAILED';
+            setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            alert('AI Connection Failed: ' + error.message);
+        }
+    }
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.clearAiConfig = async function() {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    if (keyInput) keyInput.value = '';
+    state.aiApiKey = '';
+    state.aiRelayAvailable = false;
+    
+    try {
+        await fetch(`${state.AI_RELAY_BASE_URL}/disconnect`, { method: 'POST' });
+    } catch(e) {}
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.updateAiConfigModalUI = function() {
+    if (!state) return;
+    
+    const masterSwitch = document.getElementById('aiMasterSwitch');
+    const knob = document.getElementById('aiSwitchKnob');
+    const statusText = document.getElementById('aiMasterStatusText');
+    const vaultSection = document.getElementById('aiVaultSection');
+    const hindsightToggle = document.getElementById('aiHindsightToggle');
+    const statusBadge = document.getElementById('aiStatusBadge');
+    
+    if (masterSwitch && knob && statusText && vaultSection) {
+        if (state.aiEnabled) {
+            masterSwitch.classList.replace('bg-white/10', 'bg-[#30D158]/20');
+            masterSwitch.classList.replace('border-white/20', 'border-[#30D158]/30');
+            knob.classList.replace('bg-gray-400', 'bg-[#30D158]');
+            knob.style.transform = 'translateX(24px)';
+            statusText.innerText = 'Enabled';
+            vaultSection.classList.remove('hidden');
+        } else {
+            masterSwitch.classList.replace('bg-[#30D158]/20', 'bg-white/10');
+            masterSwitch.classList.replace('border-[#30D158]/30', 'border-white/20');
+            knob.classList.replace('bg-[#30D158]', 'bg-gray-400');
+            knob.style.transform = 'translateX(0)';
+            statusText.innerText = 'Disabled';
+            vaultSection.classList.add('hidden');
+        }
+    }
+    
+    if (hindsightToggle) {
+        const hKnob = hindsightToggle.querySelector('div');
+        if (state.neuralPredictionEnabled) {
+            hindsightToggle.classList.replace('bg-white/10', 'bg-[#bf5af2]/30');
+            hindsightToggle.classList.replace('border-white/20', 'border-[#bf5af2]/50');
+            if (hKnob) {
+                hKnob.classList.replace('bg-gray-500', 'bg-[#bf5af2]');
+                hKnob.style.transform = 'translateX(20px)';
+                hKnob.style.boxShadow = '0 0 8px rgba(191,90,242,0.6)';
+            }
+        } else {
+            hindsightToggle.classList.replace('bg-[#bf5af2]/30', 'bg-white/10');
+            hindsightToggle.classList.replace('border-[#bf5af2]/50', 'border-white/20');
+            if (hKnob) {
+                hKnob.classList.replace('bg-[#bf5af2]', 'bg-gray-500');
+                hKnob.style.transform = 'translateX(0)';
+                hKnob.style.boxShadow = 'none';
+            }
+        }
+    }
+    
+    if (statusBadge) {
+        if (state.aiRelayAvailable) {
+            statusBadge.innerText = 'CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-[#30D158]/20 px-2.5 py-1 rounded-md text-[#30D158] shadow-inner';
+        } else {
+            statusBadge.innerText = 'NOT CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner';
+        }
+    }
+
+    const headerAiBtn = document.getElementById('headerAiBtn');
+    if (headerAiBtn) {
+        if (state.aiRelayAvailable) {
+            headerAiBtn.classList.add('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        } else if (state.aiEnabled) {
+            headerAiBtn.classList.add('ai-offline');
+            headerAiBtn.classList.remove('ai-connected');
+        } else {
+            headerAiBtn.classList.remove('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        }
+    }
+};
+
+// --- MISC. SETTINGS ---
+window.changePredictionStrategy = function (val) {
+    if (window.state) {
+        window.state.currentGameplayStrategy = val;
+        if (window.scanAllStrategies) window.scanAllStrategies();
+    }
+};
+window.openAiConfigModal = function () { 
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    if (keyInput) keyInput.value = window.state.aiApiKey || '';
+    if (providerSelect) providerSelect.value = window.state.aiProvider || 'gemini';
+    toggleModal('aiConfigModal'); 
+};
+window.openAiChat = function () { toggleModal('aiChatModal'); };
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleNeuralPrediction = function() {
+    if (!state) return;
+    state.neuralPredictionEnabled = !state.neuralPredictionEnabled;
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleAiApiKeyVisibility = function() {
+    const input = document.getElementById('aiApiKeyInput');
+    const icon = document.getElementById('toggleAiKeyVisibilityIcon');
+    if (!input || !icon) return;
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+};
+
+window.saveAiConfig = async function(silent = false) {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    const btn = document.getElementById('saveAiBtn');
+    
+    if (!silent) {
+        state.aiApiKey = keyInput ? keyInput.value.trim() : '';
+        state.aiProvider = providerSelect ? providerSelect.value : 'gemini';
+    }
+    
+    if (!state.aiApiKey) return;
+    
+    if (btn && !silent) btn.innerText = 'VERIFYING...';
+    
+    try {
+        const response = await fetch(`${state.AI_RELAY_BASE_URL}/connect`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: state.aiProvider, apiKey: state.aiApiKey })
+        });
+        const data = await response.json();
+        
+        if (response.ok && data.connected) {
+            state.aiRelayAvailable = true;
+            if (btn && !silent) {
+                btn.innerText = 'CONNECTED';
+                setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            }
+        } else {
+            throw new Error(data.error || 'Failed to connect');
+        }
+    } catch (error) {
+        console.error('AI Connection Error:', error);
+        state.aiRelayAvailable = false;
+        if (btn && !silent) {
+            btn.innerText = 'FAILED';
+            setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            alert('AI Connection Failed: ' + error.message);
+        }
+    }
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.clearAiConfig = async function() {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    if (keyInput) keyInput.value = '';
+    state.aiApiKey = '';
+    state.aiRelayAvailable = false;
+    
+    try {
+        await fetch(`${state.AI_RELAY_BASE_URL}/disconnect`, { method: 'POST' });
+    } catch(e) {}
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.updateAiConfigModalUI = function() {
+    if (!state) return;
+    
+    const masterSwitch = document.getElementById('aiMasterSwitch');
+    const knob = document.getElementById('aiSwitchKnob');
+    const statusText = document.getElementById('aiMasterStatusText');
+    const vaultSection = document.getElementById('aiVaultSection');
+    const hindsightToggle = document.getElementById('aiHindsightToggle');
+    const statusBadge = document.getElementById('aiStatusBadge');
+    
+    if (masterSwitch && knob && statusText && vaultSection) {
+        if (state.aiEnabled) {
+            masterSwitch.classList.replace('bg-white/10', 'bg-[#30D158]/20');
+            masterSwitch.classList.replace('border-white/20', 'border-[#30D158]/30');
+            knob.classList.replace('bg-gray-400', 'bg-[#30D158]');
+            knob.style.transform = 'translateX(24px)';
+            statusText.innerText = 'Enabled';
+            vaultSection.classList.remove('hidden');
+        } else {
+            masterSwitch.classList.replace('bg-[#30D158]/20', 'bg-white/10');
+            masterSwitch.classList.replace('border-[#30D158]/30', 'border-white/20');
+            knob.classList.replace('bg-[#30D158]', 'bg-gray-400');
+            knob.style.transform = 'translateX(0)';
+            statusText.innerText = 'Disabled';
+            vaultSection.classList.add('hidden');
+        }
+    }
+    
+    if (hindsightToggle) {
+        const hKnob = hindsightToggle.querySelector('div');
+        if (state.neuralPredictionEnabled) {
+            hindsightToggle.classList.replace('bg-white/10', 'bg-[#bf5af2]/30');
+            hindsightToggle.classList.replace('border-white/20', 'border-[#bf5af2]/50');
+            if (hKnob) {
+                hKnob.classList.replace('bg-gray-500', 'bg-[#bf5af2]');
+                hKnob.style.transform = 'translateX(20px)';
+                hKnob.style.boxShadow = '0 0 8px rgba(191,90,242,0.6)';
+            }
+        } else {
+            hindsightToggle.classList.replace('bg-[#bf5af2]/30', 'bg-white/10');
+            hindsightToggle.classList.replace('border-[#bf5af2]/50', 'border-white/20');
+            if (hKnob) {
+                hKnob.classList.replace('bg-[#bf5af2]', 'bg-gray-500');
+                hKnob.style.transform = 'translateX(0)';
+                hKnob.style.boxShadow = 'none';
+            }
+        }
+    }
+    
+    if (statusBadge) {
+        if (state.aiRelayAvailable) {
+            statusBadge.innerText = 'CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-[#30D158]/20 px-2.5 py-1 rounded-md text-[#30D158] shadow-inner';
+        } else {
+            statusBadge.innerText = 'NOT CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner';
+        }
+    }
+
+    const headerAiBtn = document.getElementById('headerAiBtn');
+    if (headerAiBtn) {
+        if (state.aiRelayAvailable) {
+            headerAiBtn.classList.add('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        } else if (state.aiEnabled) {
+            headerAiBtn.classList.add('ai-offline');
+            headerAiBtn.classList.remove('ai-connected');
+        } else {
+            headerAiBtn.classList.remove('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        }
+    }
+};
+
+// --- MISC. SETTINGS ---
+window.changePredictionStrategy = function (val) {
+    if (window.state) {
+        window.state.currentGameplayStrategy = val;
+        if (window.scanAllStrategies) window.scanAllStrategies();
+    }
+};
+window.openAiConfigModal = function () { 
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    if (keyInput) keyInput.value = window.state.aiApiKey || '';
+    if (providerSelect) providerSelect.value = window.state.aiProvider || 'gemini';
+    toggleModal('aiConfigModal'); 
+};
+window.openAiChat = function () { toggleModal('aiChatModal'); };
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleNeuralPrediction = function() {
+    if (!state) return;
+    state.neuralPredictionEnabled = !state.neuralPredictionEnabled;
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleAiApiKeyVisibility = function() {
+    const input = document.getElementById('aiApiKeyInput');
+    const icon = document.getElementById('toggleAiKeyVisibilityIcon');
+    if (!input || !icon) return;
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+};
+
+window.saveAiConfig = async function(silent = false) {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    const btn = document.getElementById('saveAiBtn');
+    
+    if (!silent) {
+        state.aiApiKey = keyInput ? keyInput.value.trim() : '';
+        state.aiProvider = providerSelect ? providerSelect.value : 'gemini';
+    }
+    
+    if (!state.aiApiKey) return;
+    
+    if (btn && !silent) btn.innerText = 'VERIFYING...';
+    
+    try {
+        const response = await fetch(`${state.AI_RELAY_BASE_URL}/connect`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: state.aiProvider, apiKey: state.aiApiKey })
+        });
+        const data = await response.json();
+        
+        if (response.ok && data.connected) {
+            state.aiRelayAvailable = true;
+            if (btn && !silent) {
+                btn.innerText = 'CONNECTED';
+                setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            }
+        } else {
+            throw new Error(data.error || 'Failed to connect');
+        }
+    } catch (error) {
+        console.error('AI Connection Error:', error);
+        state.aiRelayAvailable = false;
+        if (btn && !silent) {
+            btn.innerText = 'FAILED';
+            setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            alert('AI Connection Failed: ' + error.message);
+        }
+    }
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.clearAiConfig = async function() {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    if (keyInput) keyInput.value = '';
+    state.aiApiKey = '';
+    state.aiRelayAvailable = false;
+    
+    try {
+        await fetch(`${state.AI_RELAY_BASE_URL}/disconnect`, { method: 'POST' });
+    } catch(e) {}
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.updateAiConfigModalUI = function() {
+    if (!state) return;
+    
+    const masterSwitch = document.getElementById('aiMasterSwitch');
+    const knob = document.getElementById('aiSwitchKnob');
+    const statusText = document.getElementById('aiMasterStatusText');
+    const vaultSection = document.getElementById('aiVaultSection');
+    const hindsightToggle = document.getElementById('aiHindsightToggle');
+    const statusBadge = document.getElementById('aiStatusBadge');
+    
+    if (masterSwitch && knob && statusText && vaultSection) {
+        if (state.aiEnabled) {
+            masterSwitch.classList.replace('bg-white/10', 'bg-[#30D158]/20');
+            masterSwitch.classList.replace('border-white/20', 'border-[#30D158]/30');
+            knob.classList.replace('bg-gray-400', 'bg-[#30D158]');
+            knob.style.transform = 'translateX(24px)';
+            statusText.innerText = 'Enabled';
+            vaultSection.classList.remove('hidden');
+        } else {
+            masterSwitch.classList.replace('bg-[#30D158]/20', 'bg-white/10');
+            masterSwitch.classList.replace('border-[#30D158]/30', 'border-white/20');
+            knob.classList.replace('bg-[#30D158]', 'bg-gray-400');
+            knob.style.transform = 'translateX(0)';
+            statusText.innerText = 'Disabled';
+            vaultSection.classList.add('hidden');
+        }
+    }
+    
+    if (hindsightToggle) {
+        const hKnob = hindsightToggle.querySelector('div');
+        if (state.neuralPredictionEnabled) {
+            hindsightToggle.classList.replace('bg-white/10', 'bg-[#bf5af2]/30');
+            hindsightToggle.classList.replace('border-white/20', 'border-[#bf5af2]/50');
+            if (hKnob) {
+                hKnob.classList.replace('bg-gray-500', 'bg-[#bf5af2]');
+                hKnob.style.transform = 'translateX(20px)';
+                hKnob.style.boxShadow = '0 0 8px rgba(191,90,242,0.6)';
+            }
+        } else {
+            hindsightToggle.classList.replace('bg-[#bf5af2]/30', 'bg-white/10');
+            hindsightToggle.classList.replace('border-[#bf5af2]/50', 'border-white/20');
+            if (hKnob) {
+                hKnob.classList.replace('bg-[#bf5af2]', 'bg-gray-500');
+                hKnob.style.transform = 'translateX(0)';
+                hKnob.style.boxShadow = 'none';
+            }
+        }
+    }
+    
+    if (statusBadge) {
+        if (state.aiRelayAvailable) {
+            statusBadge.innerText = 'CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-[#30D158]/20 px-2.5 py-1 rounded-md text-[#30D158] shadow-inner';
+        } else {
+            statusBadge.innerText = 'NOT CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner';
+        }
+    }
+
+    const headerAiBtn = document.getElementById('headerAiBtn');
+    if (headerAiBtn) {
+        if (state.aiRelayAvailable) {
+            headerAiBtn.classList.add('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        } else if (state.aiEnabled) {
+            headerAiBtn.classList.add('ai-offline');
+            headerAiBtn.classList.remove('ai-connected');
+        } else {
+            headerAiBtn.classList.remove('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        }
+    }
+};
+
+// --- MISC. SETTINGS ---
+window.changePredictionStrategy = function (val) {
+    if (window.state) {
+        window.state.currentGameplayStrategy = val;
+        if (window.scanAllStrategies) window.scanAllStrategies();
+    }
+};
+window.openAiConfigModal = function () { 
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    if (keyInput) keyInput.value = window.state.aiApiKey || '';
+    if (providerSelect) providerSelect.value = window.state.aiProvider || 'gemini';
+    toggleModal('aiConfigModal'); 
+};
+window.openAiChat = function () { toggleModal('aiChatModal'); };
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleNeuralPrediction = function() {
+    if (!state) return;
+    state.neuralPredictionEnabled = !state.neuralPredictionEnabled;
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleAiApiKeyVisibility = function() {
+    const input = document.getElementById('aiApiKeyInput');
+    const icon = document.getElementById('toggleAiKeyVisibilityIcon');
+    if (!input || !icon) return;
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+};
+
+window.saveAiConfig = async function(silent = false) {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    const btn = document.getElementById('saveAiBtn');
+    
+    if (!silent) {
+        state.aiApiKey = keyInput ? keyInput.value.trim() : '';
+        state.aiProvider = providerSelect ? providerSelect.value : 'gemini';
+    }
+    
+    if (!state.aiApiKey) return;
+    
+    if (btn && !silent) btn.innerText = 'VERIFYING...';
+    
+    try {
+        const response = await fetch(`${state.AI_RELAY_BASE_URL}/connect`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: state.aiProvider, apiKey: state.aiApiKey })
+        });
+        const data = await response.json();
+        
+        if (response.ok && data.connected) {
+            state.aiRelayAvailable = true;
+            if (btn && !silent) {
+                btn.innerText = 'CONNECTED';
+                setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            }
+        } else {
+            throw new Error(data.error || 'Failed to connect');
+        }
+    } catch (error) {
+        console.error('AI Connection Error:', error);
+        state.aiRelayAvailable = false;
+        if (btn && !silent) {
+            btn.innerText = 'FAILED';
+            setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            alert('AI Connection Failed: ' + error.message);
+        }
+    }
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.clearAiConfig = async function() {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    if (keyInput) keyInput.value = '';
+    state.aiApiKey = '';
+    state.aiRelayAvailable = false;
+    
+    try {
+        await fetch(`${state.AI_RELAY_BASE_URL}/disconnect`, { method: 'POST' });
+    } catch(e) {}
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.updateAiConfigModalUI = function() {
+    if (!state) return;
+    
+    const masterSwitch = document.getElementById('aiMasterSwitch');
+    const knob = document.getElementById('aiSwitchKnob');
+    const statusText = document.getElementById('aiMasterStatusText');
+    const vaultSection = document.getElementById('aiVaultSection');
+    const hindsightToggle = document.getElementById('aiHindsightToggle');
+    const statusBadge = document.getElementById('aiStatusBadge');
+    
+    if (masterSwitch && knob && statusText && vaultSection) {
+        if (state.aiEnabled) {
+            masterSwitch.classList.replace('bg-white/10', 'bg-[#30D158]/20');
+            masterSwitch.classList.replace('border-white/20', 'border-[#30D158]/30');
+            knob.classList.replace('bg-gray-400', 'bg-[#30D158]');
+            knob.style.transform = 'translateX(24px)';
+            statusText.innerText = 'Enabled';
+            vaultSection.classList.remove('hidden');
+        } else {
+            masterSwitch.classList.replace('bg-[#30D158]/20', 'bg-white/10');
+            masterSwitch.classList.replace('border-[#30D158]/30', 'border-white/20');
+            knob.classList.replace('bg-[#30D158]', 'bg-gray-400');
+            knob.style.transform = 'translateX(0)';
+            statusText.innerText = 'Disabled';
+            vaultSection.classList.add('hidden');
+        }
+    }
+    
+    if (hindsightToggle) {
+        const hKnob = hindsightToggle.querySelector('div');
+        if (state.neuralPredictionEnabled) {
+            hindsightToggle.classList.replace('bg-white/10', 'bg-[#bf5af2]/30');
+            hindsightToggle.classList.replace('border-white/20', 'border-[#bf5af2]/50');
+            if (hKnob) {
+                hKnob.classList.replace('bg-gray-500', 'bg-[#bf5af2]');
+                hKnob.style.transform = 'translateX(20px)';
+                hKnob.style.boxShadow = '0 0 8px rgba(191,90,242,0.6)';
+            }
+        } else {
+            hindsightToggle.classList.replace('bg-[#bf5af2]/30', 'bg-white/10');
+            hindsightToggle.classList.replace('border-[#bf5af2]/50', 'border-white/20');
+            if (hKnob) {
+                hKnob.classList.replace('bg-[#bf5af2]', 'bg-gray-500');
+                hKnob.style.transform = 'translateX(0)';
+                hKnob.style.boxShadow = 'none';
+            }
+        }
+    }
+    
+    if (statusBadge) {
+        if (state.aiRelayAvailable) {
+            statusBadge.innerText = 'CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-[#30D158]/20 px-2.5 py-1 rounded-md text-[#30D158] shadow-inner';
+        } else {
+            statusBadge.innerText = 'NOT CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner';
+        }
+    }
+
+    const headerAiBtn = document.getElementById('headerAiBtn');
+    if (headerAiBtn) {
+        if (state.aiRelayAvailable) {
+            headerAiBtn.classList.add('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        } else if (state.aiEnabled) {
+            headerAiBtn.classList.add('ai-offline');
+            headerAiBtn.classList.remove('ai-connected');
+        } else {
+            headerAiBtn.classList.remove('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        }
+    }
+};
+
+// --- MISC. SETTINGS ---
+window.changePredictionStrategy = function (val) {
+    if (window.state) {
+        window.state.currentGameplayStrategy = val;
+        if (window.scanAllStrategies) window.scanAllStrategies();
+    }
+};
+window.openAiConfigModal = function () { 
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    if (keyInput) keyInput.value = window.state.aiApiKey || '';
+    if (providerSelect) providerSelect.value = window.state.aiProvider || 'gemini';
+    toggleModal('aiConfigModal'); 
+};
+window.openAiChat = function () { toggleModal('aiChatModal'); };
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleNeuralPrediction = function() {
+    if (!state) return;
+    state.neuralPredictionEnabled = !state.neuralPredictionEnabled;
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleAiApiKeyVisibility = function() {
+    const input = document.getElementById('aiApiKeyInput');
+    const icon = document.getElementById('toggleAiKeyVisibilityIcon');
+    if (!input || !icon) return;
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+};
+
+window.saveAiConfig = async function(silent = false) {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    const btn = document.getElementById('saveAiBtn');
+    
+    if (!silent) {
+        state.aiApiKey = keyInput ? keyInput.value.trim() : '';
+        state.aiProvider = providerSelect ? providerSelect.value : 'gemini';
+    }
+    
+    if (!state.aiApiKey) return;
+    
+    if (btn && !silent) btn.innerText = 'VERIFYING...';
+    
+    try {
+        const response = await fetch(`${state.AI_RELAY_BASE_URL}/connect`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: state.aiProvider, apiKey: state.aiApiKey })
+        });
+        const data = await response.json();
+        
+        if (response.ok && data.connected) {
+            state.aiRelayAvailable = true;
+            if (btn && !silent) {
+                btn.innerText = 'CONNECTED';
+                setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            }
+        } else {
+            throw new Error(data.error || 'Failed to connect');
+        }
+    } catch (error) {
+        console.error('AI Connection Error:', error);
+        state.aiRelayAvailable = false;
+        if (btn && !silent) {
+            btn.innerText = 'FAILED';
+            setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            alert('AI Connection Failed: ' + error.message);
+        }
+    }
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.clearAiConfig = async function() {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    if (keyInput) keyInput.value = '';
+    state.aiApiKey = '';
+    state.aiRelayAvailable = false;
+    
+    try {
+        await fetch(`${state.AI_RELAY_BASE_URL}/disconnect`, { method: 'POST' });
+    } catch(e) {}
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.updateAiConfigModalUI = function() {
+    if (!state) return;
+    
+    const masterSwitch = document.getElementById('aiMasterSwitch');
+    const knob = document.getElementById('aiSwitchKnob');
+    const statusText = document.getElementById('aiMasterStatusText');
+    const vaultSection = document.getElementById('aiVaultSection');
+    const hindsightToggle = document.getElementById('aiHindsightToggle');
+    const statusBadge = document.getElementById('aiStatusBadge');
+    
+    if (masterSwitch && knob && statusText && vaultSection) {
+        if (state.aiEnabled) {
+            masterSwitch.classList.replace('bg-white/10', 'bg-[#30D158]/20');
+            masterSwitch.classList.replace('border-white/20', 'border-[#30D158]/30');
+            knob.classList.replace('bg-gray-400', 'bg-[#30D158]');
+            knob.style.transform = 'translateX(24px)';
+            statusText.innerText = 'Enabled';
+            vaultSection.classList.remove('hidden');
+        } else {
+            masterSwitch.classList.replace('bg-[#30D158]/20', 'bg-white/10');
+            masterSwitch.classList.replace('border-[#30D158]/30', 'border-white/20');
+            knob.classList.replace('bg-[#30D158]', 'bg-gray-400');
+            knob.style.transform = 'translateX(0)';
+            statusText.innerText = 'Disabled';
+            vaultSection.classList.add('hidden');
+        }
+    }
+    
+    if (hindsightToggle) {
+        const hKnob = hindsightToggle.querySelector('div');
+        if (state.neuralPredictionEnabled) {
+            hindsightToggle.classList.replace('bg-white/10', 'bg-[#bf5af2]/30');
+            hindsightToggle.classList.replace('border-white/20', 'border-[#bf5af2]/50');
+            if (hKnob) {
+                hKnob.classList.replace('bg-gray-500', 'bg-[#bf5af2]');
+                hKnob.style.transform = 'translateX(20px)';
+                hKnob.style.boxShadow = '0 0 8px rgba(191,90,242,0.6)';
+            }
+        } else {
+            hindsightToggle.classList.replace('bg-[#bf5af2]/30', 'bg-white/10');
+            hindsightToggle.classList.replace('border-[#bf5af2]/50', 'border-white/20');
+            if (hKnob) {
+                hKnob.classList.replace('bg-[#bf5af2]', 'bg-gray-500');
+                hKnob.style.transform = 'translateX(0)';
+                hKnob.style.boxShadow = 'none';
+            }
+        }
+    }
+    
+    if (statusBadge) {
+        if (state.aiRelayAvailable) {
+            statusBadge.innerText = 'CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-[#30D158]/20 px-2.5 py-1 rounded-md text-[#30D158] shadow-inner';
+        } else {
+            statusBadge.innerText = 'NOT CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner';
+        }
+    }
+
+    const headerAiBtn = document.getElementById('headerAiBtn');
+    if (headerAiBtn) {
+        if (state.aiRelayAvailable) {
+            headerAiBtn.classList.add('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        } else if (state.aiEnabled) {
+            headerAiBtn.classList.add('ai-offline');
+            headerAiBtn.classList.remove('ai-connected');
+        } else {
+            headerAiBtn.classList.remove('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        }
+    }
+};
+
+// --- MISC. SETTINGS ---
+window.changePredictionStrategy = function (val) {
+    if (window.state) {
+        window.state.currentGameplayStrategy = val;
+        if (window.scanAllStrategies) window.scanAllStrategies();
+    }
+};
+window.openAiConfigModal = function () { 
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    if (keyInput) keyInput.value = window.state.aiApiKey || '';
+    if (providerSelect) providerSelect.value = window.state.aiProvider || 'gemini';
+    toggleModal('aiConfigModal'); 
+};
+window.openAiChat = function () { toggleModal('aiChatModal'); };
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleNeuralPrediction = function() {
+    if (!state) return;
+    state.neuralPredictionEnabled = !state.neuralPredictionEnabled;
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleAiApiKeyVisibility = function() {
+    const input = document.getElementById('aiApiKeyInput');
+    const icon = document.getElementById('toggleAiKeyVisibilityIcon');
+    if (!input || !icon) return;
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+};
+
+window.saveAiConfig = async function(silent = false) {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    const btn = document.getElementById('saveAiBtn');
+    
+    if (!silent) {
+        state.aiApiKey = keyInput ? keyInput.value.trim() : '';
+        state.aiProvider = providerSelect ? providerSelect.value : 'gemini';
+    }
+    
+    if (!state.aiApiKey) return;
+    
+    if (btn && !silent) btn.innerText = 'VERIFYING...';
+    
+    try {
+        const response = await fetch(`${state.AI_RELAY_BASE_URL}/connect`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: state.aiProvider, apiKey: state.aiApiKey })
+        });
+        const data = await response.json();
+        
+        if (response.ok && data.connected) {
+            state.aiRelayAvailable = true;
+            if (btn && !silent) {
+                btn.innerText = 'CONNECTED';
+                setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            }
+        } else {
+            throw new Error(data.error || 'Failed to connect');
+        }
+    } catch (error) {
+        console.error('AI Connection Error:', error);
+        state.aiRelayAvailable = false;
+        if (btn && !silent) {
+            btn.innerText = 'FAILED';
+            setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            alert('AI Connection Failed: ' + error.message);
+        }
+    }
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.clearAiConfig = async function() {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    if (keyInput) keyInput.value = '';
+    state.aiApiKey = '';
+    state.aiRelayAvailable = false;
+    
+    try {
+        await fetch(`${state.AI_RELAY_BASE_URL}/disconnect`, { method: 'POST' });
+    } catch(e) {}
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.updateAiConfigModalUI = function() {
+    if (!state) return;
+    
+    const masterSwitch = document.getElementById('aiMasterSwitch');
+    const knob = document.getElementById('aiSwitchKnob');
+    const statusText = document.getElementById('aiMasterStatusText');
+    const vaultSection = document.getElementById('aiVaultSection');
+    const hindsightToggle = document.getElementById('aiHindsightToggle');
+    const statusBadge = document.getElementById('aiStatusBadge');
+    
+    if (masterSwitch && knob && statusText && vaultSection) {
+        if (state.aiEnabled) {
+            masterSwitch.classList.replace('bg-white/10', 'bg-[#30D158]/20');
+            masterSwitch.classList.replace('border-white/20', 'border-[#30D158]/30');
+            knob.classList.replace('bg-gray-400', 'bg-[#30D158]');
+            knob.style.transform = 'translateX(24px)';
+            statusText.innerText = 'Enabled';
+            vaultSection.classList.remove('hidden');
+        } else {
+            masterSwitch.classList.replace('bg-[#30D158]/20', 'bg-white/10');
+            masterSwitch.classList.replace('border-[#30D158]/30', 'border-white/20');
+            knob.classList.replace('bg-[#30D158]', 'bg-gray-400');
+            knob.style.transform = 'translateX(0)';
+            statusText.innerText = 'Disabled';
+            vaultSection.classList.add('hidden');
+        }
+    }
+    
+    if (hindsightToggle) {
+        const hKnob = hindsightToggle.querySelector('div');
+        if (state.neuralPredictionEnabled) {
+            hindsightToggle.classList.replace('bg-white/10', 'bg-[#bf5af2]/30');
+            hindsightToggle.classList.replace('border-white/20', 'border-[#bf5af2]/50');
+            if (hKnob) {
+                hKnob.classList.replace('bg-gray-500', 'bg-[#bf5af2]');
+                hKnob.style.transform = 'translateX(20px)';
+                hKnob.style.boxShadow = '0 0 8px rgba(191,90,242,0.6)';
+            }
+        } else {
+            hindsightToggle.classList.replace('bg-[#bf5af2]/30', 'bg-white/10');
+            hindsightToggle.classList.replace('border-[#bf5af2]/50', 'border-white/20');
+            if (hKnob) {
+                hKnob.classList.replace('bg-[#bf5af2]', 'bg-gray-500');
+                hKnob.style.transform = 'translateX(0)';
+                hKnob.style.boxShadow = 'none';
+            }
+        }
+    }
+    
+    if (statusBadge) {
+        if (state.aiRelayAvailable) {
+            statusBadge.innerText = 'CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-[#30D158]/20 px-2.5 py-1 rounded-md text-[#30D158] shadow-inner';
+        } else {
+            statusBadge.innerText = 'NOT CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner';
+        }
+    }
+
+    const headerAiBtn = document.getElementById('headerAiBtn');
+    if (headerAiBtn) {
+        if (state.aiRelayAvailable) {
+            headerAiBtn.classList.add('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        } else if (state.aiEnabled) {
+            headerAiBtn.classList.add('ai-offline');
+            headerAiBtn.classList.remove('ai-connected');
+        } else {
+            headerAiBtn.classList.remove('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        }
+    }
+};
+
+// --- MISC. SETTINGS ---
+window.changePredictionStrategy = function (val) {
+    if (window.state) {
+        window.state.currentGameplayStrategy = val;
+        if (window.scanAllStrategies) window.scanAllStrategies();
+    }
+};
+window.openAiConfigModal = function () { 
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    if (keyInput) keyInput.value = window.state.aiApiKey || '';
+    if (providerSelect) providerSelect.value = window.state.aiProvider || 'gemini';
+    toggleModal('aiConfigModal'); 
+};
+window.openAiChat = function () { toggleModal('aiChatModal'); };
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleNeuralPrediction = function() {
+    if (!state) return;
+    state.neuralPredictionEnabled = !state.neuralPredictionEnabled;
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleAiApiKeyVisibility = function() {
+    const input = document.getElementById('aiApiKeyInput');
+    const icon = document.getElementById('toggleAiKeyVisibilityIcon');
+    if (!input || !icon) return;
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+};
+
+window.saveAiConfig = async function(silent = false) {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    const btn = document.getElementById('saveAiBtn');
+    
+    if (!silent) {
+        state.aiApiKey = keyInput ? keyInput.value.trim() : '';
+        state.aiProvider = providerSelect ? providerSelect.value : 'gemini';
+    }
+    
+    if (!state.aiApiKey) return;
+    
+    if (btn && !silent) btn.innerText = 'VERIFYING...';
+    
+    try {
+        const response = await fetch(`${state.AI_RELAY_BASE_URL}/connect`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: state.aiProvider, apiKey: state.aiApiKey })
+        });
+        const data = await response.json();
+        
+        if (response.ok && data.connected) {
+            state.aiRelayAvailable = true;
+            if (btn && !silent) {
+                btn.innerText = 'CONNECTED';
+                setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            }
+        } else {
+            throw new Error(data.error || 'Failed to connect');
+        }
+    } catch (error) {
+        console.error('AI Connection Error:', error);
+        state.aiRelayAvailable = false;
+        if (btn && !silent) {
+            btn.innerText = 'FAILED';
+            setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            alert('AI Connection Failed: ' + error.message);
+        }
+    }
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.clearAiConfig = async function() {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    if (keyInput) keyInput.value = '';
+    state.aiApiKey = '';
+    state.aiRelayAvailable = false;
+    
+    try {
+        await fetch(`${state.AI_RELAY_BASE_URL}/disconnect`, { method: 'POST' });
+    } catch(e) {}
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.updateAiConfigModalUI = function() {
+    if (!state) return;
+    
+    const masterSwitch = document.getElementById('aiMasterSwitch');
+    const knob = document.getElementById('aiSwitchKnob');
+    const statusText = document.getElementById('aiMasterStatusText');
+    const vaultSection = document.getElementById('aiVaultSection');
+    const hindsightToggle = document.getElementById('aiHindsightToggle');
+    const statusBadge = document.getElementById('aiStatusBadge');
+    
+    if (masterSwitch && knob && statusText && vaultSection) {
+        if (state.aiEnabled) {
+            masterSwitch.classList.replace('bg-white/10', 'bg-[#30D158]/20');
+            masterSwitch.classList.replace('border-white/20', 'border-[#30D158]/30');
+            knob.classList.replace('bg-gray-400', 'bg-[#30D158]');
+            knob.style.transform = 'translateX(24px)';
+            statusText.innerText = 'Enabled';
+            vaultSection.classList.remove('hidden');
+        } else {
+            masterSwitch.classList.replace('bg-[#30D158]/20', 'bg-white/10');
+            masterSwitch.classList.replace('border-[#30D158]/30', 'border-white/20');
+            knob.classList.replace('bg-[#30D158]', 'bg-gray-400');
+            knob.style.transform = 'translateX(0)';
+            statusText.innerText = 'Disabled';
+            vaultSection.classList.add('hidden');
+        }
+    }
+    
+    if (hindsightToggle) {
+        const hKnob = hindsightToggle.querySelector('div');
+        if (state.neuralPredictionEnabled) {
+            hindsightToggle.classList.replace('bg-white/10', 'bg-[#bf5af2]/30');
+            hindsightToggle.classList.replace('border-white/20', 'border-[#bf5af2]/50');
+            if (hKnob) {
+                hKnob.classList.replace('bg-gray-500', 'bg-[#bf5af2]');
+                hKnob.style.transform = 'translateX(20px)';
+                hKnob.style.boxShadow = '0 0 8px rgba(191,90,242,0.6)';
+            }
+        } else {
+            hindsightToggle.classList.replace('bg-[#bf5af2]/30', 'bg-white/10');
+            hindsightToggle.classList.replace('border-[#bf5af2]/50', 'border-white/20');
+            if (hKnob) {
+                hKnob.classList.replace('bg-[#bf5af2]', 'bg-gray-500');
+                hKnob.style.transform = 'translateX(0)';
+                hKnob.style.boxShadow = 'none';
+            }
+        }
+    }
+    
+    if (statusBadge) {
+        if (state.aiRelayAvailable) {
+            statusBadge.innerText = 'CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-[#30D158]/20 px-2.5 py-1 rounded-md text-[#30D158] shadow-inner';
+        } else {
+            statusBadge.innerText = 'NOT CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner';
+        }
+    }
+
+    const headerAiBtn = document.getElementById('headerAiBtn');
+    if (headerAiBtn) {
+        if (state.aiRelayAvailable) {
+            headerAiBtn.classList.add('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        } else if (state.aiEnabled) {
+            headerAiBtn.classList.add('ai-offline');
+            headerAiBtn.classList.remove('ai-connected');
+        } else {
+            headerAiBtn.classList.remove('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        }
+    }
+};
+
+// --- MISC. SETTINGS ---
+window.changePredictionStrategy = function (val) {
+    if (window.state) {
+        window.state.currentGameplayStrategy = val;
+        if (window.scanAllStrategies) window.scanAllStrategies();
+    }
+};
+window.openAiConfigModal = function () { 
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    if (keyInput) keyInput.value = window.state.aiApiKey || '';
+    if (providerSelect) providerSelect.value = window.state.aiProvider || 'gemini';
+    toggleModal('aiConfigModal'); 
+};
+window.openAiChat = function () { toggleModal('aiChatModal'); };
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleNeuralPrediction = function() {
+    if (!state) return;
+    state.neuralPredictionEnabled = !state.neuralPredictionEnabled;
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleAiApiKeyVisibility = function() {
+    const input = document.getElementById('aiApiKeyInput');
+    const icon = document.getElementById('toggleAiKeyVisibilityIcon');
+    if (!input || !icon) return;
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+};
+
+window.saveAiConfig = async function(silent = false) {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    const btn = document.getElementById('saveAiBtn');
+    
+    if (!silent) {
+        state.aiApiKey = keyInput ? keyInput.value.trim() : '';
+        state.aiProvider = providerSelect ? providerSelect.value : 'gemini';
+    }
+    
+    if (!state.aiApiKey) return;
+    
+    if (btn && !silent) btn.innerText = 'VERIFYING...';
+    
+    try {
+        const response = await fetch(`${state.AI_RELAY_BASE_URL}/connect`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: state.aiProvider, apiKey: state.aiApiKey })
+        });
+        const data = await response.json();
+        
+        if (response.ok && data.connected) {
+            state.aiRelayAvailable = true;
+            if (btn && !silent) {
+                btn.innerText = 'CONNECTED';
+                setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            }
+        } else {
+            throw new Error(data.error || 'Failed to connect');
+        }
+    } catch (error) {
+        console.error('AI Connection Error:', error);
+        state.aiRelayAvailable = false;
+        if (btn && !silent) {
+            btn.innerText = 'FAILED';
+            setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            alert('AI Connection Failed: ' + error.message);
+        }
+    }
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.clearAiConfig = async function() {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    if (keyInput) keyInput.value = '';
+    state.aiApiKey = '';
+    state.aiRelayAvailable = false;
+    
+    try {
+        await fetch(`${state.AI_RELAY_BASE_URL}/disconnect`, { method: 'POST' });
+    } catch(e) {}
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.updateAiConfigModalUI = function() {
+    if (!state) return;
+    
+    const masterSwitch = document.getElementById('aiMasterSwitch');
+    const knob = document.getElementById('aiSwitchKnob');
+    const statusText = document.getElementById('aiMasterStatusText');
+    const vaultSection = document.getElementById('aiVaultSection');
+    const hindsightToggle = document.getElementById('aiHindsightToggle');
+    const statusBadge = document.getElementById('aiStatusBadge');
+    
+    if (masterSwitch && knob && statusText && vaultSection) {
+        if (state.aiEnabled) {
+            masterSwitch.classList.replace('bg-white/10', 'bg-[#30D158]/20');
+            masterSwitch.classList.replace('border-white/20', 'border-[#30D158]/30');
+            knob.classList.replace('bg-gray-400', 'bg-[#30D158]');
+            knob.style.transform = 'translateX(24px)';
+            statusText.innerText = 'Enabled';
+            vaultSection.classList.remove('hidden');
+        } else {
+            masterSwitch.classList.replace('bg-[#30D158]/20', 'bg-white/10');
+            masterSwitch.classList.replace('border-[#30D158]/30', 'border-white/20');
+            knob.classList.replace('bg-[#30D158]', 'bg-gray-400');
+            knob.style.transform = 'translateX(0)';
+            statusText.innerText = 'Disabled';
+            vaultSection.classList.add('hidden');
+        }
+    }
+    
+    if (hindsightToggle) {
+        const hKnob = hindsightToggle.querySelector('div');
+        if (state.neuralPredictionEnabled) {
+            hindsightToggle.classList.replace('bg-white/10', 'bg-[#bf5af2]/30');
+            hindsightToggle.classList.replace('border-white/20', 'border-[#bf5af2]/50');
+            if (hKnob) {
+                hKnob.classList.replace('bg-gray-500', 'bg-[#bf5af2]');
+                hKnob.style.transform = 'translateX(20px)';
+                hKnob.style.boxShadow = '0 0 8px rgba(191,90,242,0.6)';
+            }
+        } else {
+            hindsightToggle.classList.replace('bg-[#bf5af2]/30', 'bg-white/10');
+            hindsightToggle.classList.replace('border-[#bf5af2]/50', 'border-white/20');
+            if (hKnob) {
+                hKnob.classList.replace('bg-[#bf5af2]', 'bg-gray-500');
+                hKnob.style.transform = 'translateX(0)';
+                hKnob.style.boxShadow = 'none';
+            }
+        }
+    }
+    
+    if (statusBadge) {
+        if (state.aiRelayAvailable) {
+            statusBadge.innerText = 'CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-[#30D158]/20 px-2.5 py-1 rounded-md text-[#30D158] shadow-inner';
+        } else {
+            statusBadge.innerText = 'NOT CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner';
+        }
+    }
+
+    const headerAiBtn = document.getElementById('headerAiBtn');
+    if (headerAiBtn) {
+        if (state.aiRelayAvailable) {
+            headerAiBtn.classList.add('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        } else if (state.aiEnabled) {
+            headerAiBtn.classList.add('ai-offline');
+            headerAiBtn.classList.remove('ai-connected');
+        } else {
+            headerAiBtn.classList.remove('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        }
+    }
+};
+
+// --- MISC. SETTINGS ---
+window.changePredictionStrategy = function (val) {
+    if (window.state) {
+        window.state.currentGameplayStrategy = val;
+        if (window.scanAllStrategies) window.scanAllStrategies();
+    }
+};
+window.openAiConfigModal = function () { 
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    if (keyInput) keyInput.value = window.state.aiApiKey || '';
+    if (providerSelect) providerSelect.value = window.state.aiProvider || 'gemini';
+    toggleModal('aiConfigModal'); 
+};
+window.openAiChat = function () { toggleModal('aiChatModal'); };
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleNeuralPrediction = function() {
+    if (!state) return;
+    state.neuralPredictionEnabled = !state.neuralPredictionEnabled;
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleAiApiKeyVisibility = function() {
+    const input = document.getElementById('aiApiKeyInput');
+    const icon = document.getElementById('toggleAiKeyVisibilityIcon');
+    if (!input || !icon) return;
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+};
+
+window.saveAiConfig = async function(silent = false) {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    const btn = document.getElementById('saveAiBtn');
+    
+    if (!silent) {
+        state.aiApiKey = keyInput ? keyInput.value.trim() : '';
+        state.aiProvider = providerSelect ? providerSelect.value : 'gemini';
+    }
+    
+    if (!state.aiApiKey) return;
+    
+    if (btn && !silent) btn.innerText = 'VERIFYING...';
+    
+    try {
+        const response = await fetch(`${state.AI_RELAY_BASE_URL}/connect`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: state.aiProvider, apiKey: state.aiApiKey })
+        });
+        const data = await response.json();
+        
+        if (response.ok && data.connected) {
+            state.aiRelayAvailable = true;
+            if (btn && !silent) {
+                btn.innerText = 'CONNECTED';
+                setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            }
+        } else {
+            throw new Error(data.error || 'Failed to connect');
+        }
+    } catch (error) {
+        console.error('AI Connection Error:', error);
+        state.aiRelayAvailable = false;
+        if (btn && !silent) {
+            btn.innerText = 'FAILED';
+            setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            alert('AI Connection Failed: ' + error.message);
+        }
+    }
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.clearAiConfig = async function() {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    if (keyInput) keyInput.value = '';
+    state.aiApiKey = '';
+    state.aiRelayAvailable = false;
+    
+    try {
+        await fetch(`${state.AI_RELAY_BASE_URL}/disconnect`, { method: 'POST' });
+    } catch(e) {}
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.updateAiConfigModalUI = function() {
+    if (!state) return;
+    
+    const masterSwitch = document.getElementById('aiMasterSwitch');
+    const knob = document.getElementById('aiSwitchKnob');
+    const statusText = document.getElementById('aiMasterStatusText');
+    const vaultSection = document.getElementById('aiVaultSection');
+    const hindsightToggle = document.getElementById('aiHindsightToggle');
+    const statusBadge = document.getElementById('aiStatusBadge');
+    
+    if (masterSwitch && knob && statusText && vaultSection) {
+        if (state.aiEnabled) {
+            masterSwitch.classList.replace('bg-white/10', 'bg-[#30D158]/20');
+            masterSwitch.classList.replace('border-white/20', 'border-[#30D158]/30');
+            knob.classList.replace('bg-gray-400', 'bg-[#30D158]');
+            knob.style.transform = 'translateX(24px)';
+            statusText.innerText = 'Enabled';
+            vaultSection.classList.remove('hidden');
+        } else {
+            masterSwitch.classList.replace('bg-[#30D158]/20', 'bg-white/10');
+            masterSwitch.classList.replace('border-[#30D158]/30', 'border-white/20');
+            knob.classList.replace('bg-[#30D158]', 'bg-gray-400');
+            knob.style.transform = 'translateX(0)';
+            statusText.innerText = 'Disabled';
+            vaultSection.classList.add('hidden');
+        }
+    }
+    
+    if (hindsightToggle) {
+        const hKnob = hindsightToggle.querySelector('div');
+        if (state.neuralPredictionEnabled) {
+            hindsightToggle.classList.replace('bg-white/10', 'bg-[#bf5af2]/30');
+            hindsightToggle.classList.replace('border-white/20', 'border-[#bf5af2]/50');
+            if (hKnob) {
+                hKnob.classList.replace('bg-gray-500', 'bg-[#bf5af2]');
+                hKnob.style.transform = 'translateX(20px)';
+                hKnob.style.boxShadow = '0 0 8px rgba(191,90,242,0.6)';
+            }
+        } else {
+            hindsightToggle.classList.replace('bg-[#bf5af2]/30', 'bg-white/10');
+            hindsightToggle.classList.replace('border-[#bf5af2]/50', 'border-white/20');
+            if (hKnob) {
+                hKnob.classList.replace('bg-[#bf5af2]', 'bg-gray-500');
+                hKnob.style.transform = 'translateX(0)';
+                hKnob.style.boxShadow = 'none';
+            }
+        }
+    }
+    
+    if (statusBadge) {
+        if (state.aiRelayAvailable) {
+            statusBadge.innerText = 'CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-[#30D158]/20 px-2.5 py-1 rounded-md text-[#30D158] shadow-inner';
+        } else {
+            statusBadge.innerText = 'NOT CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner';
+        }
+    }
+
+    const headerAiBtn = document.getElementById('headerAiBtn');
+    if (headerAiBtn) {
+        if (state.aiRelayAvailable) {
+            headerAiBtn.classList.add('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        } else if (state.aiEnabled) {
+            headerAiBtn.classList.add('ai-offline');
+            headerAiBtn.classList.remove('ai-connected');
+        } else {
+            headerAiBtn.classList.remove('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        }
+    }
+};
+
+// --- MISC. SETTINGS ---
+window.changePredictionStrategy = function (val) {
+    if (window.state) {
+        window.state.currentGameplayStrategy = val;
+        if (window.scanAllStrategies) window.scanAllStrategies();
+    }
+};
+window.openAiConfigModal = function () { 
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    if (keyInput) keyInput.value = window.state.aiApiKey || '';
+    if (providerSelect) providerSelect.value = window.state.aiProvider || 'gemini';
+    toggleModal('aiConfigModal'); 
+};
+window.openAiChat = function () { toggleModal('aiChatModal'); };
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleNeuralPrediction = function() {
+    if (!state) return;
+    state.neuralPredictionEnabled = !state.neuralPredictionEnabled;
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleAiApiKeyVisibility = function() {
+    const input = document.getElementById('aiApiKeyInput');
+    const icon = document.getElementById('toggleAiKeyVisibilityIcon');
+    if (!input || !icon) return;
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+};
+
+window.saveAiConfig = async function(silent = false) {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    const btn = document.getElementById('saveAiBtn');
+    
+    if (!silent) {
+        state.aiApiKey = keyInput ? keyInput.value.trim() : '';
+        state.aiProvider = providerSelect ? providerSelect.value : 'gemini';
+    }
+    
+    if (!state.aiApiKey) return;
+    
+    if (btn && !silent) btn.innerText = 'VERIFYING...';
+    
+    try {
+        const response = await fetch(`${state.AI_RELAY_BASE_URL}/connect`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: state.aiProvider, apiKey: state.aiApiKey })
+        });
+        const data = await response.json();
+        
+        if (response.ok && data.connected) {
+            state.aiRelayAvailable = true;
+            if (btn && !silent) {
+                btn.innerText = 'CONNECTED';
+                setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            }
+        } else {
+            throw new Error(data.error || 'Failed to connect');
+        }
+    } catch (error) {
+        console.error('AI Connection Error:', error);
+        state.aiRelayAvailable = false;
+        if (btn && !silent) {
+            btn.innerText = 'FAILED';
+            setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            alert('AI Connection Failed: ' + error.message);
+        }
+    }
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.clearAiConfig = async function() {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    if (keyInput) keyInput.value = '';
+    state.aiApiKey = '';
+    state.aiRelayAvailable = false;
+    
+    try {
+        await fetch(`${state.AI_RELAY_BASE_URL}/disconnect`, { method: 'POST' });
+    } catch(e) {}
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.updateAiConfigModalUI = function() {
+    if (!state) return;
+    
+    const masterSwitch = document.getElementById('aiMasterSwitch');
+    const knob = document.getElementById('aiSwitchKnob');
+    const statusText = document.getElementById('aiMasterStatusText');
+    const vaultSection = document.getElementById('aiVaultSection');
+    const hindsightToggle = document.getElementById('aiHindsightToggle');
+    const statusBadge = document.getElementById('aiStatusBadge');
+    
+    if (masterSwitch && knob && statusText && vaultSection) {
+        if (state.aiEnabled) {
+            masterSwitch.classList.replace('bg-white/10', 'bg-[#30D158]/20');
+            masterSwitch.classList.replace('border-white/20', 'border-[#30D158]/30');
+            knob.classList.replace('bg-gray-400', 'bg-[#30D158]');
+            knob.style.transform = 'translateX(24px)';
+            statusText.innerText = 'Enabled';
+            vaultSection.classList.remove('hidden');
+        } else {
+            masterSwitch.classList.replace('bg-[#30D158]/20', 'bg-white/10');
+            masterSwitch.classList.replace('border-[#30D158]/30', 'border-white/20');
+            knob.classList.replace('bg-[#30D158]', 'bg-gray-400');
+            knob.style.transform = 'translateX(0)';
+            statusText.innerText = 'Disabled';
+            vaultSection.classList.add('hidden');
+        }
+    }
+    
+    if (hindsightToggle) {
+        const hKnob = hindsightToggle.querySelector('div');
+        if (state.neuralPredictionEnabled) {
+            hindsightToggle.classList.replace('bg-white/10', 'bg-[#bf5af2]/30');
+            hindsightToggle.classList.replace('border-white/20', 'border-[#bf5af2]/50');
+            if (hKnob) {
+                hKnob.classList.replace('bg-gray-500', 'bg-[#bf5af2]');
+                hKnob.style.transform = 'translateX(20px)';
+                hKnob.style.boxShadow = '0 0 8px rgba(191,90,242,0.6)';
+            }
+        } else {
+            hindsightToggle.classList.replace('bg-[#bf5af2]/30', 'bg-white/10');
+            hindsightToggle.classList.replace('border-[#bf5af2]/50', 'border-white/20');
+            if (hKnob) {
+                hKnob.classList.replace('bg-[#bf5af2]', 'bg-gray-500');
+                hKnob.style.transform = 'translateX(0)';
+                hKnob.style.boxShadow = 'none';
+            }
+        }
+    }
+    
+    if (statusBadge) {
+        if (state.aiRelayAvailable) {
+            statusBadge.innerText = 'CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-[#30D158]/20 px-2.5 py-1 rounded-md text-[#30D158] shadow-inner';
+        } else {
+            statusBadge.innerText = 'NOT CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner';
+        }
+    }
+
+    const headerAiBtn = document.getElementById('headerAiBtn');
+    if (headerAiBtn) {
+        if (state.aiRelayAvailable) {
+            headerAiBtn.classList.add('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        } else if (state.aiEnabled) {
+            headerAiBtn.classList.add('ai-offline');
+            headerAiBtn.classList.remove('ai-connected');
+        } else {
+            headerAiBtn.classList.remove('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        }
+    }
+};
+
+// --- MISC. SETTINGS ---
+window.changePredictionStrategy = function (val) {
+    if (window.state) {
+        window.state.currentGameplayStrategy = val;
+        if (window.scanAllStrategies) window.scanAllStrategies();
+    }
+};
+window.openAiConfigModal = function () { 
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    if (keyInput) keyInput.value = window.state.aiApiKey || '';
+    if (providerSelect) providerSelect.value = window.state.aiProvider || 'gemini';
+    toggleModal('aiConfigModal'); 
+};
+window.openAiChat = function () { toggleModal('aiChatModal'); };
+    if (windowsaveSessionData)window.saveessionData();
+};
+
+window.toggleNeuralPrediction = function() {
+    if (!state) return;
+    state.neuralPredictionEnabled = !state.neuralPredictionnabled;
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleAiApiKeyVisibility = function() {
+    const input = document.getElementById('aiApiKeyInput');
+    const icon = document.getElementById('toggleAiKeyVisibilityIcon');
+    if (!input || !icon) return;
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+};
+
+window.saveAiConfig = async function(silent = false) {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    const btn = document.getElementById('saveAiBtn');
+    
+    if (!silent) {
+        state.aiApiKey = keyInput ? keyInput.value.trim() : '';
+        state.aiProvider = providerSelect ? providerSelect.value : 'gemini';
+    }
+    
+    if (!state.aiApiKey) return;
+    
+    if (btn && !silent) btn.innerext = 'VERIFYING...';
+    
+    try {
+        const response = await fetch(`${state.AI_RELAY_BASE_URL}/connect`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: state.aiProvider, apiKey: state.aiApiKey })
+        });
+        const data = await response.json();
+        
+        if (response.ok && data.connected) {
+            state.aiRelayAvailable = true;
+            if (btn && !silent) {
+                btn.innerText = 'CONNECTED';
+                setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            }
+        } else {
+            throw new Error(data.error || 'Failed to connect');
+        }
+    } catch (error) {
+        console.error('AI Connection Error:', error);
+        state.aiRelayAvailable = false;
+        if (btn && !silent) {
+            btn.innerext = 'FAILED';
+            setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            alert('AI Connection Failed: ' + error.message);
+        }
+    }
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalU();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.clearAiConfig = async function() {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    if (keyInput) keyInput.value = '';
+    state.aiApiKey = '';
+    state.aiRelayAvailable = false;
+    
+    try {
+        await fetch(`${state.AI_RELAY_BASE_URL}/disconnect`, { method: 'POST' });
+    } catch(e) {}
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.updateAiConfigModalUI = function() {
+    if (!state) return;
+    
+    const masterSwitch = document.getElementById('aiMasterSwitch');
+    const knob = document.getElementById('aiSwitchKnob');
+    const statusText = document.getElementById('aiMasterStatusText');
+    const vaultSection = document.getElementById('aiVaultSection');
+    const hindsightToggle = document.getElementById('aiHindsightToggle');
+    const statusBadge = document.getElementById('aiStatusBadge');
+    
+    if (masterSwitch && knob && statusText && vaultSection) {
+        if (state.aiEnabled) {
+            masterSwitch.classList.replace('bg-white/10', 'bg-[#30D158]/20');
+            masterSwitch.classList.replace('border-white/20', 'border-[#30D158]/30');
+            knob.classList.replace('bg-gray-400', 'bg-[#30D158]');
+            knob.style.transform = 'translateX(24px)';
+            statusText.innerText = 'Enabled';
+            vaultSection.classList.remove('hidden');
+        } else {
+            masterSwitch.classList.replace('bg-[#30D158]/20', 'bg-white/10');
+            masterSwitch.classList.replace('border-[#30D158]/30', 'border-white/20');
+            knob.classList.replace('bg-[#30D158]', 'bg-gray-400');
+            knob.style.transform = 'translateX(0)';
+            statusText.innerText = 'Disabled';
+            vaultSection.classList.add('hidden');
+        }
+    }
+    
+    if (hindsightToggle) {
+        const hKnob = hindsightToggle.querySelector('div');
+        if (state.neuralPredictionEnabled) {
+            hindsightToggle.classList.replace('bg-white/10', 'bg-[#bf5af2]/30');
+            hindsightToggle.classList.replace('border-white/20', 'border-[#bf5af2]/50');
+            if (hKnob) {
+                hKnob.classList.replace('bg-gray-500', 'bg-[#bf5af2]');
+                hKnob.style.transform = 'translateX(20px)';
+                hKnob.style.boxShadow = '0 0 8px rgba(191,90,242,0.6)';
+            }
+        } else {
+            hindsightToggle.classList.replace('bg-[#bf5af2]/30', 'bg-white/10');
+            hindsightToggle.classList.replace('border-[#bf5af2]/50', 'border-white/20');
+            if (hKnob) {
+                hKnob.classList.replace('bg-[#bf5af2]', 'bg-gray-500');
+                hKnob.style.transform = 'translateX(0)';
+                hKnob.style.boxShadow = 'none';
+            }
+        }
+    }
+    
+    if (statusBadge) {
+        if (state.aiRelayAvailable) {
+            statusBadge.innerText = 'CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-[#30D158]/20 px-2.5 py-1 rounded-md text-[#30D158] shadow-inner';
+        } else {
+            statusBadge.innerText = 'NOT CONECTED';
+            statusBadge.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner';
+        }
+    }
+
+    const headerAiBtn = document.getElementById('headerAiBtn');
+    if (headerAiBtn) {
+        if (state.aiRelayAvailable) {
+            headerAiBtn.classList.add('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        } else if (state.aiEnabled) {
+            headerAiBtn.classList.add('ai-offline');
+            headerAiBtn.classList.remove('ai-connected');
+        } else {
+            headerAiBtn.classList.remove('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        }
+    }
+};
+
+// --- MISC. SETTIN
+    historyContainer.scrollTop = historyContainer.scrollHeight;
+};
+
+// --- AI CONFIG MODAL LOGIC ---
+window.toggleAiMasterSwitch = function() {
+    if (!state) return;
+    state.aiEnabled = !state.aiEnabled; 
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    if (keyInput) keyInput.value = window.state.aiApiKey || '';
+    if (providerSelect) providerSelect.value = window.state.aiProvider || 'gemini';
+   
+
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleNeuralPrediction = function() {
+    if (!state) return;
+    state.neuralPredictionEnabled = !state.neuralPredictionEnabled;
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.toggleAiApiKeyVisibility = function() {
+    const input = document.getElementById('aiApiKeyInput');
+    const icon = document.getElementById('toggleAiKeyVisibilityIcon');
+    if (!input || !icon) return;
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+};
+
+window.saveAiConfig = async function(silent = false) {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    const btn = document.getElementById('saveAiBtn');
+    
+    if (!silent) {
+        state.aiApiKey = keyInput ? keyInput.value.trim() : '';
+        state.aiProvider = providerSelect ? providerSelect.value : 'gemini';
+    }
+    
+    if (!state.aiApiKey) return;
+    
+    if (btn && !silent) btn.innerText = 'VERIFYING...';
+    
+    try {
+        const response = await fetch(`${state.AI_RELAY_BASE_URL}/connect`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: state.aiProvider, apiKey: state.aiApiKey })
+        });
+        const data = await response.json();
+        
+        if (response.ok && data.connected) {
+            state.aiRelayAvailable = true;
+            if (btn && !silent) {
+                btn.innerText = 'CONNECTED';
+                setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            }
+        } else {
+            throw new Error(data.error || 'Failed to connect');
+        }
+    } catch (error) {
+        console.error('AI Connection Error:', error);
+        state.aiRelayAvailable = false;
+        if (btn && !silent) {
+            btn.innerText = 'FAILED';
+            setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            alert('AI Connection Failed: ' + error.message);
+        }
+    }
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.clearAiConfig = async function() {
+    if (!state) return;
+    const keyInput = document.getElementById('aiApiKeyInput');
+    if (keyInput) keyInput.value = '';
+    state.aiApiKey = '';
+    state.aiRelayAvailable = false;
+    
+    try {
+        await fetch(`${state.AI_RELAY_BASE_URL}/disconnect`, { method: 'POST' });
+    } catch(e) {}
+    
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    if (window.saveSessionData) window.saveSessionData();
+};
+
+window.updateAiConfigModalUI = function() {
+    if (!state) return;
+    
+    const masterSwitch = document.getElementById('aiMasterSwitch');
+    const knob = document.getElementById('aiSwitchKnob');
+    const statusText = document.getElementById('aiMasterStatusText');
+    const vaultSection = document.getElementById('aiVaultSection');
+    const hindsightToggle = document.getElementById('aiHindsightToggle');
+    const statusBadge = document.getElementById('aiStatusBadge');
+    
+    if (masterSwitch && knob && statusText && vaultSection) {
+        if (state.aiEnabled) {
+            masterSwitch.classList.replace('bg-white/10', 'bg-[#30D158]/20');
+            masterSwitch.classList.replace('border-white/20', 'border-[#30D158]/30');
+            knob.classList.replace('bg-gray-400', 'bg-[#30D158]');
+            knob.style.transform = 'translateX(24px)';
+            statusText.innerText = 'Enabled';
+            vaultSection.classList.remove('hidden');
+        } else {
+            masterSwitch.classList.replace('bg-[#30D158]/20', 'bg-white/10');
+            masterSwitch.classList.replace('border-[#30D158]/30', 'border-white/20');
+            knob.classList.replace('bg-[#30D158]', 'bg-gray-400');
+            knob.style.transform = 'translateX(0)';
+            statusText.innerText = 'Disabled';
+            vaultSection.classList.add('hidden');
+        }
+    }
+    
+    if (hindsightToggle) {
+        const hKnob = hindsightToggle.querySelector('div');
+        if (state.neuralPredictionEnabled) {
+            hindsightToggle.classList.replace('bg-white/10', 'bg-[#bf5af2]/30');
+            hindsightToggle.classList.replace('border-white/20', 'border-[#bf5af2]/50');
+            if (hKnob) {
+                hKnob.classList.replace('bg-gray-500', 'bg-[#bf5af2]');
+                hKnob.style.transform = 'translateX(20px)';
+                hKnob.style.boxShadow = '0 0 8px rgba(191,90,242,0.6)';
+            }
+        } else {
+            hindsightToggle.classList.replace('bg-[#bf5af2]/30', 'bg-white/10');
+            hindsightToggle.classList.replace('border-[#bf5af2]/50', 'border-white/20');
+            if (hKnob) {
+                hKnob.classList.replace('bg-[#bf5af2]', 'bg-gray-500');
+                hKnob.style.transform = 'translateX(0)';
+                hKnob.style.boxShadow = 'none';
+            }
+        }
+    }
+    
+    if (statusBadge) {
+        if (state.aiRelayAvailable) {
+            statusBadge.innerText = 'CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-[#30D158]/20 px-2.5 py-1 rounded-md text-[#30D158] shadow-inner';
+        } else {
+            statusBadge.innerText = 'NOT CONNECTED';
+            statusBadge.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner';
+        }
+    }
+
+    const headerAiBtn = document.getElementById('headerAiBtn');
+    if (headerAiBtn) {
+        if (state.aiRelayAvailable) {
+            headerAiBtn.classList.add('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        } else if (state.aiEnabled) {
+            headerAiBtn.classList.add('ai-offline');
+            headerAiBtn.classList.remove('ai-connected');
+        } else {
+            headerAiBtn.classList.remove('ai-connected');
+            headerAiBtn.classList.remove('ai-offline');
+        }
+    }
+};
+
+// --- MISC. SETTINGS ---
+window.changePredictionStrategy = function (val) {
+    if (window.state) {
+        window.state.currentGameplayStrategy = val;
+        if (window.scanAllStrategies) window.scanAllStrategies();
+    }
+};
+window.openAiConfigModal = function () { 
+    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    const keyInput = document.getElementById('aiApiKeyInput');
+    const providerSelect = document.getElementById('aiProviderSelect');
+    if (keyInput) keyInput.value = window.state.aiApiKey || '';
+    if (providerSelect) providerSelect.value = window.state.aiProvider || 'gemini';
+    toggleModal('aiConfigModal'); 
+};
 window.openAiChat = function () { toggleModal('aiChatModal'); };
