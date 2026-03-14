@@ -249,14 +249,13 @@
         if (!content) return;
 
         // Bridge to window functions
-        if (typeof window.calculatePerimeterStats !== 'function') return;
+        if (!window.PredictionEngine) return;
 
         const windowSetting = hudHistoryScope === 'recent' ? HUD_RECENT_WINDOW : 'all';
-        const stats = window.calculatePerimeterStats(history, windowSetting);
+        const stats = window.PredictionEngine.calculatePerimeterStats(history, windowSetting);
         if (!stats || !stats.counts) return;
 
-        if (typeof window.getComboCoverageStats !== 'function') return;
-        const comboStats = window.getComboCoverageStats(stats);
+        const comboStats = stats.comboStats || [];
         const sampleSize = comboStats.length > 0 ? comboStats[0].sampleSize : 0;
 
         let displayCombos = comboStats.slice();
