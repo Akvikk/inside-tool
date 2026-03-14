@@ -170,7 +170,11 @@
 
         // Bridge: Capture the engine's produced bets for dashboard display and next turn resolution
         state.activeBets = scanResult.nextBets || [];
-        state.engineSnapshot = scanResult;
+        window.currentAlerts = Array.isArray(scanResult.notifications) ? scanResult.notifications : [];
+        if (state.strategySyncCache && typeof state.strategySyncCache === 'object') {
+            const strategyKey = state.currentGameplayStrategy || 'series';
+            state.strategySyncCache[strategyKey] = scanResult;
+        }
 
         // CRITICAL: Attach active MATH signals permanently to history row BEFORE we modify activeBets for AI
         spinObj.newSignals = state.activeBets.map(b => ({

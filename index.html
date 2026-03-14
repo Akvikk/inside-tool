@@ -328,11 +328,14 @@
                     </div>
                 </div>
                 <div class="px-6 pt-3 flex gap-6">
-                    <button onclick="switchAnalyticsTab('strategy')" id="tabBtnStrategy"
+                    <button onclick="switchAnalyticsTab('strategy')" id="tabBtnStrategy" data-analytics-tab="strategy"
+                        data-analytics-panel="strategyAnalyticsPanel" data-analytics-renderer="renderStrategyAnalytics"
                         class="pb-2 text-xs font-bold uppercase tracking-widest text-[#30D158] border-b-2 border-[#30D158] transition-all">Metrics</button>
-                    <button onclick="switchAnalyticsTab('intelligence')" id="tabBtnIntelligence"
+                    <button onclick="switchAnalyticsTab('intelligence')" id="tabBtnIntelligence" data-analytics-tab="intelligence"
+                        data-analytics-panel="intelligencePanel" data-analytics-renderer="renderIntelligencePanel"
                         class="pb-2 text-xs font-bold uppercase tracking-widest text-gray-400 border-b-2 border-transparent transition-all">Intelligence</button>
-                    <button onclick="switchAnalyticsTab('advancements')" id="tabBtnAdvancements"
+                    <button onclick="switchAnalyticsTab('advancements')" id="tabBtnAdvancements" data-analytics-tab="advancements"
+                        data-analytics-panel="advancementsPanel" data-analytics-renderer="renderAdvancementAnalytics"
                         class="pb-2 text-xs font-bold uppercase tracking-widest text-gray-400 border-b-2 border-transparent transition-all">Advancements</button>
                 </div>
             </div>

@@ -1,5 +1,15 @@
 const state = window.state;
 
+function getLatestMathBets() {
+    const strategyKey = state && state.currentGameplayStrategy ? state.currentGameplayStrategy : 'series';
+    const cachedResult = state && state.strategySyncCache
+        ? state.strategySyncCache[strategyKey]
+        : null;
+    return cachedResult && Array.isArray(cachedResult.nextBets)
+        ? cachedResult.nextBets.slice()
+        : [];
+}
+
 async function requestTacticalAudit() {
     if (!window.AiBrain || typeof window.AiBrain.requestTacticalAudit !== 'function') {
         return { error: 'AI module unavailable.' };
@@ -60,7 +70,7 @@ async function requestNeuralPrediction(options = {}) {
         }
     } else {
         // Fallback to Math Engine Cards if AI is unreachable
-        state.activeBets = state.engineSnapshot ? (state.engineSnapshot.nextBets || []) : [];
+        state.activeBets = getLatestMathBets();
     }
 
     if (renderDashboardNow) {
@@ -258,14 +268,23 @@ document.addEventListener('click', () => {
     if (window.AudioEngine) window.AudioEngine.init();
 }, { once: true });
 
+async function safeModuleCall(label, handler) {
+    try {
+        return await handler();
+    } catch (error) {
+        console.error(`${label} failed:`, error);
+        return null;
+    }
+}
+
 // --- RESTORED CORE APP GLUE & INITIALIZATION ---
 window.addEventListener('DOMContentLoaded', async () => {
     console.log("INSIDE TOOL: Bootstrapping modular architecture...");
 
     // 1. Initialize Active Modules
-    if (window.InputProcessor) window.InputProcessor.init();
-    if (window.UiController) window.UiController.init();
-    if (window.HudManager) window.HudManager.init();
+    await safeModuleCall('InputProcessor.init', () => window.InputProcessor && window.InputProcessor.init && window.InputProcessor.init());
+    await safeModuleCall('UiController.init', () => window.UiController && window.UiController.init && window.UiController.init());
+    await safeModuleCall('HudManager.init', () => window.HudManager && window.HudManager.init && window.HudManager.init());
 
     // 1.5 Bind Event-Driven Architecture (AppStore)
     if (window.AppStore) {
@@ -281,15 +300,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     // 2. Load previous session if it exists
-    if (window.loadSessionData && window.loadSessionData()) {
+    const restoredSession = window.loadSessionData
+        ? await safeModuleCall('loadSessionData', () => window.loadSessionData())
+        : false;
+    if (restoredSession) {
         console.log("Session data loaded.");
-        if (window.reRenderHistory) window.reRenderHistory();
-        if (window.scanAllStrategies) await window.scanAllStrategies();
-        if (window.HudManager) window.HudManager.update();
+        await safeModuleCall('reRenderHistory', () => window.reRenderHistory && window.reRenderHistory());
+        await safeModuleCall('scanAllStrategies', () => window.scanAllStrategies && window.scanAllStrategies());
+        await safeModuleCall('HudManager.update', () => window.HudManager && window.HudManager.update && window.HudManager.update());
 
         // 2.5 Re-authenticate AI silently if enabled
         if (window.state && window.state.aiEnabled && window.state.aiApiKey) {
-            if (window.saveAiConfig) await window.saveAiConfig(true);
+            await safeModuleCall('saveAiConfig', () => window.saveAiConfig && window.saveAiConfig(true));
         }
     }
 
@@ -306,11 +328,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     // 3. Initial Rendering State
-    if (window.renderGapStats) window.renderGapStats();
-    if (window.renderDashboardSafe) window.renderDashboardSafe();
-    if (window.initComboBridgeAutoLayout) window.initComboBridgeAutoLayout();
-    if (window.scheduleComboBridgeRelayout) window.scheduleComboBridgeRelayout();
-    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+    await safeModuleCall('renderGapStats', () => window.renderGapStats && window.renderGapStats());
+    await safeModuleCall('renderDashboardSafe', () => window.renderDashboardSafe && window.renderDashboardSafe());
+    await safeModuleCall('initComboBridgeAutoLayout', () => window.initComboBridgeAutoLayout && window.initComboBridgeAutoLayout());
+    await safeModuleCall('scheduleComboBridgeRelayout', () => window.scheduleComboBridgeRelayout && window.scheduleComboBridgeRelayout());
+    await safeModuleCall('updateAiConfigModalUI', () => window.updateAiConfigModalUI && window.updateAiConfigModalUI());
 
     const resetBtn = document.getElementById('confirmResetBtn');
     if (resetBtn) resetBtn.addEventListener('click', window.resetData);
@@ -328,7 +350,13 @@ window.loadSessionData = function () {
         if (data.aiApiKey) window.state.aiApiKey = data.aiApiKey;
         if (data.aiProvider) window.state.aiProvider = data.aiProvider;
         if (data.neuralPredictionEnabled !== undefined) window.state.neuralPredictionEnabled = data.neuralPredictionEnabled;
-        // NOTE: More state properties can be added here for persistence
+        if (data.currentInputLayout === 'grid' || data.currentInputLayout === 'racetrack') window.state.currentInputLayout = data.currentInputLayout;
+        if (data.currentGameplayStrategy === 'series' || data.currentGameplayStrategy === 'combo') window.state.currentGameplayStrategy = data.currentGameplayStrategy;
+        if (typeof data.currentAnalyticsTab === 'string' && data.currentAnalyticsTab) window.state.currentAnalyticsTab = data.currentAnalyticsTab;
+        if (typeof data.currentIntelligenceMode === 'string' && data.currentIntelligenceMode) window.state.currentIntelligenceMode = data.currentIntelligenceMode;
+        if (data.analyticsDisplayStrategy === 'series' || data.analyticsDisplayStrategy === 'combo') window.state.analyticsDisplayStrategy = data.analyticsDisplayStrategy;
+        if (data.isHudColdMode !== undefined) window.state.isHudColdMode = data.isHudColdMode === true;
+        if (data.hudHistoryScope !== undefined) window.state.hudHistoryScope = data.hudHistoryScope === 'recent' ? 'recent' : 'all';
         return true;
     } catch (e) {
         console.error("Session load failed:", e);
@@ -344,7 +372,14 @@ window.saveSessionData = function () {
             aiEnabled: state.aiEnabled,
             aiApiKey: state.aiApiKey,
             aiProvider: state.aiProvider,
-            neuralPredictionEnabled: state.neuralPredictionEnabled
+            neuralPredictionEnabled: state.neuralPredictionEnabled,
+            currentInputLayout: state.currentInputLayout,
+            currentGameplayStrategy: state.currentGameplayStrategy,
+            currentAnalyticsTab: state.currentAnalyticsTab,
+            currentIntelligenceMode: state.currentIntelligenceMode,
+            analyticsDisplayStrategy: state.analyticsDisplayStrategy,
+            isHudColdMode: state.isHudColdMode === true,
+            hudHistoryScope: state.hudHistoryScope === 'recent' ? 'recent' : 'all'
         }));
     } catch (e) {
         console.warn("Session save failed:", e);
@@ -567,7 +602,11 @@ window.rebuildSessionFromSpins = async function (spins, options = {}) {
         window.state.faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
         window.state.globalSpinIdCounter = 0;
         window.state.userStats = { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
+        window.state.engineSnapshot = null;
+        window.state.currentNeuralSignal = null;
+        window.state.strategySyncCache = { series: null, combo: null };
     }
+    window.currentAlerts = [];
     if (window.EngineCore) window.EngineCore.reset();
     const tbody = document.getElementById('historyBody');
     if (tbody) tbody.innerHTML = '';
@@ -807,13 +846,18 @@ window.toggleInputLayout = function () {
         window.UiController.initDesktopGrid();
     }
     if (window.scheduleComboBridgeRelayout) window.scheduleComboBridgeRelayout();
+    if (window.saveSessionData) window.saveSessionData();
 };
 window.resetData = function () {
     if (window.state) {
         window.state.history = [];
         window.state.activeBets = [];
         window.state.faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        window.state.engineSnapshot = null;
+        window.state.currentNeuralSignal = null;
+        window.state.strategySyncCache = { series: null, combo: null };
     }
+    window.currentAlerts = [];
     if (window.EngineCore) window.EngineCore.reset();
     const tbody = document.getElementById('historyBody');
     if (tbody) tbody.innerHTML = '';
@@ -838,30 +882,68 @@ window.syncPredictionEngine = async function() {
     
     // Evaluate the history and store result in state.engineSnapshot
     const snapshot = await window.PredictionEngine.evaluatePredictionEngine(state.history, {
-        currentPredictionStrategy: state.ui.strategy === 'combo' ? 'momentum-gap' : 'legacy-face'
+        currentPredictionStrategy: state.currentGameplayStrategy === 'combo' ? 'momentum-gap' : 'legacy-face'
     });
     
-    state.engineSnapshot = snapshot;
-    return snapshot;
+    state.engineSnapshot = snapshot || null;
+    return state.engineSnapshot;
 };
 
-window.scanAllStrategies = function (options = {}) {
+window.scanAllStrategies = async function (options = {}) {
     if (window.EngineCore && typeof window.EngineCore.scanAll === 'function' && window.state) {
-        return window.EngineCore.scanAll(
+        if (window.syncPredictionEngine) {
+            await window.syncPredictionEngine();
+        }
+
+        const rawResult = await window.EngineCore.scanAll(
             window.state.history,
             window.state.engineSnapshot || {},
             window.state.currentGameplayStrategy || 'series',
             window.state.patternConfig || {},
             options
         );
+
+        const syncView = window.EngineAdapter && typeof window.EngineAdapter.toSyncView === 'function'
+            ? window.EngineAdapter.toSyncView(rawResult)
+            : rawResult;
+        const result = {
+            ...rawResult,
+            notifications: Array.isArray(syncView && syncView.notifications) ? syncView.notifications : [],
+            nextBets: Array.isArray(syncView && syncView.nextBets) ? syncView.nextBets : [],
+            valid: syncView && syncView.valid !== false,
+            errors: Array.isArray(syncView && syncView.errors) ? syncView.errors : []
+        };
+
+        window.state.activeBets = result.nextBets;
+        window.currentAlerts = result.notifications;
+
+        if (window.state.strategySyncCache && typeof window.state.strategySyncCache === 'object') {
+            const strategyKey = window.state.currentGameplayStrategy || 'series';
+            window.state.strategySyncCache[strategyKey] = result;
+        }
+
+        return result;
     }
     console.warn('EngineCore.scanAll not found.');
-    return [];
+    return { notifications: [], nextBets: [], resultsByStrategy: {} };
 };
 
 window.syncAppStore = function () {
     if (window.AppStore && typeof window.AppStore.dispatch === 'function' && window.state) {
-        window.AppStore.dispatch('engine/sync', window.state);
+        const storePatch = window.EngineAdapter && typeof window.EngineAdapter.toStorePatch === 'function'
+            ? window.EngineAdapter.toStorePatch({
+                history: window.state.history,
+                activeBets: window.state.activeBets,
+                alerts: window.currentAlerts,
+                snapshot: window.state.engineSnapshot
+            })
+            : {
+                history: window.state.history,
+                activeBets: window.state.activeBets,
+                alerts: window.currentAlerts,
+                snapshot: window.state.engineSnapshot
+            };
+        window.AppStore.dispatch('engine/sync', storePatch);
     }
 };
 
@@ -898,10 +980,40 @@ window.debounceHeavyUIUpdates = function () {
 };
 
 // --- ANALYTICS & RENDERING ---
+function getAnalyticsTabConfig() {
+    const buttons = Array.from(document.querySelectorAll('[data-analytics-tab]'));
+    if (buttons.length > 0) {
+        return buttons.map(button => ({
+            key: button.dataset.analyticsTab,
+            button,
+            panelId: button.dataset.analyticsPanel || '',
+            rendererName: button.dataset.analyticsRenderer || ''
+        })).filter(tab => tab.key && tab.panelId);
+    }
+
+    return [
+        { key: 'strategy', button: document.getElementById('tabBtnStrategy'), panelId: 'strategyAnalyticsPanel', rendererName: 'renderStrategyAnalytics' },
+        { key: 'intelligence', button: document.getElementById('tabBtnIntelligence'), panelId: 'intelligencePanel', rendererName: 'renderIntelligencePanel' },
+        { key: 'advancements', button: document.getElementById('tabBtnAdvancements'), panelId: 'advancementsPanel', rendererName: 'renderAdvancementAnalytics' }
+    ].filter(tab => tab.button);
+}
+
+function ensureActiveAnalyticsTab(tabs) {
+    if (!state || !Array.isArray(tabs) || tabs.length === 0) {
+        return state ? state.currentAnalyticsTab : '';
+    }
+
+    const activeExists = tabs.some(tab => tab.key === state.currentAnalyticsTab);
+    if (!activeExists) {
+        state.currentAnalyticsTab = tabs[0].key;
+    }
+    return state.currentAnalyticsTab;
+}
+
 window.switchAnalyticsTab = function (tab) {
     if (!state) return;
     state.currentAnalyticsTab = tab;
-    applyAnalyticsTabUI();
+    if (window.saveSessionData) window.saveSessionData();
     window.renderAnalytics();
 };
 
@@ -921,31 +1033,34 @@ window.setAnalyticsDisplayStrategy = function (strat) {
         if (btnCombo) btnCombo.className = "flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 text-[#30D158] transition-colors relative z-10";
         if (pillBg) pillBg.style.transform = 'translateX(100%)';
     }
+    if (window.saveSessionData) window.saveSessionData();
     renderStrategyAnalytics();
 };
 
 window.changeIntelMode = function (mode) {
     if (!state) return;
     state.currentIntelligenceMode = mode;
+    if (window.saveSessionData) window.saveSessionData();
     // Re-render will automatically pick up mode changes if intelligence panel is rebuilt
 };
 
 function applyAnalyticsTabUI() {
-    const tabs = ['strategy', 'intelligence', 'advancements'];
-    tabs.forEach(t => {
-        const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
-        const panelId = t === 'strategy' ? 'strategyAnalyticsPanel' : `${t}Panel`;
-        const panel = document.getElementById(panelId);
+    const tabs = getAnalyticsTabConfig();
+    const activeTab = ensureActiveAnalyticsTab(tabs);
+
+    tabs.forEach(tab => {
+        const btn = tab.button;
+        const panel = document.getElementById(tab.panelId);
 
         if (btn) {
-            if (t === state.currentAnalyticsTab) {
+            if (tab.key === activeTab) {
                 btn.className = "pb-2 text-xs font-bold uppercase tracking-widest text-[#30D158] border-b-2 border-[#30D158] transition-all";
             } else {
                 btn.className = "pb-2 text-xs font-bold uppercase tracking-widest text-gray-400 border-b-2 border-transparent transition-all";
             }
         }
         if (panel) {
-            if (t === state.currentAnalyticsTab) {
+            if (tab.key === activeTab) {
                 panel.classList.remove('hidden');
             } else {
                 panel.classList.add('hidden');
@@ -954,16 +1069,25 @@ function applyAnalyticsTabUI() {
     });
 }
 
+window.renderAdvancementAnalytics = function () {
+    const advPanel = document.getElementById('advancementLogContainer');
+    if (advPanel) {
+        advPanel.innerHTML = '<div class="text-white/40 text-center py-6 text-xs italic tracking-wide">Advancements tracking active. Awaiting threshold breaches.</div>';
+    }
+};
+
 window.renderAnalytics = function () {
     if (!state) return;
+    const tabs = getAnalyticsTabConfig();
+    const activeTab = ensureActiveAnalyticsTab(tabs);
     applyAnalyticsTabUI();
-    if (state.currentAnalyticsTab === 'strategy') {
-        renderStrategyAnalytics();
-    } else if (state.currentAnalyticsTab === 'intelligence') {
-        if (window.renderIntelligencePanel) window.renderIntelligencePanel();
-    } else if (state.currentAnalyticsTab === 'advancements') {
-        const advPanel = document.getElementById('advancementLogContainer');
-        if (advPanel) advPanel.innerHTML = '<div class="text-white/40 text-center py-6 text-xs italic tracking-wide">Advancements tracking active. Awaiting threshold breaches.</div>';
+
+    const activeConfig = tabs.find(tab => tab.key === activeTab);
+    if (!activeConfig || !activeConfig.rendererName) return;
+
+    const renderer = window[activeConfig.rendererName];
+    if (typeof renderer === 'function') {
+        renderer();
     }
 };
 
@@ -1597,10 +1721,15 @@ window.updateAiConfigModalUI = function() {
 };
 
 // --- MISC. SETTINGS ---
-window.changePredictionStrategy = function (val) {
+window.changePredictionStrategy = async function (val) {
     if (window.state) {
         window.state.currentGameplayStrategy = val;
-        if (window.scanAllStrategies) window.scanAllStrategies();
+        if (window.saveSessionData) window.saveSessionData();
+        if (window.scanAllStrategies) {
+            const result = await window.scanAllStrategies();
+            if (window.renderDashboardSafe) window.renderDashboardSafe(result);
+            if (window.syncAppStore) window.syncAppStore();
+        }
     }
 };
 window.openAiConfigModal = function () { 
