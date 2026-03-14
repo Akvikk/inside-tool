@@ -223,6 +223,7 @@ window.StrategyRegistry.series = {
      * @param {Object} FACE_MASKS - the global FACE_MASKS lookup
      */
     detectBridge(prevMask, currMask, FACE_MASKS) {
+        // 1. Check for Sequences
         for (let i = 0; i < SEQUENCES.length; i++) {
             const seq = SEQUENCES[i];
             if ((prevMask & FACE_MASKS[seq.a]) !== 0 && (currMask & FACE_MASKS[seq.b]) !== 0) {
@@ -234,6 +235,19 @@ window.StrategyRegistry.series = {
                 };
             }
         }
+        
+        // 2. Refresh: Catch repeats (Triple Cs visual cue)
+        for (let f = 1; f <= 5; f++) {
+            if ((prevMask & FACE_MASKS[f]) !== 0 && (currMask & FACE_MASKS[f]) !== 0) {
+                return {
+                    label: `F${f} REPEAT`,
+                    color: '#30D158', // Triple Cs theme color
+                    matchedPrevFace: f,
+                    matchedCurrFace: f
+                };
+            }
+        }
+
         return null;
     }
 };

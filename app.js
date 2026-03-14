@@ -168,6 +168,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (window.UiController) window.UiController.init();
     if (window.HudManager) window.HudManager.init();
 
+    // 1.5 Bind Event-Driven Architecture (AppStore)
+    if (window.AppStore) {
+        window.AppStore.subscribe((storeState, action) => {
+            if (action.type === 'history/append') {
+                if (window.renderRow) window.renderRow(action.payload);
+                if (window.renderGapStats) window.renderGapStats();
+            } else if (action.type === 'engine/sync') {
+                if (window.renderDashboardSafe) window.renderDashboardSafe(window.state.activeBets || []);
+                if (window.debounceHeavyUIUpdates) window.debounceHeavyUIUpdates();
+            }
+        });
+    }
+
     // 2. Load previous session if it exists
     if (window.loadSessionData && window.loadSessionData()) {
         console.log("Session data loaded.");
@@ -243,6 +256,41 @@ window.renderGapStats = function () {
     }
 };
 
+window.renderDashboardSafe = function (items) {
+    const dash = document.getElementById('dashboard');
+    if (!dash) return;
+
+    // Handle both raw nextBets array and scanResult objects
+    const signals = Array.isArray(items) ? items : (items && items.nextBets ? items.nextBets : []);
+    let cards = [];
+
+    signals.forEach((bet, index) => {
+        const subtitle = bet.subtitle || (bet.comboLabel ? `${bet.comboLabel} combo` : bet.patternName);
+        const accent = bet.accentColor || '#FF3B30';
+        const bgStyle = bet.confirmed
+            ? `background: linear-gradient(135deg, ${accent}50, ${accent}15)`
+            : `background: linear-gradient(135deg, ${accent}25, ${accent}05)`;
+        const borderStyle = bet.confirmed ? `border-color: ${accent}` : `border-color: ${accent}40`;
+
+        cards.push(`
+            <div class="min-w-[250px] h-[64px] px-3 py-2 rounded-lg border flex items-center justify-between cursor-pointer select-none transition-all hover:brightness-110"
+                 style="border-left: 3px solid ${accent}; ${borderStyle}; ${bgStyle}; box-shadow: 0 4px 15px ${accent}15;">
+                <div class="min-w-0">
+                    <div class="text-[15px] leading-tight font-black text-white tracking-wide drop-shadow-sm">BET F${bet.targetFace}</div>
+                    <div class="text-[11px] leading-tight text-white/80 font-semibold mt-0.5">${subtitle}</div>
+                </div>
+            </div>
+        `);
+    });
+
+    if (cards.length === 0) {
+        dash.innerHTML = `<div class="dashboard-empty w-full text-center text-[10px] font-medium text-[#8E8E93]/60 border border-dashed border-white/5 rounded-xl p-2 select-none tracking-wide flex items-center justify-center h-[60px]"><span>AWAITING SIGNALS...</span></div>`;
+        return;
+    }
+
+    dash.innerHTML = cards.join('');
+};
+
 window.renderPredictionCell = function (spin) {
     const signals = spin.newSignals || [];
     if (signals.length === 0) return '<span class="text-gray-600">-</span>';
@@ -295,8 +343,8 @@ window.renderComboCell = function (spin) {
     `;
 };
 
-window.renderRow = function (spin) {
-    const tbody = document.getElementById('historyBody');
+window.renderRow = function (spin, targetContainer) {
+    const tbody = targetContainer || document.getElementById('historyBody');
     if (!tbody) return;
 
     const tr = document.createElement('tr');
@@ -327,8 +375,11 @@ window.renderRow = function (spin) {
     `;
     tbody.appendChild(tr);
 
-    const sc = document.querySelector('#scrollContainer > div');
-    if (sc) { setTimeout(() => { sc.scrollTop = sc.scrollHeight; }, 50); }
+    if (!targetContainer) {
+        const sc = document.querySelector('#scrollContainer > div');
+        if (sc) { setTimeout(() => { sc.scrollTop = sc.scrollHeight; }, 50); }
+        if (window.layoutComboBridge) requestAnimationFrame(() => window.layoutComboBridge(spin.id));
+    }
 };
 
 window.reRenderHistory = function () {
@@ -336,9 +387,11 @@ window.reRenderHistory = function () {
     if (!tbody) return;
     tbody.innerHTML = '';
     if (window.state && window.state.history) {
+        const fragment = document.createDocumentFragment();
         window.state.history.forEach(spin => {
-            if (window.renderRow) window.renderRow(spin);
+            if (window.renderRow) window.renderRow(spin, fragment);
         });
+        tbody.appendChild(fragment);
     }
     if (window.layoutAllComboBridges) {
         requestAnimationFrame(window.layoutAllComboBridges);
@@ -620,6 +673,25 @@ window.resetStopwatch = function () {
 };
 
 // --- RESTORED GLOBAL BRIDGES & UTILITIES ---
+/**
+ * Centralized trigger for the math-heavy PredictionEngine.
+ * Updates state.engineSnapshot with fresh targets and metrics.
+ */
+window.syncPredictionEngine = async function() {
+    if (!window.PredictionEngine || typeof window.PredictionEngine.evaluatePredictionEngine !== 'function') {
+        console.warn('PredictionEngine not found.');
+        return null;
+    }
+    
+    // Evaluate the history and store result in state.engineSnapshot
+    const snapshot = await window.PredictionEngine.evaluatePredictionEngine(state.history, {
+        currentPredictionStrategy: state.ui.strategy === 'combo' ? 'momentum-gap' : 'legacy-face'
+    });
+    
+    state.engineSnapshot = snapshot;
+    return snapshot;
+};
+
 window.scanAllStrategies = function (options = {}) {
     if (window.EngineCore && typeof window.EngineCore.scanAll === 'function' && window.state) {
         return window.EngineCore.scanAll(

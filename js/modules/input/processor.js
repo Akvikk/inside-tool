@@ -117,9 +117,6 @@
         // Update Gaps for ALL matching faces
         for (let f = 1; f <= 5; f++) state.faceGaps[f]++;
         matchedFaces.forEach(f => state.faceGaps[f] = 0);
-        if (!options.silent) {
-            if (window.renderGapStats) window.renderGapStats();
-        }
 
         const currentSpinIndex = state.history.length;
 
@@ -163,8 +160,8 @@
         let scanResult = { nextBets: [], resultsByStrategy: {} };
         try {
             if (window.scanAllStrategies) {
-                scanResult = await window.scanAllStrategies({ 
-                    skipStoreSync: options.skipStoreSync === true || options.silent === true 
+                scanResult = await window.scanAllStrategies({
+                    skipStoreSync: options.skipStoreSync === true || options.silent === true
                 });
             }
         } catch (error) {
@@ -173,7 +170,7 @@
 
         // Bridge: Capture the engine's produced bets for dashboard display and next turn resolution
         state.activeBets = scanResult.nextBets || [];
-        state.engineSnapshot = scanResult; 
+        state.engineSnapshot = scanResult;
         console.log('[ENGINE] Scan Result:', scanResult);
         console.log('[ENGINE] Active Bets:', state.activeBets);
 
@@ -209,11 +206,7 @@
             }));
         }
 
-        if (!options.silent) {
-            if (window.renderRow) window.renderRow(spinObj);
-            if (window.renderDashboardSafe) window.renderDashboardSafe(scanResult.nextBets);
-            if (window.debounceHeavyUIUpdates) window.debounceHeavyUIUpdates();
-        }
+        // UI Rendering is now handled reactively via AppStore.subscribe listening to history/append and engine/sync
 
         if (!options.preserveInput) {
             const inputField = document.getElementById('spinInput');
