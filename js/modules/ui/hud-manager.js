@@ -4,10 +4,41 @@
  */
 
 (function () {
-    // --- PRIVATE STATE ---
-    let isHudColdMode = false;
-    let hudHistoryScope = 'all';
-    const HUD_RECENT_WINDOW = 14;
+    const DEFAULT_HUD_RECENT_WINDOW = 14;
+
+    function getSharedState() {
+        if (!window.state || typeof window.state !== 'object') {
+            window.state = {};
+        }
+        return window.state;
+    }
+
+    function getRecentWindow() {
+        const sharedState = getSharedState();
+        return Number.isInteger(sharedState.HUD_RECENT_WINDOW)
+            ? sharedState.HUD_RECENT_WINDOW
+            : DEFAULT_HUD_RECENT_WINDOW;
+    }
+
+    function getHudColdMode() {
+        return getSharedState().isHudColdMode === true;
+    }
+
+    function setHudColdMode(nextValue) {
+        const sharedState = getSharedState();
+        sharedState.isHudColdMode = nextValue === true;
+        return sharedState.isHudColdMode;
+    }
+
+    function getHudScope() {
+        return getSharedState().hudHistoryScope === 'recent' ? 'recent' : 'all';
+    }
+
+    function setHudScope(nextScope) {
+        const sharedState = getSharedState();
+        sharedState.hudHistoryScope = nextScope === 'recent' ? 'recent' : 'all';
+        return sharedState.hudHistoryScope;
+    }
 
     // --- PUBLIC INTERFACE ---
     window.HudManager = {
@@ -17,8 +48,8 @@
         toggleColdMode: toggleHudColdMode,
         toggleScope: toggleHudHistoryScope,
         fit: fitAnalyticsHUD,
-        getIsColdMode: () => isHudColdMode,
-        getScope: () => hudHistoryScope
+        getIsColdMode: getHudColdMode,
+        getScope: getHudScope
     };
 
     // Export to window for global access (backward compatibility for index.html)
@@ -182,26 +213,31 @@
     }
 
     function toggleHudColdMode() {
-        isHudColdMode = !isHudColdMode;
+        const isHudColdMode = setHudColdMode(!getHudColdMode());
         const btn = document.getElementById('hudColdBtn');
         if (btn) {
             if (isHudColdMode) btn.classList.replace('text-gray-500', 'text-[#06b6d4]');
             else btn.classList.replace('text-[#06b6d4]', 'text-gray-500');
         }
+        if (window.saveSessionData) window.saveSessionData();
         updateAnalyticsHUD();
     }
 
     function toggleHudHistoryScope() {
-        hudHistoryScope = hudHistoryScope === 'all' ? 'recent' : 'all';
+        const nextScope = getHudScope() === 'all' ? 'recent' : 'all';
+        setHudScope(nextScope);
+        if (window.saveSessionData) window.saveSessionData();
         updateAnalyticsHUD();
     }
 
     function getHudScopeSummary() {
         const history = window.state ? window.state.history : [];
+        const hudHistoryScope = getHudScope();
+        const recentWindow = getRecentWindow();
         if (hudHistoryScope === 'recent') {
             return history.length > 0
-                ? `Last ${Math.min(HUD_RECENT_WINDOW, history.length)} Spins`
-                : `Last ${HUD_RECENT_WINDOW} Spins`;
+                ? `Last ${Math.min(recentWindow, history.length)} Spins`
+                : `Last ${recentWindow} Spins`;
         }
         return history.length > 0 ? `All ${history.length} Spins` : 'All History';
     }
@@ -213,6 +249,9 @@
         const hudLabel = document.getElementById('hudWindowValue');
         const hudScopeBtn = document.getElementById('hudScopeBtn');
 
+        const isHudColdMode = getHudColdMode();
+        const hudHistoryScope = getHudScope();
+        const recentWindow = getRecentWindow();
         const themeColor = isHudColdMode ? '#06b6d4' : '#30D158';
 
         if (hudLabel) {
@@ -224,9 +263,11 @@
 
         if (hudScopeBtn) {
             const isRecentScope = hudHistoryScope === 'recent';
-            const scopeLabel = hudHistoryScope === 'all' ? 'ALL' : HUD_RECENT_WINDOW;
+            const scopeLabel = hudHistoryScope === 'all' ? 'ALL' : recentWindow;
             hudScopeBtn.innerText = `${history.length} / ${scopeLabel}`;
-            hudScopeBtn.title = hudHistoryScope === 'all' ? 'Switch to 14-spin rolling window' : 'Switch to all history';
+            hudScopeBtn.title = hudHistoryScope === 'all'
+                ? `Switch to ${recentWindow}-spin rolling window`
+                : 'Switch to all history';
             hudScopeBtn.className = 'px-1.5 min-w-[28px] h-5 flex items-center justify-center rounded-md text-[8px] font-black tracking-[0.12em] border transition-colors';
             hudScopeBtn.style.color = isRecentScope ? themeColor : 'rgba(255,255,255,0.88)';
             hudScopeBtn.style.borderColor = isRecentScope
@@ -251,7 +292,7 @@
         // Bridge to window functions
         if (!window.PredictionEngine) return;
 
-        const windowSetting = hudHistoryScope === 'recent' ? HUD_RECENT_WINDOW : 'all';
+        const windowSetting = hudHistoryScope === 'recent' ? recentWindow : 'all';
         const stats = window.PredictionEngine.calculatePerimeterStats(history, windowSetting);
         if (!stats || !stats.counts) return;
 
