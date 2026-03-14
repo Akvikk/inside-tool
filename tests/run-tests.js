@@ -2,10 +2,36 @@ const fs = require('fs');
 const path = require('path');
 const assert = require('assert/strict');
 const { createSandbox, loadScript } = require('./helpers/browserSandbox');
+const {
+    readLocalScripts,
+    collectFunctionNames,
+    collectInlineHandlerFunctionCalls,
+    collectReferencedIds,
+    collectDefinedIds,
+    collectDuplicateWindowFunctionAssignments
+} = require('./helpers/uiSmoke');
+
+const SCRIPT_PATHS = {
+    state: 'js/modules/engine/state.js',
+    core: 'js/modules/engine/core.js',
+    prediction: 'js/modules/engine/prediction.js',
+    contract: 'js/modules/engine/contract.js',
+    adapter: 'js/modules/engine/adapter.js',
+    store: 'js/modules/engine/store.js',
+    series: 'js/strategies/strategy.series.js',
+    combo: 'js/strategies/strategy.combo.js',
+    renderers: 'js/modules/ui/renderers.js',
+    modals: 'js/modules/ui/modals.js',
+    hudManager: 'js/modules/ui/hud-manager.js',
+    controller: 'js/modules/ui/controller.js',
+    processor: 'js/modules/input/processor.js',
+    brain: 'js/modules/ai/brain.js',
+    app: 'app.js'
+};
 
 async function testEngineContract() {
     const ctx = createSandbox();
-    loadScript(ctx, 'engine-contract.js');
+    loadScript(ctx, SCRIPT_PATHS.contract);
 
     const sanitized = ctx.EngineContract.sanitizeSyncResult({
         notifications: [{ type: 'active', strategy: 44, count: '3' }, null],
@@ -26,8 +52,8 @@ async function testEngineContract() {
 
 async function testEngineAdapter() {
     const ctx = createSandbox();
-    loadScript(ctx, 'engine-contract.js');
-    loadScript(ctx, 'engine-adapter.js');
+    loadScript(ctx, SCRIPT_PATHS.contract);
+    loadScript(ctx, SCRIPT_PATHS.adapter);
 
     const view = ctx.EngineAdapter.toSyncView({
         notifications: [{ type: 'active', strategy: 'Sequence' }],
@@ -41,7 +67,7 @@ async function testEngineAdapter() {
 
 async function testStore() {
     const ctx = createSandbox();
-    loadScript(ctx, 'store.js');
+    loadScript(ctx, SCRIPT_PATHS.store);
 
     ctx.AppStore.dispatch('history/set', [{ num: 12 }]);
     ctx.AppStore.dispatch('ui/setStrategy', 'combo');
@@ -76,12 +102,12 @@ async function testReplay() {
     const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 
     const ctx = createSandbox();
-    loadScript(ctx, 'predictionEngine.js');
-    loadScript(ctx, 'strategies/strategy.series.js');
-    loadScript(ctx, 'strategies/strategy.combo.js');
-    loadScript(ctx, 'engine-core.js');
-    loadScript(ctx, 'engine-contract.js');
-    loadScript(ctx, 'engine-adapter.js');
+    loadScript(ctx, SCRIPT_PATHS.prediction);
+    loadScript(ctx, SCRIPT_PATHS.series);
+    loadScript(ctx, SCRIPT_PATHS.combo);
+    loadScript(ctx, SCRIPT_PATHS.core);
+    loadScript(ctx, SCRIPT_PATHS.contract);
+    loadScript(ctx, SCRIPT_PATHS.adapter);
 
     const patternConfig = ctx.StrategyRegistry.series.buildPatternConfig(true);
     const history = [];
@@ -138,77 +164,47 @@ async function testReplay() {
     assert.equal(history.length, fixture.spins.length);
 }
 
-function collectFunctionNames(source) {
-    const names = new Set();
-    for (const match of source.matchAll(/function\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*\(/g)) {
-        names.add(match[1]);
-    }
-    for (const match of source.matchAll(/\b(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>/g)) {
-        names.add(match[1]);
-    }
-    return names;
-}
-
-function collectInlineHandlerFunctionCalls(source) {
-    const attrs = [];
-    for (const match of source.matchAll(/\bon[a-zA-Z]+\s*=\s*["']([^"']+)["']/g)) {
-        attrs.push(match[1]);
-    }
-    const used = new Set();
-    for (const attr of attrs) {
-        for (const match of attr.matchAll(/(^|[^.\w$])([A-Za-z_$][A-Za-z0-9_$]*)\s*\(/g)) {
-            used.add(match[2]);
-        }
-    }
-    return used;
-}
-
-function collectReferencedIds(source) {
-    const ids = new Set();
-    for (const match of source.matchAll(/getElementById\(\s*['"]([^'"]+)['"]\s*\)/g)) {
-        ids.add(match[1]);
-    }
-    return ids;
-}
-
-function collectDefinedIds(source) {
-    const ids = new Set();
-    for (const match of source.matchAll(/\bid\s*=\s*['"]([^'"]+)['"]/g)) {
-        ids.add(match[1]);
-    }
-    return ids;
-}
-
 async function testUiSmoke() {
-    const appPath = path.resolve(__dirname, '..', 'app.js');
     const htmlPath = path.resolve(__dirname, '..', 'index.html');
     const baselinePath = path.resolve(__dirname, 'ui-smoke-baseline.json');
-
-    const appCode = fs.readFileSync(appPath, 'utf8');
     const htmlCode = fs.readFileSync(htmlPath, 'utf8');
     const baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
-
-    const tags = [...htmlCode.matchAll(/<script\s+src="([^"]+)"/g)].map(m => m[1]);
-    const appIndex = tags.indexOf('app.js');
-    const contractIndex = tags.indexOf('engine-contract.js');
-    const adapterIndex = tags.indexOf('engine-adapter.js');
-    const storeIndex = tags.indexOf('store.js');
-    const renderersIndex = tags.indexOf('ui-renderers.js');
+    const projectRoot = path.resolve(__dirname, '..');
+    const scriptEntries = readLocalScripts(projectRoot, htmlCode);
+    const tags = scriptEntries.map(entry => entry.relativePath);
+    const appIndex = tags.indexOf(SCRIPT_PATHS.app);
+    const requiredBeforeApp = [
+        SCRIPT_PATHS.state,
+        SCRIPT_PATHS.core,
+        SCRIPT_PATHS.prediction,
+        SCRIPT_PATHS.contract,
+        SCRIPT_PATHS.adapter,
+        SCRIPT_PATHS.store,
+        SCRIPT_PATHS.series,
+        SCRIPT_PATHS.combo,
+        SCRIPT_PATHS.renderers,
+        SCRIPT_PATHS.modals,
+        SCRIPT_PATHS.hudManager,
+        SCRIPT_PATHS.controller,
+        SCRIPT_PATHS.processor,
+        SCRIPT_PATHS.brain
+    ];
 
     assert.ok(appIndex >= 0, 'app.js script tag missing');
-    assert.ok(contractIndex >= 0 && contractIndex < appIndex, 'engine-contract.js must load before app.js');
-    assert.ok(adapterIndex >= 0 && adapterIndex < appIndex, 'engine-adapter.js must load before app.js');
-    assert.ok(storeIndex >= 0 && storeIndex < appIndex, 'store.js must load before app.js');
-    assert.ok(renderersIndex >= 0 && renderersIndex < appIndex, 'ui-renderers.js must load before app.js');
+    requiredBeforeApp.forEach(scriptPath => {
+        const scriptIndex = tags.indexOf(scriptPath);
+        assert.ok(scriptIndex >= 0 && scriptIndex < appIndex, `${scriptPath} must load before app.js`);
+    });
 
-    const referenced = collectReferencedIds(appCode);
+    const combinedCode = scriptEntries.map(entry => entry.code).join('\n');
+    const referenced = collectReferencedIds(combinedCode);
     const defined = collectDefinedIds(htmlCode);
     const missingIds = [...referenced].filter(id => !defined.has(id)).sort();
     const allowedMissingIds = new Set(baseline.allowedMissingIds || []);
     const unexpectedMissingIds = missingIds.filter(id => !allowedMissingIds.has(id));
     assert.deepEqual(unexpectedMissingIds, [], `Unexpected missing IDs:\n${unexpectedMissingIds.join('\n')}`);
 
-    const declaredFunctions = collectFunctionNames(appCode);
+    const declaredFunctions = collectFunctionNames(combinedCode);
     const usedFunctions = collectInlineHandlerFunctionCalls(htmlCode);
     const ignore = new Set(['if', 'event', 'confirm', 'alert']);
     const allowedMissingHandlers = new Set(baseline.allowedMissingHandlers || []);
@@ -218,6 +214,13 @@ async function testUiSmoke() {
         .filter(name => !allowedMissingHandlers.has(name))
         .sort();
     assert.deepEqual(missingHandlers, [], `Missing inline handlers:\n${missingHandlers.join('\n')}`);
+
+    const duplicates = collectDuplicateWindowFunctionAssignments(scriptEntries);
+    assert.equal(
+        duplicates.length,
+        0,
+        `Duplicate window function assignments:\n${duplicates.map(entry => `${entry.name}: ${entry.scripts.join(', ')}`).join('\n')}`
+    );
 }
 
 const allTests = [
@@ -261,4 +264,3 @@ main().catch(error => {
     console.error(error && error.stack ? error.stack : error);
     process.exit(1);
 });
-

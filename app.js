@@ -863,6 +863,9 @@ window.resetData = function () {
     if (tbody) tbody.innerHTML = '';
     if (window.renderGapStats) window.renderGapStats();
     if (window.renderDashboardSafe) window.renderDashboardSafe([]);
+    if (window.HudManager && window.HudManager.update) window.HudManager.update();
+    if (window.syncAppStore) window.syncAppStore();
+    if (window.saveSessionData) window.saveSessionData();
     const confirmModal = document.getElementById('confirmModal');
     if (confirmModal && !confirmModal.classList.contains('hidden')) {
         confirmModal.classList.add('hidden');
@@ -1041,7 +1044,9 @@ window.changeIntelMode = function (mode) {
     if (!state) return;
     state.currentIntelligenceMode = mode;
     if (window.saveSessionData) window.saveSessionData();
-    // Re-render will automatically pick up mode changes if intelligence panel is rebuilt
+    if (state.currentAnalyticsTab === 'intelligence' && window.renderAnalytics) {
+        window.renderAnalytics();
+    }
 };
 
 function applyAnalyticsTabUI() {
