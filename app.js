@@ -325,20 +325,32 @@ window.renderPredictionCell = function (spin) {
 };
 
 window.renderComboCell = function (spin) {
-    const prevSpin = state.history[spin.index - 1];
-    if (!prevSpin) return '<span class="text-gray-600">-</span>';
-
     const registry = window.StrategyRegistry || {};
     const stratKey = state.currentGameplayStrategy || 'series';
     const strategy = registry[stratKey];
-
     if (!strategy || typeof strategy.detectBridge !== 'function') return '<span class="text-gray-600">-</span>';
 
-    const prevMask = window.FON_MASK_MAP ? window.FON_MASK_MAP[prevSpin.num] : 0;
     const currMask = window.FON_MASK_MAP ? window.FON_MASK_MAP[spin.num] : 0;
-    const bridge = strategy.detectBridge(prevMask, currMask, window.FACE_MASKS);
+    
+    // LOOKBACK SCAN (Up to 14 spins to match Premium Screenshot spans)
+    let bridge = null;
+    let prevSpin = null;
+    const lookbackDepth = 14;
+    for (let i = 1; i <= lookbackDepth; i++) {
+        const checkSpin = state.history[spin.index - i];
+        if (!checkSpin) break;
+        
+        const prevMask = window.FON_MASK_MAP ? window.FON_MASK_MAP[checkSpin.num] : 0;
+        const potentialBridge = strategy.detectBridge(prevMask, currMask, window.FACE_MASKS);
+        
+        if (potentialBridge) {
+            bridge = potentialBridge;
+            prevSpin = checkSpin;
+            break; // Found the most recent connection
+        }
+    }
 
-    if (!bridge) return '<span class="text-gray-600 font-mono text-[10px]">-</span>';
+    if (!bridge || !prevSpin) return '<span class="text-gray-600 font-mono text-[10px]">-</span>';
 
     // SUPERIOR RESTORATION: Badge bridges the gap between rows
     return `
@@ -478,8 +490,8 @@ window.layoutComboBridge = function (spinId) {
         y: currRect.top + currRect.height / 2 - cellRect.top
     };
     const targetPoint = {
-        x: badgeRect.left - cellRect.left,
-        y: 0 // Badge is perfectly absolute top-0, relative to cell it evaluates exactly at the seam 
+        x: badgeRect.left - cellRect.left - 2, // Land perfectly inside the badge edge
+        y: badgeRect.top + badgeRect.height / 2 - cellRect.top
     };
 
     const nextGeom = { p1: prevPoint, p2: currPoint, t: targetPoint, color: color };
@@ -540,8 +552,8 @@ window.drawComboBridge = function (layer, geom) {
     const p2 = { x: geom.p2.x - minX, y: geom.p2.y - minY };
     const t = { x: geom.t.x - minX, y: geom.t.y - minY };
 
-    // TRUE Y-SHAPE WITH STEM (Screenshot Accuracy: Meet at left edge)
-    const stemX = t.x - 4; // Short stem
+    // TRUE Y-SHAPE WITH STEM (Screenshot Accuracy: Sharp junction meeting dot)
+    const stemX = t.x - 6; // longer stem for that premium 'crows foot' feel
     path1.setAttribute('d', `M ${p1.x} ${p1.y} L ${stemX} ${t.y} L ${t.x} ${t.y}`);
     path2.setAttribute('d', `M ${p2.x} ${p2.y} L ${stemX} ${t.y} L ${t.x} ${t.y}`);
     
