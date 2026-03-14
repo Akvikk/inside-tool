@@ -1143,7 +1143,7 @@ function toggleInputLayout() {
 function fitAnalyticsHUD() {
     const hud = document.getElementById('analyticsHUD');
     const header = document.getElementById('hudHeader');
-    const body = hud ? hud.querySelector('.flex-1.flex.flex-col.overflow-hidden.relative') : null;
+    const body = document.getElementById('hudStats');
     if (!hud || !header || !body || hud.classList.contains('hidden')) return;
 
     requestAnimationFrame(() => {
@@ -2130,8 +2130,8 @@ function updateAnalyticsHUD() {
 
         // Count how many times each sequence's target face appeared after the trigger pair
         const seriesStrat = window.StrategyRegistry && window.StrategyRegistry.series;
-        const SEQ_LIST   = seriesStrat ? SEQUENCES : [];
-        const SEQ_COLORS = seriesStrat ? SEQUENCE_COLORS : [];
+        const SEQ_LIST   = seriesStrat && seriesStrat.SEQUENCES ? seriesStrat.SEQUENCES : [];
+        const SEQ_COLORS = seriesStrat && seriesStrat.SEQUENCE_COLORS ? seriesStrat.SEQUENCE_COLORS : [];
         const seqStats = SEQ_LIST.map((seq, i) => {
             let hits = 0;
             for (let j = 2; j < window_.length; j++) {

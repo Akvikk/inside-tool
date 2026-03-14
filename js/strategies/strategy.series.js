@@ -53,6 +53,8 @@ window.StrategyRegistry.series = {
     label: 'Series Strategy',
     tableHeader: 'SEQUENCE',
     PATTERN_FILTER_META: PATTERN_FILTER_META_SERIES,
+    SEQUENCES,
+    SEQUENCE_COLORS,
 
     /**
      * Build the default patternConfig keys for this strategy.
