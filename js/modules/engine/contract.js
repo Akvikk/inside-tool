@@ -114,6 +114,8 @@
         if (!isObject(raw)) {
             return { valid: false, errors: ['sync result is not an object'] };
         }
+        const notifications = Array.isArray(raw.notifications) ? raw.notifications : [];
+        const nextBets = Array.isArray(raw.nextBets) ? raw.nextBets : [];
         if (!Array.isArray(raw.notifications)) {
             errors.push('notifications is not an array');
         }
@@ -121,8 +123,8 @@
             errors.push('nextBets is not an array');
         }
 
-        (raw.notifications || []).forEach((alert, index) => validateAlertShape(alert, index, errors));
-        (raw.nextBets || []).forEach((bet, index) => validateBetShape(bet, index, errors));
+        notifications.forEach((alert, index) => validateAlertShape(alert, index, errors));
+        nextBets.forEach((bet, index) => validateBetShape(bet, index, errors));
 
         return {
             valid: errors.length === 0,
@@ -156,4 +158,3 @@
         toSpinNumber
     };
 })();
-

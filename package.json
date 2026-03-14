@@ -6,6 +6,8 @@
   "scripts": {
     "ai:relay": "node server.js",
     "test": "node tests/run-tests.js",
+    "test:node": "node --test tests/*.test.js",
+    "test:all": "npm run test && npm run test:node",
     "test:replay": "node tests/run-tests.js replay",
     "test:smoke": "node tests/run-tests.js ui-smoke",
     "check:premerge": "node scripts/premerge-check.js"
