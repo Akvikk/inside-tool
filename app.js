@@ -157,3 +157,254 @@ async function triggerAiAudit() {
         }
     }
 }
+
+// --- RESTORED CORE APP GLUE & INITIALIZATION ---
+window.addEventListener('DOMContentLoaded', () => {
+    console.log("INSIDE TOOL: Bootstrapping modular architecture...");
+
+    // 1. Initialize Active Modules
+    if (window.InputProcessor) window.InputProcessor.init();
+    if (window.UiController) window.UiController.init();
+    if (window.HudManager) window.HudManager.init();
+
+    // 2. Bind missing enter-key functionality
+    const spinInput = document.getElementById('spinInput');
+    if (spinInput) {
+        spinInput.focus();
+        spinInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                if (window.InputProcessor) window.InputProcessor.addSpin();
+            }
+        });
+    }
+
+    // 3. Initial Rendering State
+    if (window.renderGapStats) window.renderGapStats();
+    if (window.renderDashboardSafe) window.renderDashboardSafe();
+
+    const resetBtn = document.getElementById('confirmResetBtn');
+    if (resetBtn) resetBtn.addEventListener('click', window.resetData);
+});
+
+// --- ESSENTIAL UI POLYFILLS ---
+window.saveSessionData = function () {
+    try {
+        localStorage.setItem('insideTool_session_v2', JSON.stringify({
+            history: state.history,
+            faceGaps: state.faceGaps
+        }));
+    } catch (e) {
+        console.warn("Session save failed:", e);
+    }
+};
+
+window.renderGapStats = function () {
+    const container = document.getElementById('faceGapContainer');
+    if (!container) return;
+
+    container.innerHTML = '';
+    for (let f = 1; f <= 5; f++) {
+        const gap = state.faceGaps[f] || 0;
+        let colorClass = 'text-[#30D158]';
+        if (gap > 10) colorClass = 'text-[#FFD60A]';
+        if (gap > 15) colorClass = 'text-[#FF453A]';
+
+        container.innerHTML += `
+            <div class="text-center p-2 rounded-xl bg-white/5 border border-white/5 shadow-sm backdrop-blur-sm transition-all hover:bg-white/10">
+                <span class="block text-gray-400 text-[9px] font-bold mb-0.5 uppercase tracking-wider">F${f}</span>
+                <span class="${colorClass} font-bold text-xl drop-shadow-sm">${gap}</span>
+            </div>
+        `;
+    }
+};
+
+window.renderDashboardSafe = function (alerts) {
+    const dash = document.getElementById('dashboard');
+    if (!dash) return;
+
+    let cards = [];
+    const activeBets = state.activeBets || [];
+
+    activeBets.forEach((bet, index) => {
+        const subtitle = bet.subtitle || (bet.comboLabel ? `${bet.comboLabel} combo` : bet.patternName);
+        const accent = bet.accentColor || '#FF3B30';
+        const bgStyle = bet.confirmed
+            ? `background: linear-gradient(135deg, ${accent}50, ${accent}15)`
+            : `background: linear-gradient(135deg, ${accent}25, ${accent}05)`;
+        const borderStyle = bet.confirmed ? `border-color: ${accent}` : `border-color: ${accent}40`;
+
+        cards.push(`
+            <div class="min-w-[250px] h-[64px] px-3 py-2 rounded-lg border flex items-center justify-between cursor-pointer select-none transition-all hover:brightness-110"
+                 ondblclick="window.toggleBetConfirmation && window.toggleBetConfirmation(${index})"
+                 style="border-left: 3px solid ${accent}; ${borderStyle}; ${bgStyle}; box-shadow: 0 4px 15px ${accent}15;">
+                <div class="min-w-0">
+                    <div class="text-[15px] leading-tight font-black text-white tracking-wide drop-shadow-sm">BET F${bet.targetFace}</div>
+                    <div class="text-[11px] leading-tight text-white/80 font-semibold mt-0.5">${subtitle}</div>
+                </div>
+            </div>
+        `);
+    });
+
+    if (cards.length === 0) {
+        dash.innerHTML = `<div class="dashboard-empty w-full text-center text-[10px] font-medium text-[#8E8E93]/60 border border-dashed border-white/5 rounded-xl p-2 select-none tracking-wide flex items-center justify-center h-[60px]"><span>AWAITING SIGNALS...</span></div>`;
+        return;
+    }
+
+    dash.innerHTML = cards.join('');
+};
+
+window.renderRow = function (spin) {
+    const tbody = document.getElementById('historyBody');
+    if (!tbody) return;
+
+    const tr = document.createElement('tr');
+    tr.className = "history-row relative hover:bg-white/[0.02] transition-colors";
+    tr.id = 'row-' + spin.id;
+
+    const RED_NUMS = state.RED_NUMS || [];
+    let bgClass = spin.num === 0 ? 'bg-green' : (RED_NUMS.includes(spin.num) ? 'bg-red' : 'bg-black');
+
+    let faceHTML = '<span class="text-gray-600">-</span>';
+    if (spin.faces && spin.faces.length > 0) {
+        let faceTags = spin.faces.map(fId => {
+            let fStyle = window.FACES ? window.FACES[fId] : { color: '#fff', border: '#fff', bg: '#000' };
+            return `<span class="face-tag mb-1 mr-1" data-spin-id="${spin.id}" data-face-id="${fId}" style="color:${fStyle.color}; border:1px solid ${fStyle.border}; background:${fStyle.bg};">F${fId}</span>`;
+        }).join('');
+        faceHTML = `<div class="flex flex-wrap justify-center">${faceTags}</div>`;
+    }
+
+    tr.innerHTML = `
+        <td class="text-center font-mono text-xs text-gray-400">#${spin.index + 1}</td>
+        <td class="text-center"><div class="num-box ${bgClass}">${spin.num}</div></td>
+        <td class="text-center relative z-[5]">${faceHTML}</td>
+        <td class="text-center relative overflow-visible z-[1]"><span class="text-gray-600">-</span></td>
+        <td class="pl-4"><span class="text-gray-600">-</span></td>
+    `;
+    tbody.appendChild(tr);
+
+    const sc = document.querySelector('#scrollContainer > div');
+    if (sc) { setTimeout(() => { sc.scrollTop = sc.scrollHeight; }, 50); }
+};
+
+// --- RESTORED GLOBAL UI HANDLERS (MODALS, MENUS, STOPWATCH) ---
+window.addSpin = function () { if (window.InputProcessor) window.InputProcessor.addSpin(); };
+window.undoSpin = function () { if (window.InputProcessor) window.InputProcessor.undoSpin(); };
+
+window.toggleHamburgerMenu = function () {
+    const menu = document.getElementById('hamburgerMenu');
+    const backdrop = document.getElementById('hamburgerBackdrop');
+    if (menu) menu.classList.toggle('hidden');
+    if (backdrop) backdrop.classList.toggle('hidden');
+};
+
+window.toggleAccordion = function (id) {
+    const content = document.getElementById(id);
+    const icon = document.getElementById(id + 'Icon');
+    if (content) {
+        content.classList.toggle('hidden');
+        if (icon) {
+            icon.style.transform = content.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+    }
+};
+
+window.toggleModal = function (id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden');
+};
+
+window.toggleInputLayout = function () {
+    if (!window.state) return;
+    window.state.currentInputLayout = window.state.currentInputLayout === 'grid' ? 'racetrack' : 'grid';
+    const label = document.getElementById('layoutLabel');
+    if (label) {
+        label.innerText = window.state.currentInputLayout.toUpperCase();
+        if (window.state.currentInputLayout === 'racetrack') {
+            label.className = "text-[9px] font-black bg-[#BF5AF2]/20 px-2.5 py-1 rounded-md text-[#BF5AF2] shadow-inner";
+        } else {
+            label.className = "text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white shadow-inner";
+        }
+    }
+    if (window.UiController && window.UiController.initDesktopGrid) {
+        window.UiController.initDesktopGrid();
+    }
+};
+
+window.togglePatternFilterPopover = function () {
+    const popover = document.getElementById('patternFilterPopover');
+    if (popover) popover.classList.toggle('hidden');
+};
+
+window.closePatternFilterPopover = function () {
+    const popover = document.getElementById('patternFilterPopover');
+    if (popover) popover.classList.add('hidden');
+};
+
+window.resetSession = function () { toggleModal('confirmModal'); };
+window.resetData = function () {
+    if (window.state) {
+        window.state.history = [];
+        window.state.activeBets = [];
+        window.state.faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    }
+    if (window.EngineCore) window.EngineCore.reset();
+    const tbody = document.getElementById('historyBody');
+    if (tbody) tbody.innerHTML = '';
+    if (window.renderGapStats) window.renderGapStats();
+    if (window.renderDashboardSafe) window.renderDashboardSafe([]);
+    const confirmModal = document.getElementById('confirmModal');
+    if (confirmModal && !confirmModal.classList.contains('hidden')) {
+        confirmModal.classList.add('hidden');
+    }
+};
+
+let swInterval = null;
+let swSeconds = 0;
+window.toggleStopwatch = function () {
+    const icon = document.getElementById('stopwatchIcon');
+    const text = document.getElementById('stopwatchText');
+    if (swInterval) {
+        clearInterval(swInterval);
+        swInterval = null;
+        if (icon) { icon.classList.remove('fa-pause'); icon.classList.add('fa-play'); }
+        if (text) text.innerText = 'Start';
+    } else {
+        swInterval = setInterval(() => {
+            swSeconds++;
+            const display = document.getElementById('stopwatchDisplay');
+            if (display) {
+                let hrs = Math.floor(swSeconds / 3600);
+                let mins = Math.floor((swSeconds % 3600) / 60);
+                let secs = swSeconds % 60;
+                display.innerText = `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+        }, 1000);
+        if (icon) { icon.classList.remove('fa-play'); icon.classList.add('fa-pause'); }
+        if (text) text.innerText = 'Pause';
+    }
+};
+
+window.resetStopwatch = function () {
+    if (swInterval) clearInterval(swInterval);
+    swInterval = null;
+    swSeconds = 0;
+    const display = document.getElementById('stopwatchDisplay');
+    if (display) display.innerText = '00:00:00';
+    const icon = document.getElementById('stopwatchIcon');
+    const text = document.getElementById('stopwatchText');
+    if (icon) { icon.classList.remove('fa-pause'); icon.classList.add('fa-play'); }
+    if (text) text.innerText = 'Start';
+};
+
+// Prevent immediate console errors for UI links not yet modularized
+window.renderUserAnalytics = function () { console.log("Analytics renderer pending rebuild..."); };
+window.renderAnalytics = function () { console.log("Analytics renderer pending rebuild..."); };
+window.switchAnalyticsTab = function (tab) { console.log("Switch tab to", tab); };
+window.setAnalyticsDisplayStrategy = function (strat) { console.log("Set display strategy to", strat); };
+window.changeIntelMode = function (mode) { console.log("Change intel mode to", mode); };
+window.exportSpins = function () { alert("Export spins function moved to modular system."); };
+window.importSpins = function () { alert("Import spins function moved to modular system."); };
+window.changePredictionStrategy = function (val) { console.log("Changed strategy to", val); };
+window.openAiConfigModal = function () { toggleModal('aiConfigModal'); };
+window.openAiChat = function () { toggleModal('aiChatModal'); };

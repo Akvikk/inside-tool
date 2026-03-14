@@ -3,7 +3,7 @@
  * Handles all logic for the floating Analytics HUD.
  */
 
-(function() {
+(function () {
     // --- PRIVATE STATE ---
     let isHudColdMode = false;
     let hudHistoryScope = 'all';
@@ -197,7 +197,7 @@
     }
 
     function getHudScopeSummary() {
-        const history = window.history || [];
+        const history = window.state ? window.state.history : [];
         if (hudHistoryScope === 'recent') {
             return history.length > 0
                 ? `Last ${Math.min(HUD_RECENT_WINDOW, history.length)} Spins`
@@ -212,15 +212,15 @@
 
         const hudLabel = document.getElementById('hudWindowValue');
         const hudScopeBtn = document.getElementById('hudScopeBtn');
-        
+
         const themeColor = isHudColdMode ? '#06b6d4' : '#30D158';
-        
+
         if (hudLabel) {
             hudLabel.innerText = getHudScopeSummary();
             hudLabel.style.color = themeColor;
         }
 
-        const history = window.history || [];
+        const history = window.state ? window.state.history : [];
 
         if (hudScopeBtn) {
             const isRecentScope = hudHistoryScope === 'recent';
@@ -236,10 +236,10 @@
                 ? `${themeColor}22`
                 : 'rgba(255,255,255,0.10)';
         }
-        
+
         const headerTitle = hud.querySelector('#hudHeader span');
         if (headerTitle) {
-            headerTitle.innerHTML = isHudColdMode 
+            headerTitle.innerHTML = isHudColdMode
                 ? `<i class="fas fa-snowflake mr-1"></i> Cold Tracker`
                 : `<i class="fas fa-satellite-dish mr-1"></i> Live Feed`;
             headerTitle.className = `text-[9px] font-bold tracking-[0.18em] uppercase ${isHudColdMode ? 'text-[#06b6d4]' : 'text-[#30D158]'}`;

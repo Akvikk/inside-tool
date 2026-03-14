@@ -3,7 +3,8 @@
     // --- PUBLIC INTERFACE ---
     window.UiController = {
         init,
-        openHindsightModal
+        openHindsightModal,
+        initDesktopGrid
     };
 
     // Make it globally accessible for the onclick attribute
@@ -70,6 +71,7 @@
             void window.InputProcessor.addSpin();
         }
     }
+    window.handleGridClick = handleGridClick;
 
     function buildRacetrackSVG() {
         const svgW = 240;
