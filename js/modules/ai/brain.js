@@ -160,7 +160,38 @@ TASK: Provide 2 ultra-dense tactical critiques in JSON format using the schema.`
         };
     }
 
-    async function requestNeuralPrediction(context, options) {
-        return null; // Initialized fallback safely
+    async function requestNeuralPrediction(context, options = {}) {
+        const state = window.state;
+        if (!state.aiEnabled && !options.force) return null;
+
+        const prompt = `ROLE: Roulette AI Table Boss.
+CONTEXT: 
+- Last 10 hits: ${context.recentHits}.
+- Math Engine Suggests: ${context.mathLabel} -> F${context.mathTarget} (${context.mathConfidence}%).
+- Net Units: ${context.netUnits}.
+
+TASK: Output ONLY a JSON object evaluating the next best Face (1-5).
+SCHEMA:
+{
+  "status": "GO" or "SIT_OUT",
+  "targetFace": number (1-5) or null,
+  "confidence": number (0-100),
+  "reason": "short strategic string max 50 chars"
+}`;
+
+        try {
+            const responseText = await requestAiText(prompt, {
+                requestMode: 'neural-prediction',
+                temperature: 0.2,
+                maxOutputTokens: 100,
+                responseMimeType: 'application/json'
+            });
+            const data = extractJson(responseText);
+            if (data && data.status) return data;
+            return null;
+        } catch (error) {
+            console.error('AI Neural Prediction failed:', error);
+            return null;
+        }
     }
 })();

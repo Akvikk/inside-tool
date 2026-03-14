@@ -44,10 +44,28 @@ async function requestNeuralPrediction(options = {}) {
     if (signal) {
         state.currentNeuralSignal = signal;
         if (window.updateAiFusionSnapshot) window.updateAiFusionSnapshot(state.currentNeuralSignal);
+        
+        // Map AI signal to activeBets so it controls the Dashboard Cards
+        if (signal.status === 'GO' && signal.targetFace) {
+            state.activeBets = [{
+                patternName: 'Neural Net',
+                targetFace: signal.targetFace,
+                confidence: signal.confidence || 0,
+                subtitle: signal.reason || 'AI Tactical Read',
+                accentColor: '#bf5af2', // Purple AI theme
+                confirmed: false
+            }];
+        } else {
+            state.activeBets = [];
+        }
+    } else {
+        // Fallback to Math Engine Cards if AI is unreachable
+        state.activeBets = state.engineSnapshot ? (state.engineSnapshot.nextBets || []) : [];
     }
 
     if (renderDashboardNow) {
-        if (window.renderDashboardSafe) window.renderDashboardSafe(window.currentAlerts || []);
+        if (window.renderDashboardSafe) window.renderDashboardSafe(state.activeBets || []);
+        if (window.syncAppStore) window.syncAppStore(); // Broadcast the update
     }
 
     return signal;

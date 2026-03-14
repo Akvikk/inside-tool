@@ -161,9 +161,38 @@
         // Bridge: Capture the engine's produced bets for dashboard display and next turn resolution
         state.activeBets = scanResult.nextBets || [];
         state.engineSnapshot = scanResult;
-        
-        // CRITICAL: Attach active signals BEFORE the UI render dispatch
-        spinObj.newSignals = state.activeBets;
+
+        // CRITICAL: Attach active MATH signals permanently to history row BEFORE we modify activeBets for AI
+        spinObj.newSignals = state.activeBets.map(b => ({
+            patternName: b.patternName,
+            filterKey: b.filterKey || b.patternName,
+            targetFace: b.targetFace,
+            comboLabel: b.comboLabel || null,
+            confidence: Number.isFinite(b.confidence) ? b.confidence : null,
+            reason: b.reason || b.subtitle || '',
+            mode: b.mode || null,
+            status: b.status || 'GO',
+            signalSource: b.signalSource || 'math'
+        }));
+
+        if (state.neuralPredictionEnabled && !options.silent && options.skipNeural !== true) {
+            // Override Dashboard Cards with an AI Loading Card
+            state.activeBets = [{
+                patternName: 'Neural Net',
+                targetFace: '?',
+                confidence: 0,
+                subtitle: 'Consulting local brain...',
+                accentColor: '#bf5af2',
+                confirmed: false
+            }];
+
+            // Run AI in background (will replace activeBets again when done)
+            if (window.requestNeuralPrediction) {
+                window.requestNeuralPrediction({ renderDashboardNow: true }).catch(error => {
+                    console.error('Neural prediction request failed:', error);
+                });
+            }
+        }
 
         // 4. SYNC TO APP STORE (TRIGGER UI RENDER)
         if (options.skipStoreSync !== true && window.AppStore && typeof window.AppStore.dispatch === 'function') {
@@ -172,43 +201,6 @@
                 : spinObj;
             window.AppStore.dispatch('history/append', safeSpin);
         }
-        
-        console.log('[ENGINE] Scan Result:', scanResult);
-        console.log('[ENGINE] Active Bets:', state.activeBets);
-
-        if (state.neuralPredictionEnabled && !options.silent && options.skipNeural !== true) {
-            // Run AI in background to keep math engine fast & responsive
-            if (window.requestNeuralPrediction) window.requestNeuralPrediction({ renderDashboardNow: true }).catch(error => {
-                console.error('Neural prediction request failed:', error);
-            });
-            alerts = window.currentAlerts || [];
-        }
-
-        // 4. PREPARE NEW SIGNALS FOR DISPLAY (Next Spin's Bets)
-        // These are what show up on the dashboard, but we also want to show them in the table row
-        if (window.EngineAdapter && typeof window.EngineAdapter.toSpinSignals === 'function') {
-            spinObj.newSignals = window.EngineAdapter.toSpinSignals(state.activeBets, {
-                neuralPredictionEnabled: state.neuralPredictionEnabled,
-                currentNeuralSignal: state.currentNeuralSignal,
-                buildPredictionLogSignal: window.buildPredictionLogSignal
-            });
-        } else if (state.neuralPredictionEnabled && state.currentNeuralSignal) {
-            if (window.buildPredictionLogSignal) spinObj.newSignals = [window.buildPredictionLogSignal(state.currentNeuralSignal)];
-        } else if (state.activeBets.length > 0) {
-            spinObj.newSignals = state.activeBets.map(b => ({
-                patternName: b.patternName,
-                filterKey: b.filterKey || b.patternName,
-                targetFace: b.targetFace,
-                comboLabel: b.comboLabel || null,
-                confidence: Number.isFinite(b.confidence) ? b.confidence : null,
-                reason: b.reason || b.subtitle || '',
-                mode: b.mode || null,
-                status: b.status || 'GO',
-                signalSource: b.signalSource || 'math'
-            }));
-        }
-
-        // UI Rendering is now handled reactively via AppStore.subscribe listening to history/append and engine/sync
 
         if (!options.preserveInput) {
             const inputField = document.getElementById('spinInput');

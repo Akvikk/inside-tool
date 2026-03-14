@@ -931,13 +931,21 @@ button.bg-gradient-to-b:active {
     background: var(--theme-crimson);
 }
 
-.combo-link-layer, .combo-badge {
+.combo-link-layer {
+    position: absolute;
+    overflow: visible;
+    transform: translateZ(0);
+    will-change: transform, left, top, width, height;
+}
+
+.combo-badge {
     transform: translateZ(0);
     will-change: transform;
 }
 
 .combo-link-layer svg {
     pointer-events: none;
+    overflow: visible;
     will-change: transform;
 }
 
