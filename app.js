@@ -349,7 +349,7 @@ window.renderComboCell = function (spin) {
              data-color="${bridge.color}"></div>
         <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[10] flex items-center justify-center">
             <span class="combo-badge px-3 py-1 rounded-md text-[10px] font-black font-mono tracking-widest border shadow-2xl transition-all duration-300" 
-                  style="color:${bridge.color}; border-color:${bridge.color}60; background-color:#030303; box-shadow: 0 0 20px ${bridge.color}60, inset 0 0 10px ${bridge.color}20;">
+                  style="color:${bridge.color}; border-color:${bridge.color}60; background-color:#0c0c0e; box-shadow: 0 0 24px ${bridge.color}80, inset 0 0 12px ${bridge.color}30;">
                 ${bridge.label}
             </span>
         </div>
@@ -384,7 +384,7 @@ window.renderRow = function (spin, targetContainer) {
         <td class="text-center"><div class="num-box ${bgClass}">${spin.num}</div></td>
         <td class="text-center relative z-[5]">${faceHTML}</td>
         <td class="text-center relative overflow-visible z-[1]">${comboHTML}</td>
-        <td class="prediction-cell pl-4" style="text-align:left; vertical-align:top; white-space:normal !important; overflow:visible !important; border-left: 1px solid rgba(255,255,255,0.03);">${predictionHTML}</td>
+        <td class="pl-4">${predictionHTML}</td>
     `;
     tbody.appendChild(tr);
 
@@ -478,8 +478,8 @@ window.layoutComboBridge = function (spinId) {
         y: currRect.top + currRect.height / 2 - cellRect.top
     };
     const targetPoint = {
-        x: badgeRect.left - cellRect.left + 4,
-        y: badgeRect.top + badgeRect.height / 2 - cellRect.top
+        x: badgeRect.left - cellRect.left,
+        y: 0 // Badge is 'top-0', so relative to cell top it is exactly 0
     };
 
     const nextGeom = { p1: prevPoint, p2: currPoint, t: targetPoint, color: color };
@@ -540,8 +540,8 @@ window.drawComboBridge = function (layer, geom) {
     const p2 = { x: geom.p2.x - minX, y: geom.p2.y - minY };
     const t = { x: geom.t.x - minX, y: geom.t.y - minY };
 
-    // TRUE Y-SHAPE WITH STEM (Screenshot Accuracy)
-    const stemX = t.x - 12; // Length of the horizontal junction
+    // TRUE Y-SHAPE WITH STEM (Screenshot Accuracy: Meet at left edge)
+    const stemX = t.x - 4; // Short stem
     path1.setAttribute('d', `M ${p1.x} ${p1.y} L ${stemX} ${t.y} L ${t.x} ${t.y}`);
     path2.setAttribute('d', `M ${p2.x} ${p2.y} L ${stemX} ${t.y} L ${t.x} ${t.y}`);
     
