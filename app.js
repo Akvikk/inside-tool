@@ -298,12 +298,15 @@ window.renderRow = function (spin) {
         faceHTML = `<div class="flex flex-wrap justify-center">${faceTags}</div>`;
     }
 
+    const comboHTML = window.renderComboCell ? window.renderComboCell(spin) : '<span class="text-gray-600">-</span>';
+    const predictionHTML = window.renderPredictionCell ? window.renderPredictionCell(spin) : '<span class="text-gray-600">-</span>';
+
     tr.innerHTML = `
         <td class="text-center font-mono text-xs text-gray-400">#${spin.index + 1}</td>
         <td class="text-center"><div class="num-box ${bgClass}">${spin.num}</div></td>
         <td class="text-center relative z-[5]">${faceHTML}</td>
-        <td class="text-center relative overflow-visible z-[1]"><span class="text-gray-600">-</span></td>
-        <td class="pl-4"><span class="text-gray-600">-</span></td>
+        <td class="text-center relative overflow-visible z-[1]">${comboHTML}</td>
+        <td class="pl-4">${predictionHTML}</td>
     `;
     tbody.appendChild(tr);
 
@@ -923,9 +926,56 @@ function updateUserBetLog(betLog) {
     });
 }
 
+// --- DATA IMPORT & EXPORT ---
+window.exportSpins = function () {
+    if (!window.state || !window.state.history || window.state.history.length === 0) {
+        alert("No spins to export!");
+        return;
+    }
+    const spins = window.state.history.map(h => h.num);
+    const data = { timestamp: Date.now(), spins: spins };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.download = `Roulette_Spins_${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+};
+
+window.importSpins = function (input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function (e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (Array.isArray(data.spins)) {
+                if (window.rebuildSessionFromSpins) {
+                    if (window.toggleHamburgerMenu) window.toggleHamburgerMenu();
+                    await window.rebuildSessionFromSpins(data.spins);
+                    
+                    const inputField = document.getElementById('spinInput');
+                    if (inputField) {
+                        inputField.value = '';
+                        inputField.focus();
+                    }
+                }
+            } else {
+                alert("Invalid file format: 'spins' array missing.");
+            }
+        } catch (err) {
+            alert("Error reading file: " + err.message);
+        }
+    };
+    reader.readAsText(file);
+    input.value = '';
+};
+
 // Prevent immediate console errors for remaining placeholders
-window.exportSpins = function () { alert("Export spins function moved to modular system."); };
-window.importSpins = function () { alert("Import spins function moved to modular system."); };
 window.changePredictionStrategy = function (val) { console.log("Changed strategy to", val); };
 window.openAiConfigModal = function () { toggleModal('aiConfigModal'); };
 window.openAiChat = function () { toggleModal('aiChatModal'); };
