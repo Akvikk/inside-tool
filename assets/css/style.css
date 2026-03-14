@@ -1394,3 +1394,19 @@ input[type=number] {
     from { opacity: 0.8; transform: scale(1); }
     to { opacity: 1; transform: scale(1.05); }
 }
+
+/* --- SIGNAL CARD PULSE ANIMATION --- */
+@keyframes signalCardPulse {
+    0%, 100% {
+        border-color: var(--border-base);
+        box-shadow: var(--shadow-base);
+    }
+    50% {
+        border-color: var(--border-pulse);
+        box-shadow: var(--shadow-pulse);
+    }
+}
+
+.signal-card {
+    animation: signalCardPulse 2.5s infinite ease-in-out;
+}

@@ -270,15 +270,19 @@ window.renderDashboardSafe = function (items) {
         const bgStyle = bet.confirmed
             ? `background: linear-gradient(135deg, ${accent}50, ${accent}15)`
             : `background: linear-gradient(135deg, ${accent}25, ${accent}05)`;
-        const borderStyle = bet.confirmed ? `border-color: ${accent}` : `border-color: ${accent}40`;
+
+        const borderBase = bet.confirmed ? accent : `${accent}40`;
+        const borderPulse = accent;
+        const shadowBase = `0 4px 20px ${accent}20`;
+        const shadowPulse = `0 4px 30px ${accent}60, inset 0 0 12px ${accent}30`;
 
         // Screenshot sync: Add hit rate stats
         const hitRate = bet.hitRate ? `${bet.hitRate}% Hit Rate` : 'Evaluating...';
         const hits = bet.hits !== undefined ? `${bet.hits}/${bet.totalHits || 14} Hits` : '';
 
         cards.push(`
-            <div class="min-w-[250px] h-[72px] px-4 py-2 rounded-lg border flex flex-col justify-center cursor-pointer select-none transition-all hover:brightness-110"
-                 style="border-left: 4px solid ${accent}; ${borderStyle}; ${bgStyle}; box-shadow: 0 4px 20px ${accent}20;">
+            <div class="min-w-[250px] h-[72px] px-4 py-2 rounded-lg border flex flex-col justify-center cursor-pointer select-none transition-all hover:brightness-110 signal-card"
+                 style="--border-base: ${borderBase}; --border-pulse: ${borderPulse}; --shadow-base: ${shadowBase}; --shadow-pulse: ${shadowPulse}; border-left: 4px solid ${accent}; ${bgStyle};">
                 <div class="text-[14px] leading-tight font-black text-white tracking-wide drop-shadow-sm uppercase">BET F${bet.targetFace}</div>
                 <div class="text-[10px] leading-tight text-white/70 font-bold mt-1 font-mono">${hits} (${hitRate})</div>
             </div>
@@ -352,21 +356,18 @@ window.renderComboCell = function (spin) {
 
     if (!bridge || !prevSpin) return '<span class="text-gray-600 font-mono text-[10px]">-</span>';
 
-    // Combo badge + dynamic bridge between matched faces
+    // SUPERIOR RESTORATION: Badge bridges the gap between rows
     return `
-        <div class="absolute inset-x-0 top-0 -translate-y-1/2 h-0 pointer-events-none select-none z-[1] flex items-center justify-center">
-            <div class="combo-link-layer absolute overflow-visible"
-                 data-prev-spin-id="${prevSpin.id}"
-                 data-prev-face="${bridge.matchedPrevFace}"
-                 data-curr-face="${bridge.matchedCurrFace}"
-                 data-color="${bridge.color}"></div>
-            <div class="relative z-[2] inline-flex items-center justify-center">
-                <div class="absolute inset-0 rounded-lg blur-md opacity-45" style="background-color:${bridge.color};"></div>
-                <span class="combo-badge relative px-3 py-1 rounded-md text-[10px] font-black font-mono tracking-widest border shadow-2xl transition-all duration-300"
-                      style="color:${bridge.color}; border-color:${bridge.color}60; background-color:#0c0c0e; box-shadow: 0 0 14px ${bridge.color}38;">
-                    ${bridge.label}
-                </span>
-            </div>
+        <div class="combo-link-layer pointer-events-none" 
+             data-prev-spin-id="${prevSpin.id}" 
+             data-prev-face="${bridge.matchedPrevFace}" 
+             data-curr-face="${bridge.matchedCurrFace}"
+             data-color="${bridge.color}"></div>
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[10] flex items-center justify-center">
+            <span class="combo-badge px-3 py-1 rounded-md text-[10px] font-black font-mono tracking-widest border shadow-2xl transition-all duration-300" 
+                  style="color:${bridge.color}; border-color:${bridge.color}60; background-color:#0c0c0e; box-shadow: 0 0 24px ${bridge.color}80, inset 0 0 12px ${bridge.color}30;">
+                ${bridge.label}
+            </span>
         </div>
     `;
 };
@@ -493,7 +494,7 @@ window.layoutComboBridge = function (spinId) {
         y: currRect.top + currRect.height / 2 - cellRect.top
     };
     const targetPoint = {
-        x: badgeRect.left - cellRect.left + 4,
+        x: badgeRect.left - cellRect.left - 2, // Land perfectly inside the badge edge
         y: badgeRect.top + badgeRect.height / 2 - cellRect.top
     };
 
@@ -515,9 +516,9 @@ window.ensureComboBridgeElements = function (layer) {
     if (!svg) {
         layer.innerHTML = `
             <svg class="overflow-visible">
-                <path class="combo-path-1" fill="none" stroke-linecap="round" stroke-width="2.5" stroke-opacity="0.85" />
-                <path class="combo-path-2" fill="none" stroke-linecap="round" stroke-width="2.5" stroke-opacity="0.85" />
-                <circle class="combo-dot" r="2.5" />
+                <path class="combo-path-1" fill="none" stroke-linecap="round" stroke-width="2.5" />
+                <path class="combo-path-2" fill="none" stroke-linecap="round" stroke-width="2.5" />
+                <circle class="combo-dot" r="3" />
             </svg>
         `;
         svg = layer.querySelector('svg');
@@ -532,14 +533,15 @@ window.ensureComboBridgeElements = function (layer) {
 
 window.drawComboBridge = function (layer, geom) {
     const { svg, path1, path2, dot } = window.ensureComboBridgeElements(layer);
-
-    const minX = Math.min(geom.p1.x, geom.p2.x, geom.t.x) - 10;
-    const maxX = Math.max(geom.p1.x, geom.p2.x, geom.t.x) + 6;
-    const minY = Math.min(geom.p1.y, geom.p2.y, geom.t.y) - 12;
-    const maxY = Math.max(geom.p1.y, geom.p2.y, geom.t.y) + 12;
-
-    const width = Math.max(24, maxX - minX);
-    const height = Math.max(24, maxY - minY);
+    
+    // High-spread capture
+    const minX = Math.min(geom.p1.x, geom.p2.x, geom.t.x) - 20;
+    const maxX = Math.max(geom.p1.x, geom.p2.x, geom.t.x) + 20;
+    const minY = Math.min(geom.p1.y, geom.p2.y, geom.t.y) - 20;
+    const maxY = Math.max(geom.p1.y, geom.p2.y, geom.t.y) + 20;
+    
+    const width = Math.max(40, maxX - minX);
+    const height = Math.max(40, maxY - minY);
 
     layer.style.left = `${minX}px`;
     layer.style.top = `${minY}px`;
@@ -554,24 +556,24 @@ window.drawComboBridge = function (layer, geom) {
     const p2 = { x: geom.p2.x - minX, y: geom.p2.y - minY };
     const t = { x: geom.t.x - minX, y: geom.t.y - minY };
 
-    const c1x = p1.x + Math.max(12, Math.abs(t.x - p1.x) * 0.45);
-    const c2x = p2.x + Math.max(12, Math.abs(t.x - p2.x) * 0.45);
-    const cx = t.x - Math.max(10, Math.min(20, Math.abs(t.x - Math.min(p1.x, p2.x)) * 0.2));
-
-    path1.setAttribute('d', `M ${p1.x} ${p1.y} C ${c1x} ${p1.y}, ${cx} ${t.y}, ${t.x} ${t.y}`);
-    path2.setAttribute('d', `M ${p2.x} ${p2.y} C ${c2x} ${p2.y}, ${cx} ${t.y}, ${t.x} ${t.y}`);
-    [path1, path2].forEach((p) => {
+    // TRUE Y-SHAPE WITH STEM (Screenshot Accuracy: Sharp junction meeting dot)
+    const stemX = t.x - 6; // longer stem for that premium 'crows foot' feel
+    path1.setAttribute('d', `M ${p1.x} ${p1.y} L ${stemX} ${t.y} L ${t.x} ${t.y}`);
+    path2.setAttribute('d', `M ${p2.x} ${p2.y} L ${stemX} ${t.y} L ${t.x} ${t.y}`);
+    
+    // Premium Vibrant Glow Styling
+    [path1, path2].forEach(p => {
         p.setAttribute('stroke', geom.color);
         p.setAttribute('stroke-width', '2.5');
-        p.setAttribute('stroke-opacity', '0.9');
-        p.style.filter = `drop-shadow(0 0 6px ${geom.color})`;
+        p.setAttribute('stroke-opacity', '1.0');
+        p.style.filter = `drop-shadow(0 0 8px ${geom.color})`;
     });
-
+    
     dot.setAttribute('cx', t.x);
     dot.setAttribute('cy', t.y);
     dot.setAttribute('fill', geom.color);
-    dot.setAttribute('r', '2.5');
-    dot.style.filter = `drop-shadow(0 0 10px ${geom.color})`;
+    dot.setAttribute('r', '3');
+    dot.style.filter = `drop-shadow(0 0 12px ${geom.color})`;
 }
 
 window.animateComboBridge = function (layer, fromGeom, toGeom, duration = 260) {
