@@ -4,7 +4,52 @@ import { state } from '../engine/state.js';
     // --- PUBLIC INTERFACE ---
     window.UiController = {
         init,
+        openHindsightModal
     };
+
+    // Make it globally accessible for the onclick attribute
+    window.openHindsightModal = openHindsightModal;
+
+    async function openHindsightModal() {
+        if (!window.HindsightModal || !window.AiBrain) {
+            console.error("HindsightModal or AiBrain not initialized.");
+            return;
+        }
+
+        // Show modal immediately with a loading state
+        window.HindsightModal.show(); 
+
+        try {
+            // These stats need to be gathered from the engine and user history
+            const history = window.history || [];
+            // Assumes these functions are exposed globally, which is consistent with other parts of the codebase.
+            const userStats = window.getUserStats ? window.getUserStats() : { netUnits: 0, betLog: [] };
+            const engineStats = window.getEngineStats ? window.getEngineStats() : { totalWins: 0, totalLosses: 0, signalLog: [] };
+
+            const analysis = await window.AiBrain.requestFullSessionReview(history, userStats, engineStats);
+
+            if (analysis.error) {
+                throw new Error(analysis.error);
+            }
+            
+            // Reformat the critique for display
+            const formattedAnalysis = {
+                actualProfit: analysis.actualNet,
+                potentialProfit: analysis.potentialNet,
+                tacticalCritique: analysis.critique.critiques.map(c => `<strong>${c.title}:</strong> ${c.suggestion}`).join('<br>')
+            };
+
+            window.HindsightModal.show(formattedAnalysis);
+        } catch (error) {
+            console.error("Error during AI Hindsight review:", error);
+            const errorAnalysis = {
+                actualProfit: 'N/A',
+                potentialProfit: 'N/A',
+                tacticalCritique: `An error occurred: ${error.message}`
+            };
+            window.HindsightModal.show(errorAnalysis);
+        }
+    }
 
     function init() {
         if (window.HindsightModal && typeof window.HindsightModal.init === 'function') {

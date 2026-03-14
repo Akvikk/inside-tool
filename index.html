@@ -618,17 +618,32 @@
     </div>
 
     <!-- SCRIPTS -->
-    <script src="engine-core.js"></script>
-    <script src="predictionEngine.js"></script>
-    <script src="strategies/strategy.series.js"></script>
-    <script src="strategies/strategy.combo.js"></script>
-    <script src="engine-contract.js"></script>
-    <script src="engine-adapter.js"></script>
-    <script src="store.js"></script>
-    <script src="ui-renderers.js"></script>
+    <!-- ENGINE -->
+    <script src="js/modules/engine/state.js"></script>
+    <script src="js/modules/engine/core.js"></script>
+    <script src="js/modules/engine/prediction.js"></script>
+    <script src="js/modules/engine/contract.js"></script>
+    <script src="js/modules/engine/adapter.js"></script>
     
+    <!-- STRATEGIES -->
+    <script src="js/strategies/strategy.series.js"></script>
+    <script src="js/strategies/strategy.combo.js"></script>
+
+    <!-- STORE -->
+    <script src="store.js"></script>
+
+    <!-- UI -->
+    <script src="js/modules/ui/renderers.js"></script>
+    <script src="js/modules/ui/modals.js"></script>
+    <script src="js/modules/ui/hud-manager.js"></script>
+    <script src="js/modules/ui/hindsight-modal.js"></script>
+    <script src="js/modules/ui/controller.js"></script>
+
+    <!-- INPUT -->
+    <script src="js/modules/input/processor.js"></script>
+
     <!-- AI TACTICAL BRAIN: ISOLATED DECISION MODULE -->
-    <script src="ai-brain.js"></script>
+    <script src="js/modules/ai/brain.js"></script>
 
     <!-- CORE LOGIC: UI & APPLICATION -->
     <script src="app.js"></script>
