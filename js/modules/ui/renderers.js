@@ -167,35 +167,66 @@
         }
     };
 
-    window.renderPredictionCell = function (spin) {
-        const lines = [];
+    function formatPredictionDetail(entry) {
+        const parts = [];
+        if (entry && entry.targetFace !== undefined && entry.targetFace !== null && entry.targetFace !== '?') {
+            parts.push(`F${entry.targetFace}`);
+        }
 
-        // 1. Render Resolved Results (History of this spin's impact)
+        const label = entry && (entry.comboLabel || entry.patternName);
+        if (label) parts.push(label);
+
+        if (entry && Number.isFinite(entry.confidence)) {
+            parts.push(`${entry.confidence}%`);
+        }
+
+        return parts.join(' • ');
+    }
+
+    window.renderPredictionCell = function (spin) {
+        const blocks = [];
+
         if (spin.resolvedBets && spin.resolvedBets.length > 0) {
             spin.resolvedBets.forEach(bet => {
-                const icon = bet.isWin ? '<i class="fas fa-check-circle text-[#30D158] mr-2"></i>' : '<i class="fas fa-times-circle text-[#FF453A] mr-2"></i>';
+                const icon = bet.isWin ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-times-circle"></i>';
                 const status = bet.isWin ? 'WIN' : 'LOSS';
-                const color = bet.isWin ? 'text-[#30D158]' : 'text-[#FF453A]';
-                lines.push(`
-                    <div class="flex items-center text-[10px] font-mono font-bold ${color} mb-1 opacity-90">
-                        ${icon}${status}: F${bet.targetFace} (${bet.patternName || 'Perimeter'})
+                const tone = bet.isWin ? 'prediction-entry--win' : 'prediction-entry--loss';
+                const detail = formatPredictionDetail(bet) || 'Perimeter';
+
+                blocks.push(`
+                    <div class="prediction-entry-block">
+                        <div class="prediction-entry ${tone}">
+                            <span class="prediction-entry-status">${icon}${status}</span>
+                            <span class="prediction-entry-detail">${detail}</span>
+                        </div>
                     </div>
                 `);
             });
         }
 
-        // 2. Render Active Signals (What this spin just triggered)
         const signals = spin.newSignals || [];
         signals.forEach(sig => {
-            lines.push(`
-                <div class="flex items-center text-[10px] font-mono font-bold text-gray-500 mb-1 tracking-tight">
-                    Active Signal: ${sig.patternName || 'Prediction Perimeter'}
+            const detail = formatPredictionDetail(sig) || 'Prediction Perimeter';
+            const note = sig.reason
+                ? `<div class="prediction-entry-note">${sig.reason}</div>`
+                : '';
+
+            blocks.push(`
+                <div class="prediction-entry-block">
+                    <div class="prediction-entry prediction-entry--signal">
+                        <span class="prediction-entry-label">Active Signal</span>
+                        <span class="prediction-entry-detail">${detail}</span>
+                    </div>
+                    ${note}
                 </div>
             `);
         });
 
-        if (lines.length === 0) return '<span class="text-gray-600 font-mono text-[10px]">-</span>';
-        return lines.join('');
+        if (blocks.length === 0) {
+            return '<span class="prediction-empty">-</span>';
+        }
+
+        return `<div class="prediction-cell-content">${blocks.join('')}</div>`;
     };
 
     window.renderComboCell = function (spin) {
@@ -260,7 +291,7 @@
             <td class="text-center"><div class="num-box ${bgClass}">${spin.num}</div></td>
             <td class="text-center relative z-[5]">${faceHTML}</td>
             <td class="text-center relative overflow-visible z-[1]">${comboHTML}</td>
-            <td class="pl-4">${predictionHTML}</td>
+            <td class="prediction-cell">${predictionHTML}</td>
         `;
         tbody.appendChild(tr);
 

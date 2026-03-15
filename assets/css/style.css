@@ -1006,11 +1006,87 @@ button.bg-gradient-to-b:active {
 }
 
 .history-table td.prediction-cell {
+    padding: 10px 14px 10px 18px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.prediction-cell-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+}
+
+.prediction-entry-block {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: 100%;
+}
+
+.prediction-entry {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    width: 100%;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.prediction-entry-status,
+.prediction-entry-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 0;
-    /* Ensures ellipsis works in table-layout: fixed */
+}
+
+.prediction-entry-status i {
+    font-size: 12px;
+}
+
+.prediction-entry--win .prediction-entry-status {
+    color: #30D158;
+}
+
+.prediction-entry--loss .prediction-entry-status {
+    color: #FF453A;
+}
+
+.prediction-entry-label {
+    color: rgba(255, 255, 255, 0.48);
+    text-transform: uppercase;
+}
+
+.prediction-entry-detail {
+    min-width: 0;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+    text-align: right;
+    word-break: break-word;
+}
+
+.prediction-entry-note {
+    color: rgba(255, 255, 255, 0.48);
+    font-size: 11px;
+    line-height: 1.45;
+    text-align: right;
+}
+
+.prediction-empty {
+    color: rgba(255, 255, 255, 0.32);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 12px;
 }
 
 
