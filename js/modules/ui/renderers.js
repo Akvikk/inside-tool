@@ -806,12 +806,21 @@
     };
 
     function renderStrategyAnalytics() {
-        const coreStats = window.EngineCore && window.EngineCore.stats
-            ? window.EngineCore.stats
-            : { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {} };
+        const displayStrategy = state && state.analyticsDisplayStrategy === 'combo' ? 'combo' : 'series';
+        const analytics = window.EngineCore && typeof window.EngineCore.getAnalyticsData === 'function'
+            ? window.EngineCore.getAnalyticsData(displayStrategy)
+            : null;
+        const coreStats = analytics || {
+            wins: 0,
+            losses: 0,
+            net: 0,
+            streak: 0,
+            history: [0],
+            patterns: {}
+        };
 
-        const totalSignals = coreStats.totalWins + coreStats.totalLosses;
-        const hitRate = totalSignals === 0 ? 0 : Math.round((coreStats.totalWins / totalSignals) * 100);
+        const totalSignals = coreStats.wins + coreStats.losses;
+        const hitRate = totalSignals === 0 ? 0 : Math.round((coreStats.wins / totalSignals) * 100);
 
         const hrEl = document.getElementById('kpiHitRate');
         if (hrEl) {
@@ -821,22 +830,22 @@
 
         const netEl = document.getElementById('kpiNet');
         if (netEl) {
-            netEl.innerText = (coreStats.netUnits > 0 ? '+' : '') + coreStats.netUnits;
-            netEl.className = `text-2xl font-bold tracking-tight ${coreStats.netUnits > 0 ? 'text-[#30D158]' : (coreStats.netUnits < 0 ? 'text-[#FF453A]' : 'text-white')}`;
+            netEl.innerText = (coreStats.net > 0 ? '+' : '') + coreStats.net;
+            netEl.className = `text-2xl font-bold tracking-tight ${coreStats.net > 0 ? 'text-[#30D158]' : (coreStats.net < 0 ? 'text-[#FF453A]' : 'text-white')}`;
         }
 
         const sigEl = document.getElementById('kpiSignals');
         if (sigEl) sigEl.innerText = totalSignals;
 
-        const s = coreStats.currentStreak || 0;
+        const s = coreStats.streak || 0;
         const formEl = document.getElementById('kpiForm');
         if (formEl) {
             formEl.innerText = s > 0 ? `W${s}` : (s < 0 ? `L${Math.abs(s)}` : '-');
             formEl.className = `text-2xl font-bold tracking-tight ${s > 0 ? 'text-[#30D158]' : (s < 0 ? 'text-[#FF453A]' : 'text-gray-400')}`;
         }
 
-        drawAdvancedGraph(coreStats.bankrollHistory, coreStats.totalWins, coreStats.totalLosses, 'graphContainer');
-        updatePatternHeatmap(coreStats.patternStats);
+        drawAdvancedGraph(coreStats.history, coreStats.wins, coreStats.losses, 'graphContainer');
+        updatePatternHeatmap(coreStats.patterns);
     }
 
     window.renderUserAnalytics = function () {
@@ -868,6 +877,11 @@
         const container = document.getElementById(containerId);
         if (!container) return;
 
+        const sourceHistory = Array.isArray(historyArray) ? historyArray.slice() : [];
+        const normalizedHistory = sourceHistory.length >= 2
+            ? sourceHistory
+            : [sourceHistory[0] || 0, sourceHistory[0] || 0];
+
         container.innerHTML = '';
         container.className = "flex flex-col h-full w-full rounded-b-xl overflow-hidden";
 
@@ -879,31 +893,26 @@
         hudDiv.className = "h-[20%] w-full flex justify-between items-center px-4 text-[10px] font-bold bg-white/5 border-t border-white/5 backdrop-blur-sm";
         hudDiv.innerHTML = `
             <span class="text-[#4ade80] drop-shadow-sm tracking-wide">WINS: ${winCount || 0}</span>
-            <span class="text-[#e5e7eb] drop-shadow-sm tracking-wide">SPINS: ${historyArray ? Math.max(0, historyArray.length - 1) : 0}</span>
+            <span class="text-[#e5e7eb] drop-shadow-sm tracking-wide">SPINS: ${Math.max(0, sourceHistory.length - 1)}</span>
             <span class="text-[#f87171] drop-shadow-sm tracking-wide">LOSSES: ${lossCount || 0}</span>
         `;
         container.appendChild(hudDiv);
-
-        if (!historyArray || historyArray.length < 2) {
-            chartDiv.innerHTML = `<div class="flex items-center justify-center h-full text-xs text-[#8E8E93] font-mono animate-pulse">Waiting for Data...</div>`;
-            return;
-        }
 
         const vWidth = 600;
         const vHeight = 200;
         const padding = 10;
 
-        const maxVal = Math.max(...historyArray);
-        const minVal = Math.min(...historyArray);
+        const maxVal = Math.max(...normalizedHistory);
+        const minVal = Math.min(...normalizedHistory);
         let range = maxVal - minVal;
         if (range === 0) range = 2;
 
-        const getX = i => (i / (historyArray.length - 1)) * (vWidth - 2 * padding) + padding;
+        const getX = i => (i / (normalizedHistory.length - 1)) * (vWidth - 2 * padding) + padding;
         const getY = v => vHeight - padding - ((v - minVal) / range) * (vHeight - 2 * padding);
 
-        let pathD = `M ${getX(0)} ${getY(historyArray[0])}`;
-        for (let i = 1; i < historyArray.length; i++) {
-            pathD += ` L ${getX(i)} ${getY(historyArray[i])}`;
+        let pathD = `M ${getX(0)} ${getY(normalizedHistory[0])}`;
+        for (let i = 1; i < normalizedHistory.length; i++) {
+            pathD += ` L ${getX(i)} ${getY(normalizedHistory[i])}`;
         }
 
         const zeroY = getY(0);
@@ -935,6 +944,8 @@
 
         chartDiv.innerHTML = svgContent;
     }
+
+    window.drawAdvancedGraph = drawAdvancedGraph;
 
     function updatePatternHeatmap(patternData) {
         const tbody = document.getElementById('heatmapBody');

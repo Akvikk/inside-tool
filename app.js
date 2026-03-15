@@ -723,7 +723,11 @@ window.setAnalyticsDisplayStrategy = function (strat) {
         if (pillBg) pillBg.style.transform = 'translateX(100%)';
     }
     if (window.saveSessionData) window.saveSessionData();
-    renderStrategyAnalytics();
+    if (window.renderAnalytics) {
+        window.renderAnalytics();
+    } else {
+        renderStrategyAnalytics();
+    }
 };
 
 window.changeIntelMode = function (mode) {
@@ -924,12 +928,21 @@ window.renderIntelligencePanel = function() {
 };
 
 function renderStrategyAnalytics() {
-    const coreStats = window.EngineCore && window.EngineCore.stats
-        ? window.EngineCore.stats
-        : { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {} };
+    const displayStrategy = state && state.analyticsDisplayStrategy === 'combo' ? 'combo' : 'series';
+    const analytics = window.EngineCore && typeof window.EngineCore.getAnalyticsData === 'function'
+        ? window.EngineCore.getAnalyticsData(displayStrategy)
+        : null;
+    const coreStats = analytics || {
+        wins: 0,
+        losses: 0,
+        net: 0,
+        streak: 0,
+        history: [0],
+        patterns: {}
+    };
 
-    const totalSignals = coreStats.totalWins + coreStats.totalLosses;
-    const hitRate = totalSignals === 0 ? 0 : Math.round((coreStats.totalWins / totalSignals) * 100);
+    const totalSignals = coreStats.wins + coreStats.losses;
+    const hitRate = totalSignals === 0 ? 0 : Math.round((coreStats.wins / totalSignals) * 100);
 
     const hrEl = document.getElementById('kpiHitRate');
     if (hrEl) {
@@ -939,22 +952,24 @@ function renderStrategyAnalytics() {
 
     const netEl = document.getElementById('kpiNet');
     if (netEl) {
-        netEl.innerText = (coreStats.netUnits > 0 ? '+' : '') + coreStats.netUnits;
-        netEl.className = `text-2xl font-bold tracking-tight ${coreStats.netUnits > 0 ? 'text-[#30D158]' : (coreStats.netUnits < 0 ? 'text-[#FF453A]' : 'text-white')}`;
+        netEl.innerText = (coreStats.net > 0 ? '+' : '') + coreStats.net;
+        netEl.className = `text-2xl font-bold tracking-tight ${coreStats.net > 0 ? 'text-[#30D158]' : (coreStats.net < 0 ? 'text-[#FF453A]' : 'text-white')}`;
     }
 
     const sigEl = document.getElementById('kpiSignals');
     if (sigEl) sigEl.innerText = totalSignals;
 
-    const s = coreStats.currentStreak || 0;
+    const s = coreStats.streak || 0;
     const formEl = document.getElementById('kpiForm');
     if (formEl) {
         formEl.innerText = s > 0 ? `W${s}` : (s < 0 ? `L${Math.abs(s)}` : '-');
         formEl.className = `text-2xl font-bold tracking-tight ${s > 0 ? 'text-[#30D158]' : (s < 0 ? 'text-[#FF453A]' : 'text-gray-400')}`;
     }
 
-    drawAdvancedGraph(coreStats.bankrollHistory, coreStats.totalWins, coreStats.totalLosses, 'graphContainer');
-    updatePatternHeatmap(coreStats.patternStats);
+    if (typeof window.drawAdvancedGraph === 'function') {
+        window.drawAdvancedGraph(coreStats.history, coreStats.wins, coreStats.losses, 'graphContainer');
+    }
+    updatePatternHeatmap(coreStats.patterns);
 }
 
 window.renderUserAnalytics = function () {
@@ -978,7 +993,9 @@ window.renderUserAnalytics = function () {
     const totEl = document.getElementById('userTotal');
     if (totEl) totEl.innerText = totalBets;
 
-    drawAdvancedGraph(uStats.bankrollHistory, uStats.totalWins, uStats.totalLosses, 'userGraphContainer');
+    if (typeof window.drawAdvancedGraph === 'function') {
+        window.drawAdvancedGraph(uStats.bankrollHistory, uStats.totalWins, uStats.totalLosses, 'userGraphContainer');
+    }
     updateUserBetLog(uStats.betLog);
 };
 
