@@ -475,7 +475,6 @@
         const hud = document.getElementById('analyticsHUD');
         if (!hud || hud.classList.contains('hidden')) return;
 
-        const headerTitle = document.getElementById('hudHeaderTitle');
         const hudLabel = document.getElementById('hudWindowValue');
         const hudScopeBtn = document.getElementById('hudScopeBtn');
         const hudSummary = document.getElementById('hudSummary');
@@ -505,14 +504,6 @@
         syncHudColdButton(isHudColdMode);
         if (document.body && document.body.classList) {
             document.body.classList.toggle('hud-cold-mode', isHudColdMode);
-        }
-
-        if (headerTitle) {
-            const iconClass = isHudColdMode
-                ? 'fa-snowflake'
-                : (hudStrategy === 'combo' ? 'fa-chart-line' : 'fa-wave-square');
-            headerTitle.innerHTML = `<i class="fas ${iconClass}"></i><span>${displayData.strategyLabel} ${isHudColdMode ? 'Cold Scan' : 'Live Feed'}</span>`;
-            headerTitle.style.color = themeColor;
         }
 
         if (hudLabel) {
