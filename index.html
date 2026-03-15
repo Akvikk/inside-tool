@@ -629,6 +629,14 @@
                 <i class="fas fa-satellite-dish mr-1"></i> Live Feed
             </span>
             <div class="flex items-center gap-1.5">
+                <div class="flex items-center rounded bg-black/30 border border-white/10 p-0.5">
+                    <button onclick="setHudAnalyticsStrategy('series')" id="hudStrategySeriesBtn"
+                        class="px-1.5 min-w-[28px] h-4 flex items-center justify-center rounded text-[8px] font-black tracking-[0.12em] text-white/55 transition-colors"
+                        title="Show series strategy in HUD">SER</button>
+                    <button onclick="setHudAnalyticsStrategy('combo')" id="hudStrategyComboBtn"
+                        class="px-1.5 min-w-[28px] h-4 flex items-center justify-center rounded text-[8px] font-black tracking-[0.12em] text-white/55 transition-colors"
+                        title="Show combo strategy in HUD">COM</button>
+                </div>
                 <button onclick="openHindsightModal()"
                     class="px-1.5 h-4 flex items-center justify-center rounded bg-white/10 border border-white/10 text-[10px] font-bold text-[#bf5af2] hover:text-white transition-colors"
                     title="AI Hindsight Review"><i class="fas fa-brain"></i></button>
