@@ -1557,28 +1557,49 @@ input[type=number] {
     appearance: textfield;
 }
 
-/* --- REDESIGNED ANALYTICS HUD (PROGRADE) --- */
+/* --- ANALYTICS HUD (INDUSTRY STANDARD) --- */
 #analyticsHUD {
     position: fixed;
     isolation: isolate;
-    background: rgba(12, 12, 12, 0.95);
-    backdrop-filter: blur(30px) saturate(150%);
-    -webkit-backdrop-filter: blur(30px) saturate(150%);
-    border-radius: 8px;
-    border: 1px solid rgba(212, 175, 55, 0.2);
-    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease;
+    background:
+        radial-gradient(circle at top right, rgba(48, 209, 88, 0.08), transparent 38%),
+        linear-gradient(180deg, rgba(14, 15, 19, 0.98), rgba(8, 9, 12, 0.97));
+    backdrop-filter: blur(26px) saturate(145%);
+    -webkit-backdrop-filter: blur(26px) saturate(145%);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+        0 28px 80px rgba(0, 0, 0, 0.78),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
 }
 
-#analyticsHUD::before,
+#analyticsHUD::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 24%);
+}
+
 #analyticsHUD::after {
-    display: none;
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
 #analyticsHUD.hud-interacting {
-    transform: scale(1.01);
-    border-color: rgba(212, 175, 55, 0.4);
-    box-shadow: 0 28px 68px rgba(0, 0, 0, 0.9), 0 0 24px rgba(212, 175, 55, 0.2);
+    transform: scale(1.008);
+    border-color: rgba(48, 209, 88, 0.26);
+    box-shadow:
+        0 34px 96px rgba(0, 0, 0, 0.86),
+        0 0 24px rgba(48, 209, 88, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .hud-no-select {
@@ -1586,47 +1607,327 @@ input[type=number] {
 }
 
 #hudHeader {
-    border-radius: 8px 8px 0 0;
-    border-bottom: 1px solid rgba(212, 175, 55, 0.3);
-    background: #050505;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 14px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012));
     touch-action: none;
+}
+
+.hud-header-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.hud-header-kicker {
+    color: rgba(255, 255, 255, 0.42);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+
+.hud-header-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #30D158;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.hud-header-title i {
+    font-size: 12px;
+    opacity: 0.9;
+}
+
+.hud-header-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.hud-window-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.hud-close-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.6);
+    transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.hud-close-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.09);
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+#hudBody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+}
+
+.hud-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.hud-segment {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    padding: 4px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.hud-segment-btn {
+    min-height: 30px;
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    transition: color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.hud-segment-btn.is-active {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.hud-toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 38px;
+    padding: 0 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.hud-toolbar-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.14);
+}
+
+.hud-toolbar-btn i {
+    font-size: 11px;
+}
+
+.hud-toolbar-btn-ai {
+    padding: 0;
+    width: 38px;
+    min-width: 38px;
+    color: #bf5af2;
+    background: rgba(191, 90, 242, 0.08);
+    border-color: rgba(191, 90, 242, 0.24);
+}
+
+.hud-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.hud-summary-card {
+    min-width: 0;
+    padding: 10px 11px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.025));
+}
+
+.hud-summary-label {
+    color: rgba(255, 255, 255, 0.38);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.hud-summary-value {
+    margin-top: 6px;
+    color: #f5f5f7;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hud-summary-copy {
+    margin-top: 6px;
+    color: rgba(255, 255, 255, 0.52);
+    font-size: 10px;
+    line-height: 1.35;
+}
+
+.hud-table-shell {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015));
+    overflow: hidden;
+}
+
+.hud-table-head {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr) 50px;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.hud-table-head > :nth-child(2) {
+    text-align: center;
+}
+
+.hud-table-head > :last-child {
+    text-align: right;
+}
+
+.hud-table-body {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    color: rgba(245, 245, 247, 0.94);
+}
+
+.hud-row {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr) 50px;
+    gap: 10px;
+    align-items: center;
+    padding: 9px 8px;
+    border-radius: 10px;
+    transition: background 0.18s ease;
+}
+
+.hud-row:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.hud-row-label {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+}
+
+.hud-row-metrics {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.hud-row-ratio {
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 0.04em;
+}
+
+.hud-row-bar {
+    position: relative;
+    height: 6px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.hud-row-bar-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: inherit;
+    opacity: 0.95;
+}
+
+.hud-row-percent {
+    font-size: 12px;
+    font-weight: 800;
+    text-align: right;
+}
+
+.hud-empty-state {
+    padding: 28px 14px;
+    color: rgba(255, 255, 255, 0.38);
+    font-size: 12px;
+    font-style: italic;
+    text-align: center;
 }
 
 #hudResizeHandle {
     touch-action: none;
 }
 
-#hudScopeBtn {
-    border-radius: 999px;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
-}
-
-#hudStats {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0));
-    color: rgba(245, 245, 247, 0.92);
-}
-
-#hudStats .grid {
-    border-radius: 8px;
-}
-
-#hudStats .grid:hover {
-    background: rgba(255, 255, 255, 0.055);
-}
-
-#hudStats .border-b {
-    border-bottom-color: rgba(255, 255, 255, 0.16) !important;
-}
-
 /* --- HUD COLD TRACKER ACCENT --- */
 .hud-cold-mode #analyticsHUD {
-    border-color: rgba(6, 182, 212, 0.3);
-}
-
-.hud-cold-mode #hudHeader span {
-    color: #06b6d4 !important;
+    border-color: rgba(6, 182, 212, 0.26);
+    box-shadow:
+        0 28px 80px rgba(0, 0, 0, 0.78),
+        0 0 26px rgba(6, 182, 212, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 /* --- TOGGLE SWITCH (AI HINDSIGHT) --- */

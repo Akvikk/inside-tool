@@ -50,12 +50,24 @@
         const isSeries = activeStrategy !== 'combo';
 
         if (seriesBtn) {
-            seriesBtn.className = `px-1.5 min-w-[28px] h-4 flex items-center justify-center rounded text-[8px] font-black tracking-[0.12em] transition-colors ${isSeries ? 'bg-[#30D158]/20 text-[#30D158]' : 'text-white/55 hover:text-white'}`;
+            seriesBtn.className = `hud-segment-btn ${isSeries ? 'is-active' : ''}`.trim();
         }
 
         if (comboBtn) {
-            comboBtn.className = `px-1.5 min-w-[28px] h-4 flex items-center justify-center rounded text-[8px] font-black tracking-[0.12em] transition-colors ${isSeries ? 'text-white/55 hover:text-white' : 'bg-[#0A84FF]/20 text-[#0A84FF]'}`;
+            comboBtn.className = `hud-segment-btn ${isSeries ? '' : 'is-active'}`.trim();
         }
+    }
+
+    function syncHudColdButton(isColdMode) {
+        const btn = document.getElementById('hudColdBtn');
+        if (!btn) return;
+
+        btn.className = 'hud-toolbar-btn';
+        btn.style.color = isColdMode ? '#06b6d4' : '#ff9f0a';
+        btn.style.borderColor = isColdMode ? 'rgba(6, 182, 212, 0.22)' : 'rgba(255, 159, 10, 0.22)';
+        btn.style.background = isColdMode ? 'rgba(6, 182, 212, 0.08)' : 'rgba(255, 159, 10, 0.08)';
+        btn.title = isColdMode ? 'Switch to hot view' : 'Switch to cold view';
+        btn.innerHTML = `<i class="fas ${isColdMode ? 'fa-snowflake' : 'fa-fire'}"></i><span id="hudColdBtnLabel">${isColdMode ? 'Cold' : 'Hot'}</span>`;
     }
 
     function buildSeriesHudStats(history, windowSetting) {
@@ -112,6 +124,132 @@
         };
     }
 
+    function buildHudSummary(options) {
+        const {
+            displayLabel,
+            strategyCopy,
+            sampleValue,
+            sampleCopy,
+            leader,
+            leaderPercent,
+            leaderSampleSize,
+            modeLabel
+        } = options;
+
+        const leaderRatio = leader
+            ? `${leader.hits}/${Math.max(0, leaderSampleSize || 0)}`
+            : '0/0';
+        const leaderCopy = leader
+            ? `${leaderRatio} | ${leaderPercent}% ${modeLabel.toLowerCase()}`
+            : 'No dominant read';
+
+        return `
+            <div class="hud-summary-card">
+                <div class="hud-summary-label">Strategy</div>
+                <div class="hud-summary-value">${displayLabel}</div>
+                <div class="hud-summary-copy">${strategyCopy}</div>
+            </div>
+            <div class="hud-summary-card">
+                <div class="hud-summary-label">Sample</div>
+                <div class="hud-summary-value">${sampleValue}</div>
+                <div class="hud-summary-copy">${sampleCopy}</div>
+            </div>
+            <div class="hud-summary-card">
+                <div class="hud-summary-label">Leader</div>
+                <div class="hud-summary-value">${leader ? leader.label : '--'}</div>
+                <div class="hud-summary-copy">${leaderCopy}</div>
+            </div>
+        `;
+    }
+
+    function buildHudEmptyState(message) {
+        return `<div class="hud-empty-state">${message}</div>`;
+    }
+
+    function buildHudRowHtml(item, sampleSize, isHudColdMode, themeColor) {
+        const ratioSampleSize = Number.isFinite(item.sampleSize) ? item.sampleSize : sampleSize;
+        const percent = isHudColdMode ? item.coldPercent : item.hotPercent;
+        const emphasis = isHudColdMode ? percent >= 80 : percent >= 20;
+        const opacity = emphasis ? '1' : '0.62';
+        const barColor = emphasis ? themeColor : 'rgba(255,255,255,0.28)';
+
+        return `
+            <div class="hud-row">
+                <div class="hud-row-label" style="color:${item.color}; opacity:${opacity}">${item.label}</div>
+                <div class="hud-row-metrics" style="opacity:${opacity}">
+                    <div class="hud-row-ratio">${item.hits}/${ratioSampleSize}</div>
+                    <div class="hud-row-bar">
+                        <span class="hud-row-bar-fill" style="width:${Math.max(0, Math.min(100, percent))}%; background:${barColor};"></span>
+                    </div>
+                </div>
+                <div class="hud-row-percent" style="color:${barColor}; opacity:${opacity}">${percent}%</div>
+            </div>
+        `;
+    }
+
+    function getHudScopeSummary() {
+        const history = window.state ? window.state.history : [];
+        const hudHistoryScope = getHudScope();
+        const recentWindow = getRecentWindow();
+        if (hudHistoryScope === 'recent') {
+            return history.length > 0
+                ? `Last ${Math.min(recentWindow, history.length)} Spins`
+                : `Last ${recentWindow} Spins`;
+        }
+        return history.length > 0 ? `All ${history.length} Spins` : 'All History';
+    }
+
+    function getHudDisplayData(history, hudStrategy, windowSetting) {
+        if (hudStrategy === 'series') {
+            const seriesStats = buildSeriesHudStats(history, windowSetting);
+            return {
+                columnLabel: 'Sequence',
+                strategyLabel: 'Series',
+                strategyCopy: 'Sequence transition telemetry',
+                items: Array.isArray(seriesStats.items) ? seriesStats.items.slice() : [],
+                sampleSize: Number.isFinite(seriesStats.sampleSize) ? seriesStats.sampleSize : 0,
+                sampleCopy: Number.isFinite(seriesStats.sampleSize) && seriesStats.sampleSize === 1
+                    ? '1 transition measured'
+                    : `${Number.isFinite(seriesStats.sampleSize) ? seriesStats.sampleSize : 0} transitions measured`
+            };
+        }
+
+        if (!window.PredictionEngine || typeof window.PredictionEngine.calculatePerimeterStats !== 'function') {
+            return {
+                columnLabel: 'Combo',
+                strategyLabel: 'Combo',
+                strategyCopy: 'Perimeter pair telemetry',
+                items: [],
+                sampleSize: 0,
+                sampleCopy: 'Prediction engine unavailable'
+            };
+        }
+
+        const comboStats = window.PredictionEngine.calculatePerimeterStats(history, windowSetting);
+        if (!comboStats || !comboStats.counts) {
+            return {
+                columnLabel: 'Combo',
+                strategyLabel: 'Combo',
+                strategyCopy: 'Perimeter pair telemetry',
+                items: [],
+                sampleSize: 0,
+                sampleCopy: 'Awaiting telemetry'
+            };
+        }
+
+        const transitionCount = Number.isFinite(comboStats.transitionCount) ? comboStats.transitionCount : 0;
+        return {
+            columnLabel: 'Combo',
+            strategyLabel: 'Combo',
+            strategyCopy: 'Perimeter pair telemetry',
+            items: Array.isArray(comboStats.comboStats) ? comboStats.comboStats.slice() : [],
+            sampleSize: Number.isFinite(comboStats.sampleSize) ? comboStats.sampleSize : 0,
+            sampleCopy: transitionCount === 1
+                ? '1 transition measured'
+                : `${transitionCount} transitions measured`
+        };
+    }
+
     // --- PUBLIC INTERFACE ---
     window.HudManager = {
         init: initAnalyticsHUD,
@@ -135,11 +273,11 @@
     function fitAnalyticsHUD() {
         const hud = document.getElementById('analyticsHUD');
         const header = document.getElementById('hudHeader');
-        const body = hud ? hud.querySelector('.flex-1.flex.flex-col.overflow-hidden.relative') : null;
+        const body = document.getElementById('hudBody');
         if (!hud || !header || !body || hud.classList.contains('hidden')) return;
 
         requestAnimationFrame(() => {
-            const maxHeight = Math.max(180, window.innerHeight - hud.offsetTop - 8);
+            const maxHeight = Math.max(240, window.innerHeight - hud.offsetTop - 8);
             const desiredHeight = Math.ceil(header.offsetHeight + body.scrollHeight);
             hud.style.height = `${Math.min(desiredHeight, maxHeight)}px`;
         });
@@ -194,7 +332,6 @@
             if (e.cancelable) e.preventDefault();
             e.stopPropagation();
 
-            // Convert from right-anchored initial position to left-anchored dragging.
             if (!hud.style.left || hud.style.left === 'auto') {
                 hud.style.left = `${hud.offsetLeft}px`;
             }
@@ -288,12 +425,7 @@
     }
 
     function toggleHudColdMode() {
-        const isHudColdMode = setHudColdMode(!getHudColdMode());
-        const btn = document.getElementById('hudColdBtn');
-        if (btn) {
-            if (isHudColdMode) btn.classList.replace('text-gray-500', 'text-[#06b6d4]');
-            else btn.classList.replace('text-[#06b6d4]', 'text-gray-500');
-        }
+        setHudColdMode(!getHudColdMode());
         if (window.saveSessionData) window.saveSessionData();
         updateAnalyticsHUD();
     }
@@ -316,86 +448,32 @@
         return normalized;
     }
 
-    function getHudScopeSummary() {
-        const history = window.state ? window.state.history : [];
-        const hudHistoryScope = getHudScope();
-        const recentWindow = getRecentWindow();
-        if (hudHistoryScope === 'recent') {
-            return history.length > 0
-                ? `Last ${Math.min(recentWindow, history.length)} Spins`
-                : `Last ${recentWindow} Spins`;
-        }
-        return history.length > 0 ? `All ${history.length} Spins` : 'All History';
-    }
-
     function updateAnalyticsHUD() {
         const hud = document.getElementById('analyticsHUD');
         if (!hud || hud.classList.contains('hidden')) return;
 
+        const headerTitle = document.getElementById('hudHeaderTitle');
         const hudLabel = document.getElementById('hudWindowValue');
         const hudScopeBtn = document.getElementById('hudScopeBtn');
+        const hudSummary = document.getElementById('hudSummary');
+        const hudColumnLabel = document.getElementById('hudColumnLabel');
+        const hudMetricLabel = document.getElementById('hudMetricLabel');
+        const hudRateLabel = document.getElementById('hudRateLabel');
+        const content = document.getElementById('hudStats');
+        if (!content) return;
 
         const isHudColdMode = getHudColdMode();
         const hudHistoryScope = getHudScope();
         const hudStrategy = getHudAnalyticsStrategy();
         const recentWindow = getRecentWindow();
-        const themeColor = isHudColdMode ? '#06b6d4' : '#30D158';
-        syncHudStrategyButtons(hudStrategy);
-
-        if (hudLabel) {
-            hudLabel.innerText = getHudScopeSummary();
-            hudLabel.style.color = themeColor;
-        }
-
         const history = window.state ? window.state.history : [];
-
-        if (hudScopeBtn) {
-            const isRecentScope = hudHistoryScope === 'recent';
-            const scopeLabel = hudHistoryScope === 'all' ? 'ALL' : recentWindow;
-            hudScopeBtn.innerText = `${history.length} / ${scopeLabel}`;
-            hudScopeBtn.title = hudHistoryScope === 'all'
-                ? `Switch to ${recentWindow}-spin rolling window`
-                : 'Switch to all history';
-            hudScopeBtn.className = 'px-1.5 min-w-[28px] h-5 flex items-center justify-center rounded-md text-[8px] font-black tracking-[0.12em] border transition-colors';
-            hudScopeBtn.style.color = isRecentScope ? themeColor : 'rgba(255,255,255,0.88)';
-            hudScopeBtn.style.borderColor = isRecentScope
-                ? `${themeColor}55`
-                : 'rgba(255,255,255,0.22)';
-            hudScopeBtn.style.background = isRecentScope
-                ? `${themeColor}22`
-                : 'rgba(255,255,255,0.10)';
-        }
-
-        const headerTitle = hud.querySelector('#hudHeader span');
-        if (headerTitle) {
-            headerTitle.innerHTML = isHudColdMode
-                ? `<i class="fas fa-snowflake mr-1"></i> Cold Tracker`
-                : `<i class="fas fa-satellite-dish mr-1"></i> Live Feed`;
-            headerTitle.className = `text-[9px] font-bold tracking-[0.18em] uppercase ${isHudColdMode ? 'text-[#06b6d4]' : 'text-[#30D158]'}`;
-        }
-
-        const content = document.getElementById('hudStats');
-        if (!content) return;
-
-        const windowSetting = hudHistoryScope === 'recent' ? recentWindow : 'all';
-        let displayLabel = 'COMBO';
-        let displayCombos = [];
-        let sampleSize = 0;
-
-        if (hudStrategy === 'series') {
-            const seriesStats = buildSeriesHudStats(history, windowSetting);
-            displayLabel = String(seriesStats.label || 'SEQUENCE').toUpperCase();
-            displayCombos = Array.isArray(seriesStats.items) ? seriesStats.items.slice() : [];
-            sampleSize = Number.isFinite(seriesStats.sampleSize) ? seriesStats.sampleSize : 0;
-        } else {
-            if (!window.PredictionEngine) return;
-            const stats = window.PredictionEngine.calculatePerimeterStats(history, windowSetting);
-            if (!stats || !stats.counts) return;
-            const comboStats = stats.comboStats || [];
-            displayLabel = 'COMBO';
-            displayCombos = comboStats.slice();
-            sampleSize = comboStats.length > 0 ? comboStats[0].sampleSize : 0;
-        }
+        const themeColor = isHudColdMode ? '#06b6d4' : '#30D158';
+        const modeLabel = isHudColdMode ? 'Cold' : 'Hot';
+        const isRecentScope = hudHistoryScope === 'recent';
+        const scopeSummary = getHudScopeSummary();
+        const displayData = getHudDisplayData(history, hudStrategy, isRecentScope ? recentWindow : 'all');
+        const displayCombos = Array.isArray(displayData.items) ? displayData.items.slice() : [];
+        const sampleSize = Number.isFinite(displayData.sampleSize) ? displayData.sampleSize : 0;
 
         if (isHudColdMode) {
             displayCombos.sort((a, b) => b.coldPercent - a.coldPercent || b.sampleMisses - a.sampleMisses || a.hits - b.hits);
@@ -403,40 +481,69 @@
             displayCombos.sort((a, b) => b.hotPercent - a.hotPercent || b.hits - a.hits || a.sampleMisses - b.sampleMisses);
         }
 
-        const col2Title = 'H / S';
-        const col3Title = isHudColdMode ? 'C%' : 'H%';
+        const leader = sampleSize > 0 && displayCombos.length > 0 ? displayCombos[0] : null;
+        const leaderPercent = leader ? (isHudColdMode ? leader.coldPercent : leader.hotPercent) : 0;
+        const leaderSampleSize = leader
+            ? (Number.isFinite(leader.sampleSize) ? leader.sampleSize : sampleSize)
+            : sampleSize;
 
-        let html = `
-            <div class="space-y-0.5">
-                <div class="grid grid-cols-[54px_minmax(0,1fr)_32px] items-center gap-1.5 px-0.5 pb-1 text-[8px] uppercase tracking-[0.12em] text-white/28 border-b border-white/10">
-                    <div class="font-bold">${displayLabel}</div>
-                    <div class="text-center font-bold">${col2Title}</div>
-                    <div class="text-right font-bold">${col3Title}</div>
-                </div>
-        `;
+        syncHudStrategyButtons(hudStrategy);
+        syncHudColdButton(isHudColdMode);
+        if (document.body && document.body.classList) {
+            document.body.classList.toggle('hud-cold-mode', isHudColdMode);
+        }
 
-        if (sampleSize === 0) {
-            html += `<div class="py-4 text-center text-white/35 italic">Awaiting spins...</div>`;
-        } else {
-            displayCombos.forEach(c => {
-                const ratioSampleSize = Number.isFinite(c.sampleSize) ? c.sampleSize : sampleSize;
-                const val1 = `${c.hits}/${ratioSampleSize}`;
-                const val2 = isHudColdMode ? c.coldPercent : c.hotPercent;
-                const opacity = (isHudColdMode ? val2 > 80 : val2 > 20) ? '1' : '0.5';
-                const valColor = (isHudColdMode ? val2 > 80 : val2 > 20) ? themeColor : '#8E8E93';
+        if (headerTitle) {
+            const iconClass = isHudColdMode
+                ? 'fa-snowflake'
+                : (hudStrategy === 'combo' ? 'fa-chart-line' : 'fa-wave-square');
+            headerTitle.innerHTML = `<i class="fas ${iconClass}"></i><span>${displayData.strategyLabel} ${isHudColdMode ? 'Cold Scan' : 'Live Feed'}</span>`;
+            headerTitle.style.color = themeColor;
+        }
 
-                html += `
-                    <div class="grid grid-cols-[54px_minmax(0,1fr)_32px] items-center gap-1.5 px-0.5 py-1">
-                        <div class="text-[12px] font-black tracking-[0.08em]" style="color:${c.color}; opacity:${opacity}">${c.label}</div>
-                        <div class="text-center font-mono text-[10px] text-gray-200" style="opacity:${opacity}">${val1}</div>
-                        <div class="text-right font-mono text-[10px] font-bold" style="color:${valColor}; opacity:${opacity}">${val2}%</div>
-                    </div>
-                `;
+        if (hudLabel) {
+            hudLabel.innerText = scopeSummary;
+            hudLabel.style.color = themeColor;
+        }
+
+        if (hudScopeBtn) {
+            hudScopeBtn.innerText = isRecentScope ? String(recentWindow) : 'ALL';
+            hudScopeBtn.title = hudHistoryScope === 'all'
+                ? `Switch to ${recentWindow}-spin rolling window`
+                : 'Switch to all history';
+            hudScopeBtn.className = 'hud-toolbar-btn';
+            hudScopeBtn.style.color = isRecentScope ? themeColor : 'rgba(255,255,255,0.88)';
+            hudScopeBtn.style.borderColor = isRecentScope ? `${themeColor}55` : 'rgba(255,255,255,0.22)';
+            hudScopeBtn.style.background = isRecentScope ? `${themeColor}22` : 'rgba(255,255,255,0.10)';
+        }
+
+        if (hudSummary) {
+            hudSummary.innerHTML = buildHudSummary({
+                displayLabel: displayData.strategyLabel,
+                strategyCopy: `${displayData.strategyCopy} | ${modeLabel}`,
+                sampleValue: `${sampleSize}`,
+                sampleCopy: `${scopeSummary} | ${displayData.sampleCopy}`,
+                leader,
+                leaderPercent,
+                leaderSampleSize,
+                modeLabel
             });
         }
 
-        html += `</div>`;
-        content.innerHTML = html;
+        if (hudColumnLabel) hudColumnLabel.innerText = displayData.columnLabel;
+        if (hudMetricLabel) hudMetricLabel.innerText = 'Activity';
+        if (hudRateLabel) hudRateLabel.innerText = `${modeLabel} %`;
+
+        if (sampleSize === 0 || displayCombos.length === 0) {
+            content.innerHTML = buildHudEmptyState('Awaiting telemetry...');
+            fitAnalyticsHUD();
+            return;
+        }
+
+        content.innerHTML = displayCombos
+            .map((item) => buildHudRowHtml(item, sampleSize, isHudColdMode, themeColor))
+            .join('');
+
         fitAnalyticsHUD();
     }
 
