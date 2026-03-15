@@ -145,7 +145,10 @@
                     <div class="hud-summary-label" style="color:${faceStat.color};">${faceStat.label}</div>
                     <div class="hud-summary-value">${faceStat.hits}</div>
                 </div>
-                <div class="hud-summary-copy">${faceStat.percent}% • g${faceStat.gap}</div>
+                <div class="hud-summary-copy">
+                    <span class="hud-summary-percent" style="color:${faceStat.color}; text-shadow:0 0 10px ${faceStat.color}33;">${faceStat.percent}%</span>
+                    <span class="hud-summary-gap">g${faceStat.gap}</span>
+                </div>
             </div>
         `).join('');
     }
@@ -195,9 +198,12 @@
     function buildHudRowHtml(item, sampleSize, isHudColdMode, themeColor) {
         const ratioSampleSize = Number.isFinite(item.sampleSize) ? item.sampleSize : sampleSize;
         const percent = isHudColdMode ? item.coldPercent : item.hotPercent;
+        const hasSignal = percent > 0;
         const emphasis = isHudColdMode ? percent >= 80 : percent >= 20;
-        const opacity = emphasis ? '1' : '0.62';
-        const barColor = emphasis ? themeColor : 'rgba(255,255,255,0.28)';
+        const opacity = hasSignal ? (emphasis ? '1' : '0.82') : '0.4';
+        const accentColor = isHudColdMode ? themeColor : (item.color || themeColor);
+        const barColor = hasSignal ? accentColor : 'rgba(255,255,255,0.18)';
+        const percentShadow = hasSignal ? `0 0 12px ${accentColor}40` : 'none';
 
         return `
             <div class="hud-row">
@@ -205,10 +211,10 @@
                 <div class="hud-row-metrics" style="opacity:${opacity}">
                     <div class="hud-row-ratio">${item.hits}/${ratioSampleSize}</div>
                     <div class="hud-row-bar">
-                        <span class="hud-row-bar-fill" style="width:${Math.max(0, Math.min(100, percent))}%; background:${barColor};"></span>
+                        <span class="hud-row-bar-fill" style="width:${Math.max(0, Math.min(100, percent))}%; background:${barColor}; box-shadow:${hasSignal ? `0 0 10px ${accentColor}55` : 'none'};"></span>
                     </div>
                 </div>
-                <div class="hud-row-percent" style="color:${barColor}; opacity:${opacity}">${percent}%</div>
+                <div class="hud-row-percent" style="color:${hasSignal ? accentColor : 'rgba(255,255,255,0.3)'}; opacity:${opacity}; text-shadow:${percentShadow}">${percent}%</div>
             </div>
         `;
     }
