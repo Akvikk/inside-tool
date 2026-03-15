@@ -99,6 +99,28 @@
         }
     };
 
+    window.toggleBetConfirmation = function (index) {
+        if (!window.state || !Array.isArray(window.state.activeBets)) return;
+
+        const betIndex = Number(index);
+        if (!Number.isInteger(betIndex) || betIndex < 0 || betIndex >= window.state.activeBets.length) return;
+
+        const bet = window.state.activeBets[betIndex];
+        if (!bet || !bet.targetFace || bet.targetFace === '?') return;
+
+        bet.confirmed = bet.confirmed !== true;
+
+        if (window.renderDashboardSafe) {
+            window.renderDashboardSafe(window.state.activeBets);
+        }
+        if (window.syncAppStore) {
+            window.syncAppStore();
+        }
+        if (window.saveSessionData) {
+            window.saveSessionData();
+        }
+    };
+
     window.renderDashboardSafe = function (items) {
         if (window.aiScrambleInterval) {
             clearInterval(window.aiScrambleInterval);
@@ -132,11 +154,22 @@
             const mainText = isAiLoading ? 'SYNCING NEURAL NET' : `BET F${bet.targetFace}`;
             const subText = isAiLoading ? subtitle : `${hits} (${hitRate})`;
             const titleClass = isAiLoading ? 'ai-scramble-text text-[#bf5af2]' : 'text-white';
+            const confirmationLabel = isAiLoading
+                ? 'ANALYZING'
+                : (bet.confirmed ? 'CONFIRMED' : 'TAP TO CONFIRM');
+            const confirmationTone = isAiLoading
+                ? 'text-[#bf5af2]'
+                : (bet.confirmed ? 'text-[#30D158]' : 'text-white/45');
 
             cards.push(`
                 <div class="min-w-[250px] h-[72px] px-4 py-2 rounded-lg border flex flex-col justify-center cursor-pointer select-none transition-all hover:brightness-110 signal-card"
+                     data-bet-index="${index}"
+                     title="${isAiLoading ? 'AI read in progress' : 'Click to toggle confirmation'}"
                      style="--border-base: ${borderBase}; --border-pulse: ${borderPulse}; --shadow-base: ${shadowBase}; --shadow-pulse: ${shadowPulse}; border-left: 4px solid ${accent}; ${bgStyle};">
-                    <div class="text-[14px] leading-tight font-black tracking-wide drop-shadow-sm uppercase ${titleClass}" data-text="${mainText}">${mainText}</div>
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="text-[14px] leading-tight font-black tracking-wide drop-shadow-sm uppercase ${titleClass}" data-text="${mainText}">${mainText}</div>
+                        <div class="text-[9px] font-black tracking-[0.18em] uppercase ${confirmationTone}">${confirmationLabel}</div>
+                    </div>
                     <div class="text-[10px] leading-tight text-white/70 font-bold mt-1 font-mono">${subText}</div>
                 </div>
             `);
@@ -148,6 +181,15 @@
         }
 
         dash.innerHTML = cards.join('');
+
+        dash.querySelectorAll('.signal-card[data-bet-index]').forEach(card => {
+            card.addEventListener('click', () => {
+                const idx = Number(card.getAttribute('data-bet-index'));
+                if (window.toggleBetConfirmation) {
+                    window.toggleBetConfirmation(idx);
+                }
+            });
+        });
 
         // Initiate Hacker Terminal Scramble Effect
         const scramblers = dash.querySelectorAll('.ai-scramble-text');
@@ -176,7 +218,7 @@
         const label = entry && (entry.comboLabel || entry.patternName);
         if (label) parts.push(label);
 
-        if (entry && Number.isFinite(entry.confidence)) {
+        if (entry && Number.isFinite(entry.confidence) && entry.confidence > 0) {
             parts.push(`${entry.confidence}%`);
         }
 
@@ -732,7 +774,9 @@
         if (!snapshot) return 'No engine state available.';
         if (snapshot.currentPrediction) {
             const action = snapshot.currentPrediction.action || 'BET';
-            const confidence = Number.isFinite(snapshot.currentPrediction.confidence) ? ` ${snapshot.currentPrediction.confidence}%` : '';
+            const confidence = Number.isFinite(snapshot.currentPrediction.confidence) && snapshot.currentPrediction.confidence > 0
+                ? ` ${snapshot.currentPrediction.confidence}%`
+                : '';
             return `${action} F${snapshot.currentPrediction.targetFace} via ${snapshot.currentPrediction.comboLabel}${confidence}.`;
         }
         return snapshot.watchlistMessage || snapshot.leadMessage || 'No actionable signal.';

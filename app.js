@@ -874,7 +874,9 @@ window.formatEnginePrediction = function(snapshot) {
     if (!snapshot) return 'No engine state available.';
     if (snapshot.currentPrediction) {
         const action = snapshot.currentPrediction.action || 'BET';
-        const confidence = Number.isFinite(snapshot.currentPrediction.confidence) ? ` ${snapshot.currentPrediction.confidence}%` : '';
+        const confidence = Number.isFinite(snapshot.currentPrediction.confidence) && snapshot.currentPrediction.confidence > 0
+            ? ` ${snapshot.currentPrediction.confidence}%`
+            : '';
         return `${action} F${snapshot.currentPrediction.targetFace} via ${snapshot.currentPrediction.comboLabel}${confidence}.`;
     }
     return snapshot.watchlistMessage || snapshot.leadMessage || 'No actionable signal.';
