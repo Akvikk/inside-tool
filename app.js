@@ -201,6 +201,24 @@ async function safeModuleCall(label, handler) {
     }
 }
 
+window.syncStrategyUi = function () {
+    if (!window.state) return;
+
+    const registry = window.StrategyRegistry || {};
+    const strategyKey = window.state.currentGameplayStrategy || 'series';
+    const strategy = registry[strategyKey] || null;
+
+    const comboHeader = document.getElementById('historyComboHeader');
+    if (comboHeader) {
+        comboHeader.innerText = strategy && strategy.tableHeader ? strategy.tableHeader : 'COMBO';
+    }
+
+    const strategySelect = document.getElementById('hamburgerStrategySelect');
+    if (strategySelect) {
+        strategySelect.value = strategyKey;
+    }
+};
+
 // --- RESTORED CORE APP GLUE & INITIALIZATION ---
 window.addEventListener('DOMContentLoaded', async () => {
     console.log("INSIDE TOOL: Bootstrapping modular architecture...");
@@ -229,6 +247,9 @@ window.addEventListener('DOMContentLoaded', async () => {
         : false;
     if (window.ensureActivePatternConfig) {
         window.ensureActivePatternConfig();
+    }
+    if (window.syncStrategyUi) {
+        window.syncStrategyUi();
     }
     if (window.renderPatternFilterUi) {
         window.renderPatternFilterUi();
@@ -1365,11 +1386,17 @@ window.updateAiConfigModalUI = function() {
 window.changePredictionStrategy = async function (val) {
     if (window.state) {
         window.state.currentGameplayStrategy = val;
+        if (window.syncStrategyUi) {
+            window.syncStrategyUi();
+        }
         if (window.ensureActivePatternConfig) {
             window.ensureActivePatternConfig();
         }
         if (window.renderPatternFilterUi) {
             window.renderPatternFilterUi();
+        }
+        if (window.reRenderHistory) {
+            window.reRenderHistory();
         }
         if (window.saveSessionData) window.saveSessionData();
         if (window.scanAllStrategies) {
