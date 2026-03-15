@@ -967,26 +967,102 @@ e                         <div class="text-[14px] leading-tight font-bold tracki
             zeroOffset = 100;
         }
 
-        const svgContent = `
-            <svg viewBox="0 0 ${vWidth} ${vHeight}" width="100%" height="100%" preserveAspectRatio="none" style="overflow: visible;">
-                <defs>
-                    <linearGradient id="profitGrad-${containerId}" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stop-color="#4ade80" />
-                        <stop offset="${zeroOffset}%" stop-color="#4ade80" />
-                        <stop offset="${zeroOffset}%" stop-color="#f87171" />
-                        <stop offset="100%" stop-color="#f87171" />
-                    </linearGradient>
-                </defs>
-                <line x1="${padding}" y1="${zeroY}" x2="${vWidth - padding}" y2="${zeroY}" 
-                      stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 6" opacity="0.3" vector-effect="non-scaling-stroke" />
-                <path d="${pathD}" fill="none" stroke="url(#profitGrad-${containerId})" 
-                      stroke-width="3" stroke-linecap="round" stroke-linejoin="round" 
-                      vector-effect="non-scaling-stroke" 
-                      style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));" />
-            </svg>
-        `;
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', `0 0 ${vWidth} ${vHeight}`);
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', '100%');
+        svg.setAttribute('preserveAspectRatio', 'none');
+        svg.style.overflow = 'visible';
 
-        chartDiv.innerHTML = svgContent;
+        const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+        const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+        gradient.id = `profitGrad-${containerId}`;
+        gradient.setAttribute('x1', '0%');
+        gradient.setAttribute('y1', '0%');
+        gradient.setAttribute('x2', '0%');
+        gradient.setAttribute('y2', '100%');
+        gradient.innerHTML = `
+            <stop offset="0%" stop-color="#4ade80" />
+            <stop offset="${zeroOffset}%" stop-color="#4ade80" />
+            <stop offset="${zeroOffset}%" stop-color="#f87171" />
+            <stop offset="100%" stop-color="#f87171" />
+        `;
+        defs.appendChild(gradient);
+        svg.appendChild(defs);
+
+        const zeroLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        zeroLine.setAttribute('x1', padding);
+        zeroLine.setAttribute('y1', zeroY);
+        zeroLine.setAttribute('x2', vWidth - padding);
+        zeroLine.setAttribute('y2', zeroY);
+        zeroLine.setAttribute('stroke', '#9ca3af');
+        zeroLine.setAttribute('stroke-width', '2');
+        zeroLine.setAttribute('stroke-dasharray', '6 6');
+        zeroLine.setAttribute('opacity', '0.3');
+        zeroLine.setAttribute('vector-effect', 'non-scaling-stroke');
+        svg.appendChild(zeroLine);
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', pathD);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', `url(#profitGrad-${containerId})`);
+        path.setAttribute('stroke-width', '3');
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
+        path.setAttribute('vector-effect', 'non-scaling-stroke');
+        path.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
+        svg.appendChild(path);
+
+        const hoverPoint = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        hoverPoint.setAttribute('class', 'graph-hover-point');
+        hoverPoint.style.opacity = 0;
+        svg.appendChild(hoverPoint);
+        
+        const tooltip = document.getElementById('graphTooltip');
+        const interactionLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        const pointWidth = (vWidth - 2 * padding) / (normalizedHistory.length - 1);
+
+        normalizedHistory.forEach((value, i) => {
+            const x = getX(i);
+            const y = getY(value);
+
+            const hitArea = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            hitArea.setAttribute('x', x - pointWidth / 2);
+            hitArea.setAttribute('y', 0);
+            hitArea.setAttribute('width', pointWidth);
+            hitArea.setAttribute('height', vHeight);
+            hitArea.setAttribute('fill', 'transparent');
+            
+            hitArea.addEventListener('mouseenter', () => {
+                hoverPoint.style.opacity = 1;
+                tooltip.classList.remove('hidden');
+            });
+
+            hitArea.addEventListener('mouseleave', () => {
+                hoverPoint.style.opacity = 0;
+                tooltip.classList.add('hidden');
+            });
+
+            hitArea.addEventListener('mousemove', (e) => {
+                const ctm = svg.getScreenCTM();
+                const svgX = (e.clientX - ctm.e) / ctm.a;
+                const svgY = (e.clientY - ctm.f) / ctm.d;
+                
+                hoverPoint.setAttribute('cx', x);
+                hoverPoint.setAttribute('cy', y);
+                
+                tooltip.style.left = `${e.clientX}px`;
+                tooltip.style.top = `${e.clientY}px`;
+                
+                const val = value > 0 ? `+${value}` : value;
+                tooltip.innerHTML = `<div>Net: <strong>${val}</strong></div><div class="text-white/50">Spin: ${i}</div>`;
+            });
+            
+            interactionLayer.appendChild(hitArea);
+        });
+
+        svg.appendChild(interactionLayer);
+        chartDiv.appendChild(svg);
     }
 
     window.drawAdvancedGraph = drawAdvancedGraph;
