@@ -67,18 +67,18 @@ const FON_PRIMARY_FACE_MAP = Object.freeze(Object.fromEntries(
 ));
 
 const FACES = {
-    1: { id: 1, nums: [1, 6, 10, 15, 24, 29, 33], color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)', border: '#0891b2' },
-    2: { id: 2, nums: [2, 7, 11, 16, 20, 24, 25, 29, 34], color: '#f97316', bg: 'rgba(249, 115, 22, 0.15)', border: '#ea580c' },
-    3: { id: 3, nums: [3, 8, 12, 17, 21, 26, 30, 35], color: '#a855f7', bg: 'rgba(168, 85, 247, 0.15)', border: '#9333ea' },
-    4: { id: 4, nums: [4, 9, 13, 18, 22, 27, 31, 36], color: '#eab308', bg: 'rgba(234, 179, 8, 0.15)', border: '#ca8a04' },
-    5: { id: 5, nums: [0, 5, 10, 14, 15, 19, 23, 28, 32], color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)', border: '#dc2626' }
+    1: { id: 1, nums: [1, 6, 10, 15, 24, 29, 33], color: '#0ea5e9', bg: 'rgba(14, 165, 233, 0.15)', border: '#0284c7' },
+    2: { id: 2, nums: [2, 7, 11, 16, 20, 24, 25, 29, 34], color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', border: '#d97706' },
+    3: { id: 3, nums: [3, 8, 12, 17, 21, 26, 30, 35], color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)', border: '#7c3aed' },
+    4: { id: 4, nums: [4, 9, 13, 18, 22, 27, 31, 36], color: '#d4af37', bg: 'rgba(212, 175, 55, 0.15)', border: '#b4952e' },
+    5: { id: 5, nums: [0, 5, 10, 14, 15, 19, 23, 28, 32], color: '#d33838', bg: 'rgba(211, 56, 56, 0.15)', border: '#b02a2a' }
 };
 
 const PERIMETER_COMBOS = [
-    { label: '5-2', a: 5, b: 2, color: '#FF3B30' },
-    { label: '5-3', a: 5, b: 3, color: '#FF9500' },
-    { label: '1-3', a: 1, b: 3, color: '#34C759' },
-    { label: '2-4', a: 2, b: 4, color: '#007AFF' }
+    { label: '5-2', a: 5, b: 2, color: '#d33838' },
+    { label: '5-3', a: 5, b: 3, color: '#e07a00' },
+    { label: '1-3', a: 1, b: 3, color: '#22c55e' },
+    { label: '2-4', a: 2, b: 4, color: '#3b82f6' }
 ];
 
 const PERIMETER_COMBO_LOOKUP = Object.freeze(
@@ -139,11 +139,11 @@ function emitPredictionProgress(percent, detail = {}) {
         : `Prediction Engine ${percent}%`;
 
     console.log(message);
-    
+
     // Dispatch as a CustomEvent for UI to listen to if it chooses
     if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('predictionProgress', { 
-            detail: { percent, processed, total, message } 
+        window.dispatchEvent(new CustomEvent('predictionProgress', {
+            detail: { percent, processed, total, message }
         }));
     }
 }

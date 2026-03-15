@@ -86,9 +86,9 @@
         container.innerHTML = '';
         for (let f = 1; f <= 5; f++) {
             const gap = state.faceGaps[f] || 0;
-            let colorClass = 'text-[#30D158]';
-            if (gap > 10) colorClass = 'text-[#FFD60A]';
-            if (gap > 15) colorClass = 'text-[#FF453A]';
+            let colorClass = 'text-[#22c55e]';
+            if (gap > 10) colorClass = 'text-[#d4af37]';
+            if (gap > 15) colorClass = 'text-[#d33838]';
 
             container.innerHTML += `
                 <div class="text-center p-2 rounded-xl bg-white/5 border border-white/5 shadow-sm backdrop-blur-sm transition-all hover:bg-white/10">
@@ -138,13 +138,13 @@
             const subtitle = bet.subtitle || (bet.comboLabel ? `${bet.comboLabel} combo` : bet.patternName);
             const accent = bet.accentColor || '#FF3B30';
             const bgStyle = bet.confirmed
-                ? `background: linear-gradient(135deg, ${accent}50, ${accent}15)`
-                : `background: linear-gradient(135deg, ${accent}25, ${accent}05)`;
+                ? `background: linear-gradient(135deg, ${accent}35, ${accent}10)`
+                : `background: linear-gradient(135deg, ${accent}15, ${accent}05)`;
 
             const borderBase = bet.confirmed ? accent : `${accent}40`;
             const borderPulse = accent;
-            const shadowBase = `0 4px 20px ${accent}20`;
-            const shadowPulse = `0 4px 30px ${accent}60, inset 0 0 12px ${accent}30`;
+            const shadowBase = `0 4px 12px ${accent}15`;
+            const shadowPulse = `0 4px 20px ${accent}35, inset 0 0 8px ${accent}20`;
 
             // Screenshot sync: Add hit rate stats
             const hitRate = bet.hitRate ? `${bet.hitRate}% Hit Rate` : 'Evaluating...';
@@ -159,7 +159,7 @@
                 : (bet.confirmed ? 'CONFIRMED' : 'TAP TO CONFIRM');
             const confirmationTone = isAiLoading
                 ? 'text-[#bf5af2]'
-                : (bet.confirmed ? 'text-[#30D158]' : 'text-white/45');
+                : (bet.confirmed ? 'text-[#22c55e]' : 'text-white/45');
 
             cards.push(`
                 <div class="min-w-[250px] h-[72px] px-4 py-2 rounded-lg border flex flex-col justify-center cursor-pointer select-none transition-all hover:brightness-110 signal-card"
@@ -167,10 +167,10 @@
                      title="${isAiLoading ? 'AI read in progress' : 'Click to toggle confirmation'}"
                      style="--border-base: ${borderBase}; --border-pulse: ${borderPulse}; --shadow-base: ${shadowBase}; --shadow-pulse: ${shadowPulse}; border-left: 4px solid ${accent}; ${bgStyle};">
                     <div class="flex items-start justify-between gap-3">
-                        <div class="text-[14px] leading-tight font-black tracking-wide drop-shadow-sm uppercase ${titleClass}" data-text="${mainText}">${mainText}</div>
-                        <div class="text-[9px] font-black tracking-[0.18em] uppercase ${confirmationTone}">${confirmationLabel}</div>
+e                         <div class="text-[14px] leading-tight font-bold tracking-wide drop-shadow-sm uppercase ${titleClass}" data-text="${mainText}">${mainText}</div>
+                        <div class="text-[9px] font-bold tracking-[0.18em] uppercase ${confirmationTone}">${confirmationLabel}</div>
                     </div>
-                    <div class="text-[10px] leading-tight text-white/70 font-bold mt-1 font-mono">${subText}</div>
+                    <div class="text-[10px] leading-tight text-white/70 font-semibold mt-1 font-mono">${subText}</div>
                 </div>
             `);
         });
@@ -297,7 +297,7 @@
                      data-color="${bridge.color}"></div>
                 <div class="relative z-[2] inline-flex items-center justify-center">
                     <span class="combo-badge relative px-3 py-1 rounded-md text-[10px] font-black font-mono tracking-widest border shadow-2xl transition-all duration-300"
-                          style="color:${bridge.color}; border-color:${bridge.color}55; background-color:#0b0b0d; box-shadow: 0 0 14px ${bridge.color}5a, inset 0 0 8px ${bridge.color}22;">
+                          style="color:${bridge.color}; border-color:${bridge.color}55; background-color:#0b0b0d; box-shadow: 0 0 8px ${bridge.color}40, inset 0 0 4px ${bridge.color}15;">
                         ${bridge.label}
                     </span>
                 </div>
@@ -720,9 +720,9 @@
         const tones = {
             BUILDING: 'text-gray-400 bg-gray-400/10 border border-gray-400/20 px-2 py-0.5 rounded',
             WAITING: 'text-gray-400 bg-gray-400/10 border border-gray-400/20 px-2 py-0.5 rounded',
-            READY: 'text-[#30D158] bg-[#30D158]/10 border border-[#30D158]/20 px-2 py-0.5 rounded',
-            FOLLOW_UP: 'text-[#0A84FF] bg-[#0A84FF]/10 border border-[#0A84FF]/20 px-2 py-0.5 rounded',
-            WATCHLIST: 'text-[#FFD60A] bg-[#FFD60A]/10 border border-[#FFD60A]/20 px-2 py-0.5 rounded',
+            READY: 'text-[#22c55e] bg-[#22c55e]/10 border border-[#22c55e]/20 px-2 py-0.5 rounded',
+            FOLLOW_UP: 'text-[#3b82f6] bg-[#3b82f6]/10 border border-[#3b82f6]/20 px-2 py-0.5 rounded',
+            WATCHLIST: 'text-[#d4af37] bg-[#d4af37]/10 border border-[#d4af37]/20 px-2 py-0.5 rounded',
             NO_SIGNAL: 'text-gray-500 bg-gray-500/10 border border-gray-500/20 px-2 py-0.5 rounded'
         };
         return tones[stateStr] || 'text-gray-400 bg-gray-400/10 border border-gray-400/20 px-2 py-0.5 rounded';
@@ -731,31 +731,31 @@
     window.getMetricToneClass = function (metric, value) {
         switch (metric) {
             case 'hits':
-                if (value >= 3) return 'text-[#30D158] drop-shadow-sm font-bold';
-                if (value === 2) return 'text-[#FFD60A] font-bold';
-                if (value === 1) return 'text-[#FF453A]';
+                if (value >= 3) return 'text-[#22c55e] drop-shadow-sm font-bold';
+                if (value === 2) return 'text-[#d4af37] font-bold';
+                if (value === 1) return 'text-[#d33838]';
                 return 'text-gray-500 opacity-50';
             case 'hotPercent':
             case 'coldPercent':
-                if (value >= (metric === 'hotPercent' ? 25 : 85)) return 'text-[#30D158] drop-shadow-sm font-bold';
-                if (value >= (metric === 'hotPercent' ? 15 : 65)) return 'text-[#FFD60A] font-bold';
-                if (value > 0) return 'text-[#FF453A]';
+                if (value >= (metric === 'hotPercent' ? 25 : 85)) return 'text-[#22c55e] drop-shadow-sm font-bold';
+                if (value >= (metric === 'hotPercent' ? 15 : 65)) return 'text-[#d4af37] font-bold';
+                if (value > 0) return 'text-[#d33838]';
                 return 'text-gray-500 opacity-50';
             case 'margin':
-                if (value >= 2) return 'text-[#30D158] font-bold';
-                if (value === 1) return 'text-[#FFD60A] font-bold';
-                if (value === 0) return 'text-[#FF453A]';
+                if (value >= 2) return 'text-[#22c55e] font-bold';
+                if (value === 1) return 'text-[#d4af37] font-bold';
+                if (value === 0) return 'text-[#d33838]';
                 return 'text-gray-500 opacity-50';
             case 'confirmation':
-                return value >= 1 ? 'text-[#30D158] drop-shadow-sm font-bold' : 'text-[#FF453A] font-bold';
+                return value >= 1 ? 'text-[#22c55e] drop-shadow-sm font-bold' : 'text-[#d33838] font-bold';
             case 'lastSeen':
                 if (value === null || value === undefined || value === '-') return 'text-gray-500 opacity-50';
-                if (value <= 1) return 'text-[#30D158] font-bold';
-                if (value <= 3) return 'text-[#FFD60A] font-bold';
-                return 'text-[#FF453A] font-bold';
+                if (value <= 1) return 'text-[#22c55e] font-bold';
+                if (value <= 3) return 'text-[#d4af37] font-bold';
+                return 'text-[#d33838] font-bold';
             case 'checkpoint':
-                if (value <= 1) return 'text-[#FFD60A] font-bold';
-                if (value <= 3) return 'text-[#FF453A] font-bold';
+                if (value <= 1) return 'text-[#d4af37] font-bold';
+                if (value <= 3) return 'text-[#d33838] font-bold';
                 return 'text-gray-500 opacity-50';
             default:
                 return 'text-gray-500 opacity-50';
@@ -764,8 +764,8 @@
 
     window.getPredictionToneClass = function (snapshot) {
         if (!snapshot) return 'text-gray-500';
-        if (snapshot.currentPrediction) return 'text-[#30D158] font-bold drop-shadow-sm';
-        if (snapshot.engineState === 'WATCHLIST') return 'text-[#FFD60A] font-bold';
+        if (snapshot.currentPrediction) return 'text-[#22c55e] font-bold drop-shadow-sm';
+        if (snapshot.engineState === 'WATCHLIST') return 'text-[#d4af37] font-bold';
         if (snapshot.engineState === 'NO_SIGNAL') return 'text-gray-400';
         return 'text-gray-500';
     };
@@ -869,13 +869,13 @@
         const hrEl = document.getElementById('kpiHitRate');
         if (hrEl) {
             hrEl.innerText = hitRate + "%";
-            hrEl.className = `text-2xl font-bold tracking-tight ${totalSignals === 0 ? 'text-white' : (hitRate >= 50 ? 'text-[#30D158]' : 'text-[#FF453A]')}`;
+            hrEl.className = `text-2xl font-semibold tracking-tight ${totalSignals === 0 ? 'text-white' : (hitRate >= 50 ? 'text-[#22c55e]' : 'text-[#d33838]')}`;
         }
 
         const netEl = document.getElementById('kpiNet');
         if (netEl) {
             netEl.innerText = (coreStats.net > 0 ? '+' : '') + coreStats.net;
-            netEl.className = `text-2xl font-bold tracking-tight ${coreStats.net > 0 ? 'text-[#30D158]' : (coreStats.net < 0 ? 'text-[#FF453A]' : 'text-white')}`;
+            netEl.className = `text-2xl font-semibold tracking-tight ${coreStats.net > 0 ? 'text-[#22c55e]' : (coreStats.net < 0 ? 'text-[#d33838]' : 'text-white')}`;
         }
 
         const sigEl = document.getElementById('kpiSignals');
@@ -885,7 +885,7 @@
         const formEl = document.getElementById('kpiForm');
         if (formEl) {
             formEl.innerText = s > 0 ? `W${s}` : (s < 0 ? `L${Math.abs(s)}` : '-');
-            formEl.className = `text-2xl font-bold tracking-tight ${s > 0 ? 'text-[#30D158]' : (s < 0 ? 'text-[#FF453A]' : 'text-gray-400')}`;
+            formEl.className = `text-2xl font-semibold tracking-tight ${s > 0 ? 'text-[#22c55e]' : (s < 0 ? 'text-[#d33838]' : 'text-gray-400')}`;
         }
 
         drawAdvancedGraph(coreStats.history, coreStats.wins, coreStats.losses, 'graphContainer');
@@ -901,13 +901,13 @@
         const netEl = document.getElementById('userNet');
         if (netEl) {
             netEl.innerText = (uStats.netUnits > 0 ? '+' : '') + uStats.netUnits;
-            netEl.className = `text-4xl font-bold tracking-tight ${uStats.netUnits > 0 ? 'text-[#30D158]' : (uStats.netUnits < 0 ? 'text-[#FF453A]' : 'text-white')}`;
+            netEl.className = `text-4xl font-semibold tracking-tight ${uStats.netUnits > 0 ? 'text-[#22c55e]' : (uStats.netUnits < 0 ? 'text-[#d33838]' : 'text-white')}`;
         }
 
         const hrEl = document.getElementById('userHitRate');
         if (hrEl) {
             hrEl.innerText = hitRate + "%";
-            hrEl.className = `text-4xl font-bold tracking-tight ${totalBets === 0 ? 'text-white' : (hitRate >= 50 ? 'text-[#30D158]' : 'text-[#FF453A]')}`;
+            hrEl.className = `text-4xl font-semibold tracking-tight ${totalBets === 0 ? 'text-white' : (hitRate >= 50 ? 'text-[#22c55e]' : 'text-[#d33838]')}`;
         }
 
         const totEl = document.getElementById('userTotal');
@@ -1012,8 +1012,8 @@
         patterns.forEach(([name, s]) => {
             const total = s.wins + s.losses;
             const rate = total === 0 ? 0 : Math.round((s.wins / total) * 100);
-            const color = rate >= 50 ? 'text-[#30D158]' : 'text-[#FF453A]';
-            const bar = rate >= 50 ? 'bg-[#30D158]' : 'bg-[#FF453A]';
+            const color = rate >= 50 ? 'text-[#22c55e]' : 'text-[#d33838]';
+            const bar = rate >= 50 ? 'bg-[#22c55e]' : 'bg-[#d33838]';
 
             tbody.innerHTML += `
                 <tr class="hover:bg-white/5 transition-colors">
@@ -1049,7 +1049,7 @@
         }
 
         betLog.forEach(log => {
-            const resClass = log.result === 'WIN' ? 'text-[#30D158]' : 'text-[#FF453A]';
+            const resClass = log.result === 'WIN' ? 'text-[#22c55e]' : 'text-[#d33838]';
             const unitsText = log.units > 0 ? `+${log.units}` : log.units;
             const targetText = String(log.target || '').replace('F', '');
 

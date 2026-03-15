@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿// --- CONFIGURATION ---
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// --- CONFIGURATION ---
 const RED_NUMS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
 const PERIMETER_RULE_KEY = 'Perimeter Rule';
 const PREDICTION_PERIMETER_PATTERN = 'Prediction Perimeter';
@@ -1815,18 +1815,19 @@ function renderStrategyAnalytics() {
 
     const hrEl = document.getElementById('kpiHitRate');
     hrEl.innerText = hitRate + "%";
-    hrEl.className = `text-3xl font-bold tracking-tight ${hitRate >= 50 ? 'text-[#30D158]' : 'text-[#FF453A]'}`;
+    hrEl.className = `text-3xl font-mono font-semibold tracking-tight ${hitRate >= 50 ? 'text-[#22c55e]' : 'text-[#d33838]'}`;
 
     const netEl = document.getElementById('kpiNet');
     netEl.innerText = (displayStats.net > 0 ? '+' : '') + displayStats.net;
-    netEl.className = `text-3xl font-bold tracking-tight ${displayStats.net >= 0 ? 'text-[#30D158]' : 'text-[#FF453A]'}`;
+    netEl.className = `text-3xl font-mono font-semibold tracking-tight ${displayStats.net >= 0 ? 'text-[#22c55e]' : 'text-[#d33838]'}`;
 
+    document.getElementById('kpiSignals').className = "text-3xl font-mono font-semibold tracking-tight text-white";
     document.getElementById('kpiSignals').innerText = totalSignals;
 
     const s = displayStats.streak;
     const formEl = document.getElementById('kpiForm');
     formEl.innerText = s > 0 ? `W${s}` : (s < 0 ? `L${Math.abs(s)}` : '-');
-    formEl.className = `text-3xl font-bold tracking-tight ${s > 0 ? 'text-[#30D158]' : (s < 0 ? 'text-[#FF453A]' : 'text-gray-400')}`;
+    formEl.className = `text-3xl font-mono font-semibold tracking-tight ${s > 0 ? 'text-[#22c55e]' : (s < 0 ? 'text-[#d33838]' : 'text-gray-400')}`;
 
     drawAdvancedGraph(displayStats.history, displayStats.wins, displayStats.losses, 'graphContainer');
     updatePatternHeatmap(displayStats.patterns);
@@ -1881,10 +1882,13 @@ function renderUserAnalytics() {
 
     const netEl = document.getElementById('userNet');
     netEl.innerText = (userStats.netUnits > 0 ? '+' : '') + userStats.netUnits;
-    netEl.className = `text-5xl font-bold tracking-tight ${userStats.netUnits >= 0 ? 'text-[#30D158]' : 'text-[#FF453A]'}`;
+    netEl.className = `text-5xl font-mono font-semibold tracking-tight ${userStats.netUnits >= 0 ? 'text-[#22c55e]' : 'text-[#d33838]'}`;
 
     document.getElementById('userHitRate').innerText = hitRate + "%";
+    document.getElementById('userHitRate').className = `text-5xl font-mono font-semibold tracking-tight ${hitRate >= 50 ? 'text-[#22c55e]' : 'text-[#d33838]'}`;
+
     document.getElementById('userTotal').innerText = totalBets;
+    document.getElementById('userTotal').className = "text-5xl font-mono font-semibold tracking-tight text-white";
 
     drawAdvancedGraph(userStats.bankrollHistory, userStats.totalWins, userStats.totalLosses, 'userGraphContainer');
     updateUserBetLog();

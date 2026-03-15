@@ -5,18 +5,18 @@
        CASINO VIP FOUNDATION
        Strict, elegant, ultra-dark felt background
     */
-    --bg-deep: #080a09;
+    --bg-deep: #121413;
 
     /* 
        ROULETTE THEME
        Classic Casino Red, Board Green, and Brass/Gold
     */
-    --theme-crimson: #e62e2d;
-    --theme-crimson-glow: rgba(230, 46, 45, 0.4);
-    --theme-crimson-dim: rgba(230, 46, 45, 0.1);
+    --theme-crimson: #d33838;
+    --theme-crimson-glow: rgba(211, 56, 56, 0.3);
+    --theme-crimson-dim: rgba(211, 56, 56, 0.1);
 
-    --theme-emerald: #008c3a;
-    --theme-emerald-glow: rgba(0, 140, 58, 0.4);
+    --theme-emerald: #148043;
+    --theme-emerald-glow: rgba(20, 128, 67, 0.3);
 
     --theme-grey: #111111;
     --theme-grey-light: #1c1c1c;
@@ -38,7 +38,7 @@
     /* Typography */
     --text-primary: #f0f0f0;
     --text-secondary: #8E8E93;
-    --text-tertiary: #525256;
+    --text-tertiary: #71717a;
 
     /* Animation */
     --ease-strike: cubic-bezier(0.19, 1, 0.22, 1);
@@ -46,7 +46,7 @@
 }
 
 body {
-    background: radial-gradient(circle at center, #111513 0%, #030403 100%);
+    background: radial-gradient(circle at center, #1a1d1c 0%, #0d0f0e 100%);
     background-attachment: fixed;
     color: var(--text-primary);
     font-family: 'Inter', -apple-system, sans-serif;
@@ -79,6 +79,7 @@ input,
 .face-tag,
 .num-box {
     font-family: 'JetBrains Mono', monospace;
+    line-height: 1.5;
 }
 
 /* Subtly textured noise for premium feel */
@@ -100,10 +101,9 @@ body::before {
     content: '';
     position: fixed;
     inset: 0;
-    background: linear-gradient(-45deg, #2b0808, #051a0f, #1a1605, #080a09);
-    background-size: 400% 400%;
-    animation: ambientShift 30s ease infinite;
-    opacity: 0.4;
+    background: linear-gradient(-45deg, #1f1414, #0d1a14, #1a1811, #121413);
+    background-size: 200% 200%;
+    opacity: 0.15;
     z-index: -3;
     pointer-events: none;
 }
@@ -169,7 +169,7 @@ body::before {
     filter: blur(140px);
     z-index: -2;
     pointer-events: none;
-    opacity: 0.4;
+    opacity: 0.15;
     mix-blend-mode: screen;
 }
 
@@ -180,7 +180,7 @@ body::before {
     height: 60vw;
     background: radial-gradient(circle, rgba(230, 46, 45, 0.15), transparent 70%);
     /* Red Glow */
-    animation: orbFloat1 35s infinite ease-in-out;
+    animation: orbFloat1 60s infinite ease-in-out;
 }
 
 .orb-2 {
@@ -190,7 +190,7 @@ body::before {
     height: 50vw;
     background: radial-gradient(circle, rgba(0, 140, 58, 0.12), transparent 70%);
     /* Green Glow */
-    animation: orbFloat2 40s infinite ease-in-out;
+    animation: orbFloat2 70s infinite ease-in-out;
 }
 
 .orb-3 {
@@ -200,7 +200,7 @@ body::before {
     height: 45vw;
     background: radial-gradient(circle, rgba(212, 175, 55, 0.1), transparent 70%);
     /* Gold Glow */
-    animation: orbFloat3 35s infinite ease-in-out;
+    animation: orbFloat3 60s infinite ease-in-out;
 }
 
 .ambient-frost-layer {
@@ -238,10 +238,10 @@ body::before {
 
 /* Inner plates (Dashboards, Tables) */
 .frosted-plate {
-    background: rgba(15, 15, 15, 0.9) !important;
+    background: rgba(20, 22, 22, 0.9) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-top: 2px solid var(--theme-accent-gold) !important;
-    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.3) !important;
     border-radius: 8px !important;
     overflow: visible;
     transition: transform 0.2s var(--ease-strike), border-color 0.2s, box-shadow 0.2s !important;
@@ -281,8 +281,11 @@ h6,
 #userNet,
 #userHitRate,
 #userTotal {
-    text-shadow: 0 0 15px currentColor;
-    font-weight: 800 !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    font-weight: 600 !important;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    padding: 2px 10px;
 }
 
 /* Tab Navigation - Pill Style Override */
@@ -344,7 +347,7 @@ button[onclick^="changeIntelMode"] {
 #analyticsBtnCombo.text-\[\#30D158\],
 button[onclick^="changeIntelMode"].text-white {
     color: #ffffff !important;
-    text-shadow: 0 0 8px rgba(255, 255, 255, 0.5) !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5) !important;
 }
 
 /* Micro-interactions & Tactile Feedback */
@@ -398,7 +401,7 @@ button:active,
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 6px;
     backdrop-filter: blur(10px);
-    font-weight: 800;
+    font-weight: 600;
     font-size: 1.15rem;
     transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
     color: var(--text-tertiary);
@@ -413,7 +416,7 @@ button:active,
         inset 0 -2px 6px rgba(0, 0, 0, 0.4);
     transform: translateY(0);
     border-bottom-width: 4px;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
+    text-shadow: none !important;
 }
 
 .grid-btn::after {
@@ -447,21 +450,21 @@ button:active,
 
 /* Physical Casino Table Style Blocks */
 .grid-red {
-    background: #c62828 !important;
+    background: #b02a2a !important;
     color: #ffffff !important;
-    border-color: #ef5350 !important;
+    border-color: #d14949 !important;
     border-bottom-color: #8e0000 !important;
 }
 
 .grid-green {
-    background: #008c3a !important;
+    background: #148043 !important;
     color: #ffffff !important;
-    border-color: #00c451 !important;
+    border-color: #1f9e56 !important;
     border-bottom-color: #004d1f !important;
 }
 
 .grid-black {
-    background: #151515 !important;
+    background: #1a1c1c !important;
     color: #ffffff !important;
     border-color: #333333 !important;
     border-bottom-color: #000000 !important;
@@ -506,7 +509,7 @@ button:active,
         0 10px 24px rgba(0, 0, 0, 0.45),
         0 0 0 1px rgba(255, 255, 255, 0.03),
         inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    text-shadow: 0 0 10px rgba(var(--accent-rgb), 0.42);
+    text-shadow: 0 1px 2px rgba(var(--accent-rgb), 0.2);
 }
 
 .top-nav-btn:hover {
@@ -579,8 +582,8 @@ button:active,
     border-color: #ffe680 !important;
     color: #000000 !important;
     text-shadow: none !important;
-    box-shadow: 0 4px 20px rgba(212, 175, 55, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.6) !important;
-    animation: goldShimmer 4s infinite linear !important;
+    box-shadow: 0 4px 10px rgba(212, 175, 55, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.6) !important;
+    animation: goldShimmer 8s infinite linear !important;
     border-bottom: 3px solid #806600 !important;
 }
 
@@ -608,7 +611,7 @@ button:active,
 
 #headerAiBtn.ai-connected .ai-chat-status-dot,
 #headerAiBtn.ai-offline .ai-chat-status-dot {
-    box-shadow: 0 0 12px currentColor;
+    box-shadow: 0 0 6px currentColor;
 }
 
 #headerAiBtn .ai-chat-status-dot.ai-pulse {
@@ -940,31 +943,17 @@ button.bg-gradient-to-b:active {
 }
 
 /* Ghost Mode Active Scanning Pulse - "The Pinch of Green" */
-@keyframes scanningPulse {
-
-    0%,
-    100% {
-        background-color: rgba(0, 255, 102, 0.05);
-        box-shadow: 0 0 10px rgba(0, 255, 102, 0.1);
-        border-color: rgba(0, 255, 102, 0.2);
-    }
-
-    50% {
-        background-color: rgba(0, 255, 102, 0.15);
-        box-shadow: 0 0 20px rgba(0, 255, 102, 0.3);
-        border-color: rgba(0, 255, 102, 0.5);
-    }
-}
 
 #dashboard .dashboard-empty {
     font-family: inherit;
     color: var(--theme-emerald);
     /* GHOST MODE is green */
-    font-weight: 800;
+    font-weight: 600;
     letter-spacing: 0.1em;
     border-radius: 6px;
     padding: 12px;
-    animation: scanningPulse 2s infinite ease-in-out;
+    background-color: rgba(20, 128, 67, 0.05);
+    border-color: rgba(20, 128, 67, 0.2);
 }
 
 /* --- HISTORY TABLE --- */
@@ -979,7 +968,7 @@ button.bg-gradient-to-b:active {
 .history-table th {
     color: var(--theme-accent-gold);
     font-size: 0.7rem;
-    font-weight: 800;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.15em;
     position: sticky;
@@ -1044,7 +1033,7 @@ button.bg-gradient-to-b:active {
     flex-shrink: 0;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 600;
     letter-spacing: 0.04em;
     white-space: nowrap;
 }
@@ -1070,7 +1059,7 @@ button.bg-gradient-to-b:active {
     min-width: 0;
     color: rgba(255, 255, 255, 0.8);
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.45;
     text-align: right;
     word-break: break-word;
@@ -1164,8 +1153,8 @@ button.bg-gradient-to-b:active {
 
 /* Intensify the glow for a more premium look */
 .combo-path-glow-1, .combo-path-glow-2, .combo-path-glow-merge {
-    stroke-opacity: 0.8 !important;
-    filter: drop-shadow(0 0 8px currentColor) drop-shadow(0 0 12px currentColor) !important;
+    stroke-opacity: 0.4 !important;
+    filter: drop-shadow(0 0 4px currentColor) !important;
 }
 
 .combo-path-core-1, .combo-path-core-2, .combo-path-core-merge {
@@ -1181,7 +1170,7 @@ button.bg-gradient-to-b:active {
     width: 30px;
     height: 30px;
     border-radius: 6px;
-    font-weight: 800;
+    font-weight: 600;
     font-size: 0.95rem;
     color: white;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), inset 0 2px 2px rgba(255, 255, 255, 0.3);
@@ -1189,8 +1178,8 @@ button.bg-gradient-to-b:active {
 }
 
 .bg-red {
-    background: #d00018;
-    border: 1px solid #ff4d4d;
+    background: #b02a2a;
+    border: 1px solid #d14949;
     border-bottom-color: #8a0000 !important;
 }
 
@@ -1201,14 +1190,14 @@ button.bg-gradient-to-b:active {
 }
 
 .bg-green {
-    background: #00b347;
-    border: 1px solid #00e65b;
+    background: #148043;
+    border: 1px solid #1f9e56;
     border-bottom-color: #006628 !important;
-    color: black;
+    color: white;
 }
 
 .face-tag {
-    font-weight: 800;
+    font-weight: 600;
     font-size: 0.75rem;
     padding: 4px 8px;
     border-radius: 4px;
@@ -1261,7 +1250,7 @@ button.bg-gradient-to-b:active {
     border-left: 4px solid var(--theme-crimson);
     /* The defining line */
     border-radius: 8px;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.8);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
     cursor: pointer;
     transition: all 0.2s var(--ease-strike);
 }
@@ -1296,7 +1285,7 @@ button.bg-gradient-to-b:active {
 /* Status Badges */
 .status-pill {
     font-size: 0.6rem;
-    font-weight: 800;
+    font-weight: 600;
     padding: 2px 6px;
     border-radius: 4px;
     text-transform: uppercase;
@@ -1447,7 +1436,7 @@ button.bg-gradient-to-b:active {
 .tab-btn {
     flex: 1;
     padding: 6px 12px;
-    font-weight: 800;
+    font-weight: 600;
     color: var(--text-secondary);
     border-radius: 4px;
     font-size: 0.8rem;
@@ -1471,7 +1460,7 @@ button.bg-gradient-to-b:active {
     font-size: 1.1rem;
     padding: 10px 14px;
     transition: all 0.2s;
-    font-weight: 700;
+    font-weight: 600;
     backdrop-filter: blur(10px);
 }
 
@@ -1533,7 +1522,7 @@ button.bg-gradient-to-b:active {
 }
 
 .intel-toolbar-title {
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
 }
@@ -1664,7 +1653,7 @@ input[type=number] {
     border-radius: 7px;
     color: rgba(255, 255, 255, 0.5);
     font-size: 9px;
-    font-weight: 800;
+    font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     transition: color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
@@ -1688,7 +1677,7 @@ input[type=number] {
     background: rgba(255, 255, 255, 0.04);
     color: rgba(255, 255, 255, 0.72);
     font-size: 9px;
-    font-weight: 800;
+    font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
@@ -1737,7 +1726,7 @@ input[type=number] {
 .hud-summary-label {
     color: rgba(255, 255, 255, 0.38);
     font-size: 7px;
-    font-weight: 800;
+    font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
 }
@@ -1746,7 +1735,7 @@ input[type=number] {
     margin-top: 0;
     color: #f5f5f7;
     font-size: 13px;
-    font-weight: 800;
+    font-weight: 600;
     line-height: 1.1;
     letter-spacing: 0.03em;
     white-space: nowrap;
@@ -1767,14 +1756,14 @@ input[type=number] {
 
 .hud-summary-percent {
     font-size: 10px;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: 0.02em;
 }
 
 .hud-summary-gap {
     color: rgba(255, 255, 255, 0.45);
     font-size: 8px;
-    font-weight: 700;
+    font-weight: 600;
 }
 
 .hud-table-shell {
@@ -1796,7 +1785,7 @@ input[type=number] {
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     color: rgba(255, 255, 255, 0.4);
     font-size: 9px;
-    font-weight: 800;
+    font-weight: 600;
     letter-spacing: 0.14em;
     text-transform: uppercase;
 }
@@ -1834,7 +1823,7 @@ input[type=number] {
 
 .hud-row-label {
     font-size: 11px;
-    font-weight: 800;
+    font-weight: 600;
     letter-spacing: 0.04em;
 }
 
@@ -1848,7 +1837,7 @@ input[type=number] {
 .hud-row-ratio {
     color: rgba(255, 255, 255, 0.78);
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 600;
     text-align: center;
     letter-spacing: 0.04em;
 }
@@ -1870,7 +1859,7 @@ input[type=number] {
 
 .hud-row-percent {
     font-size: 12px;
-    font-weight: 900;
+    font-weight: 700;
     letter-spacing: 0.02em;
     text-align: right;
 }
@@ -1913,18 +1902,18 @@ input[type=number] {
 
 @keyframes glow-green {
     from {
-        box-shadow: 0 0 5px rgba(48, 209, 88, 0.2);
+        box-shadow: 0 0 2px rgba(48, 209, 88, 0.15);
     }
 
     to {
-        box-shadow: 0 0 15px rgba(48, 209, 88, 0.5);
+        box-shadow: 0 0 8px rgba(48, 209, 88, 0.35);
     }
 }
 
 .highlight-pair {
-    box-shadow: 0 0 10px rgba(255, 214, 10, 0.6);
-    border-color: #FFD60A !important;
-    animation: pulse-gold 1.5s infinite alternate;
+    box-shadow: 0 0 6px rgba(212, 175, 55, 0.4);
+    border-color: #d4af37 !important;
+    animation: pulse-gold 2.5s infinite alternate;
 }
 
 @keyframes pulse-gold {
