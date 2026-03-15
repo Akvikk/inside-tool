@@ -1082,6 +1082,19 @@ button.bg-gradient-to-b:active {
 
 .combo-link-layer path {
     vector-effect: non-scaling-stroke;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Intensify the glow for a more premium look */
+.combo-path-glow-1, .combo-path-glow-2, .combo-path-glow-merge {
+    stroke-opacity: 0.8 !important;
+    filter: drop-shadow(0 0 8px currentColor) drop-shadow(0 0 12px currentColor) !important;
+}
+
+.combo-path-core-1, .combo-path-core-2, .combo-path-core-merge {
+    stroke-opacity: 1.0 !important;
+    stroke-width: 2.5px !important;
 }
 
 /* Table Number Boxes */

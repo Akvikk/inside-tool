@@ -513,11 +513,24 @@ window.renderComboCell = function (spin) {
     if (spin.index <= 0) return '<span class="text-gray-600 font-mono text-[10px]">-</span>';
 
     const currMask = window.FON_MASK_MAP ? window.FON_MASK_MAP[spin.num] : 0;
-    const prevSpin = state.history[spin.index - 1];
-    if (!prevSpin) return '<span class="text-gray-600 font-mono text-[10px]">-</span>';
-
-    const prevMask = window.FON_MASK_MAP ? window.FON_MASK_MAP[prevSpin.num] : 0;
-    const bridge = strategy.detectBridge(prevMask, currMask, window.FACE_MASKS);
+    
+    // Look back up to 14 spins for the nearest valid bridge
+    let bridge = null;
+    let prevSpin = null;
+    
+    for (let d = 1; d <= 14; d++) {
+        const checkSpin = state.history[spin.index - d];
+        if (!checkSpin) break;
+        
+        const prevMask = window.FON_MASK_MAP ? window.FON_MASK_MAP[checkSpin.num] : 0;
+        const b = strategy.detectBridge(prevMask, currMask, window.FACE_MASKS);
+        
+        if (b) {
+            bridge = b;
+            prevSpin = checkSpin;
+            break; // Found the nearest bridge
+        }
+    }
 
     if (!bridge || !prevSpin) return '<span class="text-gray-600 font-mono text-[10px]">-</span>';
 
@@ -665,11 +678,11 @@ window.layoutComboBridge = function (spinId) {
         y: currRect.top + currRect.height / 2 - cellRect.top
     };
     const badgePoint = {
-        x: badgeRect.left - cellRect.left + Math.max(5, Math.min(11, badgeRect.width * 0.16)),
-        y: badgeRect.top + badgeRect.height / 2 - cellRect.top
+        x: badgeRect.left - cellRect.left + (badgeRect.width * 0.15),
+        y: badgeRect.top + (badgeRect.height / 2) - cellRect.top
     };
     const availableReach = Math.max(30, badgePoint.x - Math.max(prevPoint.x, currPoint.x));
-    const mergeBackoff = Math.max(10, Math.min(18, availableReach * 0.18));
+    const mergeBackoff = Math.max(8, Math.min(16, availableReach * 0.2));
     const mergePoint = {
         x: badgePoint.x - mergeBackoff,
         y: badgePoint.y
@@ -796,9 +809,8 @@ window.drawComboBridge = function (layer, geom) {
     const makeMergePath = () => {
         const spanX = Math.max(0, b.x - m.x);
         if (spanX < 1) return `M ${m.x} ${m.y}`;
-        const c1x = m.x + Math.max(4, Math.min(12, spanX * 0.58));
-        const c2x = b.x - Math.max(2, Math.min(8, spanX * 0.28));
-        return `M ${m.x} ${m.y} C ${c1x} ${m.y}, ${c2x} ${b.y}, ${b.x} ${b.y}`;
+        // Ensure y is stable for the stem
+        return `M ${m.x} ${m.y} L ${b.x} ${m.y}`;
     };
 
     const d1 = makeBranchPath(p1);
