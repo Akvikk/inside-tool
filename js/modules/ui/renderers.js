@@ -439,7 +439,7 @@ e                         <div class="text-[14px] leading-tight font-bold tracki
             x: badgePoint.x - mergeBackoff,
             y: badgePoint.y
         };
-        const maxAllowedSpan = Math.max(comboCell.offsetHeight * 2.4, 140);
+        const maxAllowedSpan = 1000; // Increased from comboCell.offsetHeight * 2.4
         if (
             Math.abs(prevPoint.y - mergePoint.y) > maxAllowedSpan ||
             Math.abs(currPoint.y - mergePoint.y) > maxAllowedSpan
