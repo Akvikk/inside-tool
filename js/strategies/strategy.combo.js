@@ -50,34 +50,48 @@ window.StrategyRegistry.combo = {
      * @param {Object} snapshot      - return value of buildPredictionEngineSnapshot()
      * @param {Object} _patternConfig - unused (combo patterns filtered inside PredictionEngine)
      */
-    run(_historyData, snapshot, _patternConfig) {
+    run(_historyData, snapshot, patternConfig = {}) {
         const notifications = [];
         const nextBets = [];
 
-        if (
-            snapshot &&
-            snapshot.engineState !== 'NO_SIGNAL' &&
-            snapshot.engineState !== 'BUILDING' &&
-            snapshot.currentPrediction
-        ) {
-            const pred = snapshot.currentPrediction;
-            if (pred.action !== 'SIT_OUT' && pred.action !== 'WAIT') {
-                notifications.push({
-                    type: 'ACTIVE',
-                    fA: pred.triggerFace || pred.targetFace,
-                    fB: pred.targetFace,
-                    count: 1,
-                    strategy: 'Combo',
-                    patternName: pred.comboLabel
-                });
-                nextBets.push({
-                    targetFace: pred.targetFace,
-                    strategy: 'Combo',
-                    patternName: pred.comboLabel,
-                    confirmed: false
-                });
-            }
+        if (!snapshot) {
+            return { notifications, nextBets };
         }
+
+        const prediction = snapshot.currentPrediction || snapshot;
+        const action = prediction.action || snapshot.action;
+        const targetFace = prediction.targetFace || snapshot.targetFace;
+        const displayLabel = prediction.comboLabel || snapshot.signalLabel || snapshot.ruleLabel || null;
+        const comboKey = snapshot.focusCombo && snapshot.focusCombo.label
+            ? snapshot.focusCombo.label
+            : displayLabel;
+
+        if (!targetFace || action === 'SIT_OUT' || action === 'WAIT') {
+            return { notifications, nextBets };
+        }
+
+        if (comboKey && patternConfig[comboKey] === false) {
+            return { notifications, nextBets };
+        }
+
+        notifications.push({
+            type: 'ACTIVE',
+            fA: prediction.triggerFace || snapshot.triggerFace || targetFace,
+            fB: targetFace,
+            count: 1,
+            strategy: 'Combo',
+            patternName: comboKey || displayLabel || 'Combo',
+            filterKey: comboKey || displayLabel || 'Combo'
+        });
+        nextBets.push({
+            targetFace,
+            strategy: 'Combo',
+            patternName: comboKey || displayLabel || 'Combo',
+            comboLabel: displayLabel || comboKey || 'Combo',
+            filterKey: comboKey || displayLabel || 'Combo',
+            confidence: prediction.confidence || snapshot.confidence || 0,
+            confirmed: false
+        });
 
         return { notifications, nextBets };
     },

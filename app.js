@@ -227,6 +227,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     const restoredSession = window.loadSessionData
         ? await safeModuleCall('loadSessionData', () => window.loadSessionData())
         : false;
+    if (window.ensureActivePatternConfig) {
+        window.ensureActivePatternConfig();
+    }
+    if (window.renderPatternFilterUi) {
+        window.renderPatternFilterUi();
+    }
     if (restoredSession) {
         console.log("Session data loaded.");
         await safeModuleCall('reRenderHistory', () => window.reRenderHistory && window.reRenderHistory());
@@ -571,6 +577,9 @@ window.syncPredictionEngine = async function() {
 
 window.scanAllStrategies = async function (options = {}) {
     if (window.EngineCore && typeof window.EngineCore.scanAll === 'function' && window.state) {
+        if (window.ensureActivePatternConfig) {
+            window.ensureActivePatternConfig();
+        }
         if (window.syncPredictionEngine) {
             await window.syncPredictionEngine();
         }
@@ -925,13 +934,13 @@ function renderStrategyAnalytics() {
     const hrEl = document.getElementById('kpiHitRate');
     if (hrEl) {
         hrEl.innerText = hitRate + "%";
-        hrEl.className = `text-2xl font-bold tracking-tight ${hitRate >= 50 ? 'text-[#30D158]' : 'text-[#FF453A]'}`;
+        hrEl.className = `text-2xl font-bold tracking-tight ${totalSignals === 0 ? 'text-white' : (hitRate >= 50 ? 'text-[#30D158]' : 'text-[#FF453A]')}`;
     }
 
     const netEl = document.getElementById('kpiNet');
     if (netEl) {
         netEl.innerText = (coreStats.netUnits > 0 ? '+' : '') + coreStats.netUnits;
-        netEl.className = `text-2xl font-bold tracking-tight ${coreStats.netUnits >= 0 ? 'text-[#30D158]' : 'text-[#FF453A]'}`;
+        netEl.className = `text-2xl font-bold tracking-tight ${coreStats.netUnits > 0 ? 'text-[#30D158]' : (coreStats.netUnits < 0 ? 'text-[#FF453A]' : 'text-white')}`;
     }
 
     const sigEl = document.getElementById('kpiSignals');
@@ -957,11 +966,14 @@ window.renderUserAnalytics = function () {
     const netEl = document.getElementById('userNet');
     if (netEl) {
         netEl.innerText = (uStats.netUnits > 0 ? '+' : '') + uStats.netUnits;
-        netEl.className = `text-4xl font-bold tracking-tight ${uStats.netUnits >= 0 ? 'text-[#30D158]' : 'text-[#FF453A]'}`;
+        netEl.className = `text-4xl font-bold tracking-tight ${uStats.netUnits > 0 ? 'text-[#30D158]' : (uStats.netUnits < 0 ? 'text-[#FF453A]' : 'text-white')}`;
     }
 
     const hrEl = document.getElementById('userHitRate');
-    if (hrEl) hrEl.innerText = hitRate + "%";
+    if (hrEl) {
+        hrEl.innerText = hitRate + "%";
+        hrEl.className = `text-4xl font-bold tracking-tight ${totalBets === 0 ? 'text-white' : (hitRate >= 50 ? 'text-[#30D158]' : 'text-[#FF453A]')}`;
+    }
 
     const totEl = document.getElementById('userTotal');
     if (totEl) totEl.innerText = totalBets;
@@ -1336,6 +1348,12 @@ window.updateAiConfigModalUI = function() {
 window.changePredictionStrategy = async function (val) {
     if (window.state) {
         window.state.currentGameplayStrategy = val;
+        if (window.ensureActivePatternConfig) {
+            window.ensureActivePatternConfig();
+        }
+        if (window.renderPatternFilterUi) {
+            window.renderPatternFilterUi();
+        }
         if (window.saveSessionData) window.saveSessionData();
         if (window.scanAllStrategies) {
             const result = await window.scanAllStrategies();

@@ -115,6 +115,7 @@ window.StrategyRegistry.series = {
                             strategy: 'Sequence',
                             highlightIds: [prev.id, latest.id],
                             patternName,
+                            filterKey: patternName,
                             confirmed: false
                         });
                     }
@@ -196,6 +197,7 @@ window.StrategyRegistry.series = {
                             strategy: 'TripleCs',
                             highlightIds: ids,
                             patternName,
+                            filterKey: 'TripleCs',
                             confirmed: false
                         });
                     } else {
@@ -235,19 +237,6 @@ window.StrategyRegistry.series = {
                 };
             }
         }
-        
-        // 2. Refresh: Catch repeats (Triple Cs visual cue)
-        for (let f = 1; f <= 5; f++) {
-            if ((prevMask & FACE_MASKS[f]) !== 0 && (currMask & FACE_MASKS[f]) !== 0) {
-                return {
-                    label: `F${f} REPEAT`,
-                    color: '#30D158', // Triple Cs theme color
-                    matchedPrevFace: f,
-                    matchedCurrFace: f
-                };
-            }
-        }
-
         return null;
     }
 };

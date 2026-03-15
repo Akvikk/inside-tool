@@ -14,6 +14,8 @@
             if (data.neuralPredictionEnabled !== undefined) window.state.neuralPredictionEnabled = data.neuralPredictionEnabled;
             if (data.currentInputLayout === 'grid' || data.currentInputLayout === 'racetrack') window.state.currentInputLayout = data.currentInputLayout;
             if (data.currentGameplayStrategy === 'series' || data.currentGameplayStrategy === 'combo') window.state.currentGameplayStrategy = data.currentGameplayStrategy;
+            if (data.patternConfigs && typeof data.patternConfigs === 'object') window.state.patternConfigs = data.patternConfigs;
+            if (data.patternConfig && typeof data.patternConfig === 'object') window.state.patternConfig = data.patternConfig;
             if (typeof data.currentAnalyticsTab === 'string' && data.currentAnalyticsTab) window.state.currentAnalyticsTab = data.currentAnalyticsTab;
             if (typeof data.currentIntelligenceMode === 'string' && data.currentIntelligenceMode) window.state.currentIntelligenceMode = data.currentIntelligenceMode;
             if (data.analyticsDisplayStrategy === 'series' || data.analyticsDisplayStrategy === 'combo') window.state.analyticsDisplayStrategy = data.analyticsDisplayStrategy;
@@ -37,6 +39,8 @@
                 neuralPredictionEnabled: state.neuralPredictionEnabled,
                 currentInputLayout: state.currentInputLayout,
                 currentGameplayStrategy: state.currentGameplayStrategy,
+                patternConfig: state.patternConfig,
+                patternConfigs: state.patternConfigs,
                 currentAnalyticsTab: state.currentAnalyticsTab,
                 currentIntelligenceMode: state.currentIntelligenceMode,
                 analyticsDisplayStrategy: state.analyticsDisplayStrategy,
