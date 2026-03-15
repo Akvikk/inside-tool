@@ -1413,8 +1413,7 @@ button.bg-gradient-to-b:active {
 #aiConfigModal:not(.hidden) .modal-surface,
 #confirmModal:not(.hidden) .modal-surface {
     animation:
-        modalLiftIn 0.28s cubic-bezier(0.18, 0.88, 0.24, 1) both,
-        modalDrift 6.8s ease-in-out 0.32s infinite;
+        modalLiftIn 0.28s cubic-bezier(0.18, 0.88, 0.24, 1) both;
 }
 
 /* Modal Headers */

@@ -254,16 +254,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (window.renderPatternFilterUi) {
         window.renderPatternFilterUi();
     }
-    if (restoredSession) {
-        console.log("Session data loaded.");
-        await safeModuleCall('reRenderHistory', () => window.reRenderHistory && window.reRenderHistory());
-        await safeModuleCall('scanAllStrategies', () => window.scanAllStrategies && window.scanAllStrategies());
-        await safeModuleCall('HudManager.update', () => window.HudManager && window.HudManager.update && window.HudManager.update());
+    if (restoredSession && window.state.history.length > 0) {
+        console.log(`Session data loaded. Rebuilding state from ${window.state.history.length} spins...`);
+        const spinNumbers = window.state.history.map(s => s.num);
+        await safeModuleCall('rebuildSessionFromSpins', () => window.rebuildSessionFromSpins && window.rebuildSessionFromSpins(spinNumbers));
+        
+        console.log("State rebuilt successfully.");
 
         // 2.5 Re-authenticate AI silently if enabled
         if (window.state && window.state.aiEnabled && window.state.aiApiKey) {
             await safeModuleCall('saveAiConfig', () => window.saveAiConfig && window.saveAiConfig(true));
         }
+    } else if (restoredSession) {
+        console.log("Session data loaded, but no history to rebuild.");
     }
 
     // 2. Bind missing enter-key functionality
