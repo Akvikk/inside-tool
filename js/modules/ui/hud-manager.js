@@ -34,10 +34,82 @@
         return getSharedState().hudHistoryScope === 'recent' ? 'recent' : 'all';
     }
 
+    function getHudAnalyticsStrategy() {
+        return getSharedState().analyticsDisplayStrategy === 'combo' ? 'combo' : 'series';
+    }
+
     function setHudScope(nextScope) {
         const sharedState = getSharedState();
         sharedState.hudHistoryScope = nextScope === 'recent' ? 'recent' : 'all';
         return sharedState.hudHistoryScope;
+    }
+
+    function syncHudStrategyButtons(activeStrategy) {
+        const seriesBtn = document.getElementById('hudStrategySeriesBtn');
+        const comboBtn = document.getElementById('hudStrategyComboBtn');
+        const isSeries = activeStrategy !== 'combo';
+
+        if (seriesBtn) {
+            seriesBtn.className = `px-1.5 min-w-[28px] h-4 flex items-center justify-center rounded text-[8px] font-black tracking-[0.12em] transition-colors ${isSeries ? 'bg-[#30D158]/20 text-[#30D158]' : 'text-white/55 hover:text-white'}`;
+        }
+
+        if (comboBtn) {
+            comboBtn.className = `px-1.5 min-w-[28px] h-4 flex items-center justify-center rounded text-[8px] font-black tracking-[0.12em] transition-colors ${isSeries ? 'text-white/55 hover:text-white' : 'bg-[#0A84FF]/20 text-[#0A84FF]'}`;
+        }
+    }
+
+    function buildSeriesHudStats(history, windowSetting) {
+        const historyArray = Array.isArray(history) ? history : [];
+        const parsedWindow = Number.parseInt(windowSetting, 10);
+        const useAllHistory = windowSetting === 'all' || windowSetting === Infinity || windowSetting === null;
+        const safeWindow = useAllHistory
+            ? Math.max(2, historyArray.length)
+            : (Number.isNaN(parsedWindow) ? DEFAULT_HUD_RECENT_WINDOW : Math.max(2, Math.min(60, parsedWindow)));
+        const recentSpins = historyArray.slice(-safeWindow);
+        const sampleSize = Math.max(0, recentSpins.length - 1);
+        const strategy = window.StrategyRegistry && window.StrategyRegistry.series
+            ? window.StrategyRegistry.series
+            : null;
+        const sequences = strategy && Array.isArray(strategy.SEQUENCES) ? strategy.SEQUENCES : [];
+        const colors = strategy && Array.isArray(strategy.SEQUENCE_COLORS) ? strategy.SEQUENCE_COLORS : [];
+
+        const sequenceStats = sequences.map((seq, index) => {
+            let hits = 0;
+            let lastSeenIndex = -1;
+
+            for (let spinIndex = 1; spinIndex < recentSpins.length; spinIndex++) {
+                const prevSpin = recentSpins[spinIndex - 1];
+                const currSpin = recentSpins[spinIndex];
+                const prevFaces = Array.isArray(prevSpin && prevSpin.faces) ? prevSpin.faces : [];
+                const currFaces = Array.isArray(currSpin && currSpin.faces) ? currSpin.faces : [];
+
+                if (prevFaces.includes(seq.a) && currFaces.includes(seq.b)) {
+                    hits++;
+                    lastSeenIndex = spinIndex - 1;
+                }
+            }
+
+            const sampleMisses = Math.max(0, sampleSize - hits);
+            const hotPercent = sampleSize > 0 ? Math.round((hits / sampleSize) * 100) : 0;
+            const coldPercent = sampleSize > 0 ? Math.round((sampleMisses / sampleSize) * 100) : 0;
+
+            return {
+                label: `(${String(seq.name || '').replace(/-/g, '')})`,
+                color: colors[index % Math.max(1, colors.length)] || '#8E8E93',
+                hits,
+                sampleSize,
+                sampleMisses,
+                hotPercent,
+                coldPercent,
+                lastSeenDistance: lastSeenIndex < 0 ? '-' : Math.max(0, sampleSize - 1 - lastSeenIndex)
+            };
+        });
+
+        return {
+            sampleSize,
+            items: sequenceStats,
+            label: strategy && strategy.tableHeader ? strategy.tableHeader : 'SEQUENCE'
+        };
     }
 
     // --- PUBLIC INTERFACE ---
@@ -47,6 +119,8 @@
         update: updateAnalyticsHUD,
         toggleColdMode: toggleHudColdMode,
         toggleScope: toggleHudHistoryScope,
+        setStrategy: setHudAnalyticsStrategy,
+        getStrategy: getHudAnalyticsStrategy,
         fit: fitAnalyticsHUD,
         getIsColdMode: getHudColdMode,
         getScope: getHudScope
@@ -56,6 +130,7 @@
     window.toggleAnalyticsHUD = toggleAnalyticsHUD;
     window.toggleHudColdMode = toggleHudColdMode;
     window.toggleHudHistoryScope = toggleHudHistoryScope;
+    window.setHudAnalyticsStrategy = setHudAnalyticsStrategy;
 
     function fitAnalyticsHUD() {
         const hud = document.getElementById('analyticsHUD');
@@ -230,6 +305,17 @@
         updateAnalyticsHUD();
     }
 
+    function setHudAnalyticsStrategy(nextStrategy) {
+        const normalized = nextStrategy === 'combo' ? 'combo' : 'series';
+        const sharedState = getSharedState();
+        sharedState.analyticsDisplayStrategy = normalized;
+        syncHudStrategyButtons(normalized);
+        if (window.saveSessionData) window.saveSessionData();
+        if (window.renderAnalytics) window.renderAnalytics();
+        updateAnalyticsHUD();
+        return normalized;
+    }
+
     function getHudScopeSummary() {
         const history = window.state ? window.state.history : [];
         const hudHistoryScope = getHudScope();
@@ -251,8 +337,10 @@
 
         const isHudColdMode = getHudColdMode();
         const hudHistoryScope = getHudScope();
+        const hudStrategy = getHudAnalyticsStrategy();
         const recentWindow = getRecentWindow();
         const themeColor = isHudColdMode ? '#06b6d4' : '#30D158';
+        syncHudStrategyButtons(hudStrategy);
 
         if (hudLabel) {
             hudLabel.innerText = getHudScopeSummary();
@@ -289,17 +377,26 @@
         const content = document.getElementById('hudStats');
         if (!content) return;
 
-        // Bridge to window functions
-        if (!window.PredictionEngine) return;
-
         const windowSetting = hudHistoryScope === 'recent' ? recentWindow : 'all';
-        const stats = window.PredictionEngine.calculatePerimeterStats(history, windowSetting);
-        if (!stats || !stats.counts) return;
+        let displayLabel = 'COMBO';
+        let displayCombos = [];
+        let sampleSize = 0;
 
-        const comboStats = stats.comboStats || [];
-        const sampleSize = comboStats.length > 0 ? comboStats[0].sampleSize : 0;
+        if (hudStrategy === 'series') {
+            const seriesStats = buildSeriesHudStats(history, windowSetting);
+            displayLabel = String(seriesStats.label || 'SEQUENCE').toUpperCase();
+            displayCombos = Array.isArray(seriesStats.items) ? seriesStats.items.slice() : [];
+            sampleSize = Number.isFinite(seriesStats.sampleSize) ? seriesStats.sampleSize : 0;
+        } else {
+            if (!window.PredictionEngine) return;
+            const stats = window.PredictionEngine.calculatePerimeterStats(history, windowSetting);
+            if (!stats || !stats.counts) return;
+            const comboStats = stats.comboStats || [];
+            displayLabel = 'COMBO';
+            displayCombos = comboStats.slice();
+            sampleSize = comboStats.length > 0 ? comboStats[0].sampleSize : 0;
+        }
 
-        let displayCombos = comboStats.slice();
         if (isHudColdMode) {
             displayCombos.sort((a, b) => b.coldPercent - a.coldPercent || b.sampleMisses - a.sampleMisses || a.hits - b.hits);
         } else {
@@ -311,8 +408,8 @@
 
         let html = `
             <div class="space-y-0.5">
-                <div class="grid grid-cols-[34px_minmax(0,1fr)_32px] items-center gap-1.5 px-0.5 pb-1 text-[8px] uppercase tracking-[0.12em] text-white/28 border-b border-white/10">
-                    <div class="font-bold">Combo</div>
+                <div class="grid grid-cols-[54px_minmax(0,1fr)_32px] items-center gap-1.5 px-0.5 pb-1 text-[8px] uppercase tracking-[0.12em] text-white/28 border-b border-white/10">
+                    <div class="font-bold">${displayLabel}</div>
                     <div class="text-center font-bold">${col2Title}</div>
                     <div class="text-right font-bold">${col3Title}</div>
                 </div>
@@ -329,7 +426,7 @@
                 const valColor = (isHudColdMode ? val2 > 80 : val2 > 20) ? themeColor : '#8E8E93';
 
                 html += `
-                    <div class="grid grid-cols-[34px_minmax(0,1fr)_32px] items-center gap-1.5 px-0.5 py-1">
+                    <div class="grid grid-cols-[54px_minmax(0,1fr)_32px] items-center gap-1.5 px-0.5 py-1">
                         <div class="text-[12px] font-black tracking-[0.08em]" style="color:${c.color}; opacity:${opacity}">${c.label}</div>
                         <div class="text-center font-mono text-[10px] text-gray-200" style="opacity:${opacity}">${val1}</div>
                         <div class="text-right font-mono text-[10px] font-bold" style="color:${valColor}; opacity:${opacity}">${val2}%</div>

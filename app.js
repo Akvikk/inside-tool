@@ -744,6 +744,9 @@ window.setAnalyticsDisplayStrategy = function (strat) {
         if (pillBg) pillBg.style.transform = 'translateX(100%)';
     }
     if (window.saveSessionData) window.saveSessionData();
+    if (window.HudManager && typeof window.HudManager.update === 'function') {
+        window.HudManager.update();
+    }
     if (window.renderAnalytics) {
         window.renderAnalytics();
     } else {
