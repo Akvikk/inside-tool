@@ -547,7 +547,7 @@ window.renderRow = function (spin, targetContainer) {
     tr.className = "history-row relative hover:bg-white/[0.02] transition-colors";
     tr.id = 'row-' + spin.id;
 
-    const RED_NUMS = state.RED_NUMS || [];
+    const RED_NUMS = config.RED_NUMS || [];
     let bgClass = spin.num === 0 ? 'bg-green' : (RED_NUMS.includes(spin.num) ? 'bg-red' : 'bg-black');
 
     let faceHTML = '<span class="text-gray-600">-</span>';
@@ -657,29 +657,47 @@ window.layoutComboBridge = function (spinId) {
     const badgeRect = badge.getBoundingClientRect();
 
     const prevPoint = {
-        x: prevRect.right - cellRect.left + 2,
+        x: prevRect.right - cellRect.left + 4,
         y: prevRect.top + prevRect.height / 2 - cellRect.top
     };
     const currPoint = {
-        x: currRect.right - cellRect.left + 2,
+        x: currRect.right - cellRect.left + 4,
         y: currRect.top + currRect.height / 2 - cellRect.top
     };
-    const targetPoint = {
-        x: badgeRect.left - cellRect.left + 4,
+    const badgePoint = {
+        x: badgeRect.left - cellRect.left + Math.max(5, Math.min(11, badgeRect.width * 0.16)),
         y: badgeRect.top + badgeRect.height / 2 - cellRect.top
+    };
+    const availableReach = Math.max(30, badgePoint.x - Math.max(prevPoint.x, currPoint.x));
+    const mergeBackoff = Math.max(10, Math.min(18, availableReach * 0.18));
+    const mergePoint = {
+        x: badgePoint.x - mergeBackoff,
+        y: badgePoint.y
     };
     const maxAllowedSpan = Math.max(comboCell.offsetHeight * 2.4, 140);
     if (
-        Math.abs(prevPoint.y - targetPoint.y) > maxAllowedSpan ||
-        Math.abs(currPoint.y - targetPoint.y) > maxAllowedSpan
+        Math.abs(prevPoint.y - mergePoint.y) > maxAllowedSpan ||
+        Math.abs(currPoint.y - mergePoint.y) > maxAllowedSpan
     ) {
         layer.innerHTML = '';
         layer._comboGeom = null;
         return;
     }
 
-    const nextGeom = { p1: prevPoint, p2: currPoint, t: targetPoint, color: color };
-    const prevGeom = layer._comboGeom || { p1: { ...targetPoint }, p2: { ...targetPoint }, t: { ...targetPoint }, color: color };
+    const nextGeom = {
+        p1: prevPoint,
+        p2: currPoint,
+        m: mergePoint,
+        b: badgePoint,
+        color: color
+    };
+    const prevGeom = layer._comboGeom || {
+        p1: { ...badgePoint },
+        p2: { ...badgePoint },
+        m: { ...badgePoint },
+        b: { ...badgePoint },
+        color: color
+    };
 
     if (window.animateComboBridge) window.animateComboBridge(layer, prevGeom, nextGeom, 260);
     layer._comboGeom = nextGeom;
@@ -725,8 +743,10 @@ window.ensureComboBridgeElements = function (layer) {
             <svg class="overflow-visible">
                 <path class="combo-path-glow-1" fill="none" stroke-linecap="round" stroke-linejoin="round" />
                 <path class="combo-path-glow-2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+                <path class="combo-path-glow-merge" fill="none" stroke-linecap="round" stroke-linejoin="round" />
                 <path class="combo-path-core-1" fill="none" stroke-linecap="round" stroke-linejoin="round" />
                 <path class="combo-path-core-2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+                <path class="combo-path-core-merge" fill="none" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
         `;
         svg = layer.querySelector('svg');
@@ -735,18 +755,20 @@ window.ensureComboBridgeElements = function (layer) {
         svg,
         glow1: layer.querySelector('.combo-path-glow-1'),
         glow2: layer.querySelector('.combo-path-glow-2'),
+        glowMerge: layer.querySelector('.combo-path-glow-merge'),
         core1: layer.querySelector('.combo-path-core-1'),
-        core2: layer.querySelector('.combo-path-core-2')
+        core2: layer.querySelector('.combo-path-core-2'),
+        coreMerge: layer.querySelector('.combo-path-core-merge')
     };
 }
 
 window.drawComboBridge = function (layer, geom) {
-    const { svg, glow1, glow2, core1, core2 } = window.ensureComboBridgeElements(layer);
+    const { svg, glow1, glow2, glowMerge, core1, core2, coreMerge } = window.ensureComboBridgeElements(layer);
 
-    const minX = Math.min(geom.p1.x, geom.p2.x, geom.t.x) - 10;
-    const maxX = Math.max(geom.p1.x, geom.p2.x, geom.t.x) + 6;
-    const minY = Math.min(geom.p1.y, geom.p2.y, geom.t.y) - 10;
-    const maxY = Math.max(geom.p1.y, geom.p2.y, geom.t.y) + 10;
+    const minX = Math.min(geom.p1.x, geom.p2.x, geom.m.x, geom.b.x) - 14;
+    const maxX = Math.max(geom.p1.x, geom.p2.x, geom.m.x, geom.b.x) + 10;
+    const minY = Math.min(geom.p1.y, geom.p2.y, geom.m.y, geom.b.y) - 14;
+    const maxY = Math.max(geom.p1.y, geom.p2.y, geom.m.y, geom.b.y) + 14;
 
     const width = Math.max(24, maxX - minX);
     const height = Math.max(24, maxY - minY);
@@ -762,28 +784,35 @@ window.drawComboBridge = function (layer, geom) {
 
     const p1 = { x: geom.p1.x - minX, y: geom.p1.y - minY };
     const p2 = { x: geom.p2.x - minX, y: geom.p2.y - minY };
-    const t = { x: geom.t.x - minX, y: geom.t.y - minY };
+    const m = { x: geom.m.x - minX, y: geom.m.y - minY };
+    const b = { x: geom.b.x - minX, y: geom.b.y - minY };
 
-    const makePath = (p) => {
-        const spanX = Math.max(18, t.x - p.x);
-        const dy = t.y - p.y;
-        const c1x = p.x + Math.max(10, Math.min(26, spanX * 0.52));
-        const c2x = t.x - Math.max(6, Math.min(14, spanX * 0.28));
-        const c1y = p.y + dy * 0.08;
-        const c2y = t.y - dy * 0.08;
-        return `M ${p.x} ${p.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${t.x} ${t.y}`;
+    const makeBranchPath = (p) => {
+        const spanX = Math.max(28, m.x - p.x);
+        const startLead = Math.max(16, Math.min(46, spanX * 0.34));
+        const endLead = Math.max(12, Math.min(28, spanX * 0.26));
+        return `M ${p.x} ${p.y} C ${p.x + startLead} ${p.y}, ${m.x - endLead} ${m.y}, ${m.x} ${m.y}`;
+    };
+    const makeMergePath = () => {
+        const spanX = Math.max(0, b.x - m.x);
+        if (spanX < 1) return `M ${m.x} ${m.y}`;
+        const c1x = m.x + Math.max(4, Math.min(12, spanX * 0.58));
+        const c2x = b.x - Math.max(2, Math.min(8, spanX * 0.28));
+        return `M ${m.x} ${m.y} C ${c1x} ${m.y}, ${c2x} ${b.y}, ${b.x} ${b.y}`;
     };
 
-    const d1 = makePath(p1);
-    const d2 = makePath(p2);
+    const d1 = makeBranchPath(p1);
+    const d2 = makeBranchPath(p2);
+    const dMerge = makeMergePath();
 
-    const connectorReach = Math.max(24, t.x - Math.min(p1.x, p2.x));
-    const responsiveScale = Math.max(0.62, Math.min(1, connectorReach / 150));
-    const coreWidth = (2.2 * responsiveScale).toFixed(2);
-    const glowWidth = (4.4 * responsiveScale).toFixed(2);
-    const coreOpacity = Math.max(0.78, Math.min(0.95, 0.78 + responsiveScale * 0.16)).toFixed(2);
-    const glowOpacity = Math.max(0.22, Math.min(0.35, 0.18 + responsiveScale * 0.17)).toFixed(2);
-    const blurPx = Math.max(2, Math.round(4 * responsiveScale));
+    const connectorReach = Math.max(36, b.x - Math.min(p1.x, p2.x));
+    const responsiveScale = Math.max(0.58, Math.min(1.04, connectorReach / 156));
+    const coreWidth = (1.9 * responsiveScale).toFixed(2);
+    const mergeCoreWidth = (2.05 * responsiveScale).toFixed(2);
+    const glowWidth = (4.1 * responsiveScale).toFixed(2);
+    const coreOpacity = Math.max(0.8, Math.min(0.95, 0.8 + responsiveScale * 0.12)).toFixed(2);
+    const glowOpacity = Math.max(0.18, Math.min(0.32, 0.16 + responsiveScale * 0.15)).toFixed(2);
+    const blurPx = Math.max(2, Math.round(5 * responsiveScale));
 
     [glow1, glow2].forEach((p, idx) => {
         p.setAttribute('d', idx === 0 ? d1 : d2);
@@ -792,12 +821,22 @@ window.drawComboBridge = function (layer, geom) {
         p.setAttribute('stroke-opacity', glowOpacity);
         p.style.filter = `drop-shadow(0 0 ${blurPx}px ${geom.color})`;
     });
+    glowMerge.setAttribute('d', dMerge);
+    glowMerge.setAttribute('stroke', geom.color);
+    glowMerge.setAttribute('stroke-width', glowWidth);
+    glowMerge.setAttribute('stroke-opacity', (parseFloat(glowOpacity) * 0.94).toFixed(2));
+    glowMerge.style.filter = `drop-shadow(0 0 ${blurPx + 1}px ${geom.color})`;
+
     [core1, core2].forEach((p, idx) => {
         p.setAttribute('d', idx === 0 ? d1 : d2);
         p.setAttribute('stroke', geom.color);
         p.setAttribute('stroke-width', coreWidth);
         p.setAttribute('stroke-opacity', coreOpacity);
     });
+    coreMerge.setAttribute('d', dMerge);
+    coreMerge.setAttribute('stroke', geom.color);
+    coreMerge.setAttribute('stroke-width', mergeCoreWidth);
+    coreMerge.setAttribute('stroke-opacity', Math.min(0.98, parseFloat(coreOpacity) + 0.04).toFixed(2));
 }
 
 window.animateComboBridge = function (layer, fromGeom, toGeom, duration = 260) {
@@ -812,7 +851,8 @@ window.animateComboBridge = function (layer, fromGeom, toGeom, duration = 260) {
         const geom = {
             p1: { x: lerp(fromGeom.p1.x, toGeom.p1.x, t), y: lerp(fromGeom.p1.y, toGeom.p1.y, t) },
             p2: { x: lerp(fromGeom.p2.x, toGeom.p2.x, t), y: lerp(fromGeom.p2.y, toGeom.p2.y, t) },
-            t: { x: lerp(fromGeom.t.x, toGeom.t.x, t), y: lerp(fromGeom.t.y, toGeom.t.y, t) },
+            m: { x: lerp(fromGeom.m.x, toGeom.m.x, t), y: lerp(fromGeom.m.y, toGeom.m.y, t) },
+            b: { x: lerp(fromGeom.b.x, toGeom.b.x, t), y: lerp(fromGeom.b.y, toGeom.b.y, t) },
             color: toGeom.color
         };
         if (window.drawComboBridge) window.drawComboBridge(layer, geom);
@@ -1176,8 +1216,8 @@ window.renderIntelligencePanel = function() {
     const nextCheckpoint = document.getElementById('intelNextCheckpoint');
     if (!content) return;
 
-    const ENGINE_PRIMARY_WINDOW = window.state ? window.state.ENGINE_PRIMARY_WINDOW : 14;
-    const ENGINE_CONFIRMATION_WINDOW = window.state ? window.state.ENGINE_CONFIRMATION_WINDOW : 5;
+    const ENGINE_PRIMARY_WINDOW = window.config ? window.config.ENGINE_PRIMARY_WINDOW : 14;
+    const ENGINE_CONFIRMATION_WINDOW = window.config ? window.config.ENGINE_CONFIRMATION_WINDOW : 5;
     
     const snapshot = window.state.engineSnapshot || {};
     const rankedCombos = window.sortEngineReadCombos(snapshot.comboCoverage || []);

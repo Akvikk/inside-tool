@@ -109,7 +109,7 @@
 
         let getColorClass = (num) => {
             if (num === 0) return 'rt-green';
-            return state.RED_NUMS.includes(num) ? 'rt-red' : 'rt-black';
+            return config.RED_NUMS.includes(num) ? 'rt-red' : 'rt-black';
         };
 
         let paths = '';
@@ -194,7 +194,7 @@
 
             for (let i = 1; i <= 36; i++) {
                 let btn = document.createElement('button');
-                const isRed = state.RED_NUMS.includes(i);
+                const isRed = config.RED_NUMS.includes(i);
                 btn.className = `grid-btn py-4 shadow-sm h-12 flex items-center justify-center ${isRed ? 'grid-red' : 'grid-black'}`;
                 btn.innerText = i;
                 btn.onclick = () => handleGridClick(i);
