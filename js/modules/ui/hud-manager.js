@@ -5,6 +5,7 @@
 
 (function () {
     const DEFAULT_HUD_RECENT_WINDOW = 14;
+    const HUD_MAX_ROWS = 5;
 
     function getSharedState() {
         if (!window.state || typeof window.state !== 'object') {
@@ -140,9 +141,11 @@
     function buildHudSummary(faceStats) {
         return faceStats.map((faceStat) => `
             <div class="hud-summary-card" style="border-color:${faceStat.color}33; background:linear-gradient(180deg, ${faceStat.backgroundTop}, ${faceStat.backgroundBottom});">
-                <div class="hud-summary-label" style="color:${faceStat.color};">${faceStat.label}</div>
-                <div class="hud-summary-value">${faceStat.hits}</div>
-                <div class="hud-summary-copy">${faceStat.percent}% coverage | g${faceStat.gap}</div>
+                <div class="hud-summary-top">
+                    <div class="hud-summary-label" style="color:${faceStat.color};">${faceStat.label}</div>
+                    <div class="hud-summary-value">${faceStat.hits}</div>
+                </div>
+                <div class="hud-summary-copy">${faceStat.percent}% • g${faceStat.gap}</div>
             </div>
         `).join('');
     }
@@ -208,18 +211,6 @@
                 <div class="hud-row-percent" style="color:${barColor}; opacity:${opacity}">${percent}%</div>
             </div>
         `;
-    }
-
-    function getHudScopeSummary() {
-        const history = window.state ? window.state.history : [];
-        const hudHistoryScope = getHudScope();
-        const recentWindow = getRecentWindow();
-        if (hudHistoryScope === 'recent') {
-            return history.length > 0
-                ? `Last ${Math.min(recentWindow, history.length)} Spins`
-                : `Last ${recentWindow} Spins`;
-        }
-        return history.length > 0 ? `All ${history.length} Spins` : 'All History';
     }
 
     function getHudDisplayData(history, hudStrategy, windowSetting) {
@@ -475,7 +466,6 @@
         const hud = document.getElementById('analyticsHUD');
         if (!hud || hud.classList.contains('hidden')) return;
 
-        const hudLabel = document.getElementById('hudWindowValue');
         const hudScopeBtn = document.getElementById('hudScopeBtn');
         const hudSummary = document.getElementById('hudSummary');
         const hudColumnLabel = document.getElementById('hudColumnLabel');
@@ -492,7 +482,6 @@
         const themeColor = isHudColdMode ? '#06b6d4' : '#30D158';
         const modeLabel = isHudColdMode ? 'Cold' : 'Hot';
         const isRecentScope = hudHistoryScope === 'recent';
-        const scopeSummary = getHudScopeSummary();
         const windowSetting = isRecentScope ? recentWindow : 'all';
         const historyWindow = getHudWindowHistory(history, windowSetting);
         const faceStats = buildHudFaceStats(historyWindow);
@@ -506,13 +495,8 @@
             document.body.classList.toggle('hud-cold-mode', isHudColdMode);
         }
 
-        if (hudLabel) {
-            hudLabel.innerText = scopeSummary;
-            hudLabel.style.color = themeColor;
-        }
-
         if (hudScopeBtn) {
-            hudScopeBtn.innerText = isRecentScope ? String(recentWindow) : 'ALL';
+            hudScopeBtn.innerText = isRecentScope ? String(recentWindow) : 'All';
             hudScopeBtn.title = hudHistoryScope === 'all'
                 ? `Switch to ${recentWindow}-spin rolling window`
                 : 'Switch to all history';
@@ -536,13 +520,15 @@
             displayCombos.sort((a, b) => b.hotPercent - a.hotPercent || b.hits - a.hits || a.sampleMisses - b.sampleMisses);
         }
 
-        if (sampleSize === 0 || displayCombos.length === 0) {
+        const visibleCombos = displayCombos.slice(0, HUD_MAX_ROWS);
+
+        if (sampleSize === 0 || visibleCombos.length === 0) {
             content.innerHTML = buildHudEmptyState('Awaiting telemetry...');
             fitAnalyticsHUD();
             return;
         }
 
-        content.innerHTML = displayCombos
+        content.innerHTML = visibleCombos
             .map((item) => buildHudRowHtml(item, sampleSize, isHudColdMode, themeColor))
             .join('');
 

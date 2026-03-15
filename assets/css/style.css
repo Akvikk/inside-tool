@@ -1607,79 +1607,27 @@ input[type=number] {
 }
 
 #hudHeader {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto auto auto;
     align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
-    padding: 9px 10px 8px;
+    gap: 6px;
+    padding: 8px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012));
     touch-action: none;
 }
 
-.hud-header-copy {
+#hudHeader .hud-segment {
     min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.hud-header-kicker {
-    color: rgba(255, 255, 255, 0.42);
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-}
-
-.hud-header-title {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    color: #30D158;
-    font-size: 14px;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
-
-.hud-header-title i {
-    font-size: 12px;
-    opacity: 0.9;
-}
-
-.hud-header-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-    margin-left: auto;
-}
-
-.hud-window-pill {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 28px;
-    padding: 0 9px;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.05);
-    color: rgba(255, 255, 255, 0.86);
-    font-size: 9px;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    white-space: nowrap;
 }
 
 .hud-close-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 9px;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.12);
     background: rgba(255, 255, 255, 0.04);
     color: rgba(255, 255, 255, 0.6);
@@ -1695,36 +1643,29 @@ input[type=number] {
 #hudBody {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 12px;
+    gap: 8px;
+    padding: 8px;
     overflow: hidden;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
-}
-
-.hud-toolbar {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto auto;
-    gap: 8px;
-    align-items: center;
 }
 
 .hud-segment {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 4px;
-    padding: 4px;
-    border-radius: 12px;
+    gap: 3px;
+    padding: 3px;
+    border-radius: 10px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(255, 255, 255, 0.03);
 }
 
 .hud-segment-btn {
-    min-height: 30px;
-    border-radius: 8px;
+    min-height: 26px;
+    border-radius: 7px;
     color: rgba(255, 255, 255, 0.5);
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 800;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     transition: color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
 }
@@ -1739,16 +1680,16 @@ input[type=number] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    min-height: 38px;
-    padding: 0 12px;
-    border-radius: 12px;
+    gap: 5px;
+    min-height: 26px;
+    padding: 0 9px;
+    border-radius: 9px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(255, 255, 255, 0.04);
     color: rgba(255, 255, 255, 0.72);
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 800;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
 }
@@ -1760,13 +1701,13 @@ input[type=number] {
 }
 
 .hud-toolbar-btn i {
-    font-size: 11px;
+    font-size: 10px;
 }
 
 .hud-toolbar-btn-ai {
     padding: 0;
-    width: 38px;
-    min-width: 38px;
+    width: 26px;
+    min-width: 26px;
     color: #bf5af2;
     background: rgba(191, 90, 242, 0.08);
     border-color: rgba(191, 90, 242, 0.24);
@@ -1775,29 +1716,36 @@ input[type=number] {
 .hud-summary-grid {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 6px;
+    gap: 4px;
 }
 
 .hud-summary-card {
     min-width: 0;
-    padding: 9px 8px;
-    border-radius: 10px;
+    padding: 6px 7px;
+    border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.025));
 }
 
+.hud-summary-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+}
+
 .hud-summary-label {
     color: rgba(255, 255, 255, 0.38);
-    font-size: 8px;
+    font-size: 7px;
     font-weight: 800;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
 }
 
 .hud-summary-value {
-    margin-top: 5px;
+    margin-top: 0;
     color: #f5f5f7;
-    font-size: 14px;
+    font-size: 11px;
     font-weight: 800;
     line-height: 1.1;
     letter-spacing: 0.03em;
@@ -1807,10 +1755,10 @@ input[type=number] {
 }
 
 .hud-summary-copy {
-    margin-top: 5px;
+    margin-top: 3px;
     color: rgba(255, 255, 255, 0.52);
-    font-size: 9px;
-    line-height: 1.25;
+    font-size: 8px;
+    line-height: 1.15;
     word-break: break-word;
 }
 
@@ -1818,7 +1766,7 @@ input[type=number] {
     min-height: 0;
     display: flex;
     flex-direction: column;
-    border-radius: 14px;
+    border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015));
     overflow: hidden;
@@ -1826,15 +1774,15 @@ input[type=number] {
 
 .hud-table-head {
     display: grid;
-    grid-template-columns: 72px minmax(0, 1fr) 50px;
-    gap: 10px;
+    grid-template-columns: 64px minmax(0, 1fr) 42px;
+    gap: 8px;
     align-items: center;
-    padding: 10px 12px;
+    padding: 8px 10px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     color: rgba(255, 255, 255, 0.4);
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 800;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
 }
 
@@ -1850,18 +1798,18 @@ input[type=number] {
     min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 8px;
+    gap: 2px;
+    padding: 4px;
     color: rgba(245, 245, 247, 0.94);
 }
 
 .hud-row {
     display: grid;
-    grid-template-columns: 72px minmax(0, 1fr) 50px;
-    gap: 10px;
+    grid-template-columns: 64px minmax(0, 1fr) 42px;
+    gap: 8px;
     align-items: center;
-    padding: 9px 8px;
-    border-radius: 10px;
+    padding: 6px 6px;
+    border-radius: 8px;
     transition: background 0.18s ease;
 }
 
@@ -1870,21 +1818,21 @@ input[type=number] {
 }
 
 .hud-row-label {
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 800;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
 }
 
 .hud-row-metrics {
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 4px;
 }
 
 .hud-row-ratio {
     color: rgba(255, 255, 255, 0.78);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     text-align: center;
     letter-spacing: 0.04em;
@@ -1892,7 +1840,7 @@ input[type=number] {
 
 .hud-row-bar {
     position: relative;
-    height: 6px;
+    height: 4px;
     border-radius: 999px;
     overflow: hidden;
     background: rgba(255, 255, 255, 0.08);
@@ -1906,15 +1854,15 @@ input[type=number] {
 }
 
 .hud-row-percent {
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 800;
     text-align: right;
 }
 
 .hud-empty-state {
-    padding: 28px 14px;
+    padding: 20px 12px;
     color: rgba(255, 255, 255, 0.38);
-    font-size: 12px;
+    font-size: 11px;
     font-style: italic;
     text-align: center;
 }

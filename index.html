@@ -625,48 +625,63 @@
         style="width: 340px; top: 80px; right: 16px;">
         <div id="hudHeader"
             class="cursor-move select-none">
-            <div class="hud-header-meta">
-                <div id="hudWindowValue" class="hud-window-pill">All History</div>
-                <button onclick="toggleAnalyticsHUD()" class="hud-close-btn" title="Close analytics HUD">
-                    <i class="fas fa-times"></i>
-                </button>
+            <div class="hud-segment">
+                <button onclick="setHudAnalyticsStrategy('series')" id="hudStrategySeriesBtn"
+                    class="hud-segment-btn" title="Show series strategy in HUD">Series</button>
+                <button onclick="setHudAnalyticsStrategy('combo')" id="hudStrategyComboBtn"
+                    class="hud-segment-btn" title="Show combo strategy in HUD">Combo</button>
             </div>
+            <button onclick="toggleHudColdMode()" id="hudColdBtn" class="hud-toolbar-btn"
+                title="Toggle hot/cold mode">
+                <i class="fas fa-fire"></i>
+                <span id="hudColdBtnLabel">Hot</span>
+            </button>
+            <button onclick="toggleHudHistoryScope()" id="hudScopeBtn" class="hud-toolbar-btn"
+                title="Toggle recent/all scope">All</button>
+            <button onclick="openHindsightModal()" id="hudAiBtn" class="hud-toolbar-btn hud-toolbar-btn-ai"
+                title="AI Hindsight Review">
+                <i class="fas fa-brain"></i>
+            </button>
+            <button onclick="toggleAnalyticsHUD()" class="hud-close-btn" title="Close analytics HUD">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
         <div id="hudBody" class="flex-1 flex flex-col overflow-hidden relative">
-            <div class="hud-toolbar">
-                <div class="hud-segment">
-                    <button onclick="setHudAnalyticsStrategy('series')" id="hudStrategySeriesBtn"
-                        class="hud-segment-btn" title="Show series strategy in HUD">Series</button>
-                    <button onclick="setHudAnalyticsStrategy('combo')" id="hudStrategyComboBtn"
-                        class="hud-segment-btn" title="Show combo strategy in HUD">Combo</button>
-                </div>
-                <button onclick="toggleHudColdMode()" id="hudColdBtn" class="hud-toolbar-btn"
-                    title="Toggle hot/cold mode">
-                    <i class="fas fa-fire"></i>
-                    <span id="hudColdBtnLabel">Hot</span>
-                </button>
-                <button onclick="toggleHudHistoryScope()" id="hudScopeBtn" class="hud-toolbar-btn"
-                    title="Toggle recent/all scope">All</button>
-                <button onclick="openHindsightModal()" id="hudAiBtn" class="hud-toolbar-btn hud-toolbar-btn-ai"
-                    title="AI Hindsight Review">
-                    <i class="fas fa-brain"></i>
-                </button>
-            </div>
             <div id="hudSummary" class="hud-summary-grid">
                 <div class="hud-summary-card">
-                    <div class="hud-summary-label">Strategy</div>
-                    <div class="hud-summary-value">Series</div>
-                    <div class="hud-summary-copy">Awaiting feed</div>
+                    <div class="hud-summary-top">
+                        <div class="hud-summary-label">F1</div>
+                        <div class="hud-summary-value">0</div>
+                    </div>
+                    <div class="hud-summary-copy">0% • g0</div>
                 </div>
                 <div class="hud-summary-card">
-                    <div class="hud-summary-label">Window</div>
-                    <div class="hud-summary-value">0</div>
-                    <div class="hud-summary-copy">No transitions</div>
+                    <div class="hud-summary-top">
+                        <div class="hud-summary-label">F2</div>
+                        <div class="hud-summary-value">0</div>
+                    </div>
+                    <div class="hud-summary-copy">0% • g0</div>
                 </div>
                 <div class="hud-summary-card">
-                    <div class="hud-summary-label">Leader</div>
-                    <div class="hud-summary-value">--</div>
-                    <div class="hud-summary-copy">No dominant read</div>
+                    <div class="hud-summary-top">
+                        <div class="hud-summary-label">F3</div>
+                        <div class="hud-summary-value">0</div>
+                    </div>
+                    <div class="hud-summary-copy">0% • g0</div>
+                </div>
+                <div class="hud-summary-card">
+                    <div class="hud-summary-top">
+                        <div class="hud-summary-label">F4</div>
+                        <div class="hud-summary-value">0</div>
+                    </div>
+                    <div class="hud-summary-copy">0% • g0</div>
+                </div>
+                <div class="hud-summary-card">
+                    <div class="hud-summary-top">
+                        <div class="hud-summary-label">F5</div>
+                        <div class="hud-summary-value">0</div>
+                    </div>
+                    <div class="hud-summary-copy">0% • g0</div>
                 </div>
             </div>
             <div class="hud-table-shell">
