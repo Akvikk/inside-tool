@@ -34,6 +34,7 @@
             lastUpdatedLabel: 'Never'
         },
         patternConfig: {},
+        patternConfigs: {},
         userStats: {
             totalWins: 0, totalLosses: 0, netUnits: 0,
             bankrollHistory: [0],

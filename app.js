@@ -970,77 +970,7 @@ window.renderUserAnalytics = function () {
     updateUserBetLog(uStats.betLog);
 };
 
-function drawAdvancedGraph(historyArray, winCount, lossCount, containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
 
-    container.innerHTML = '';
-    container.className = "flex flex-col h-full w-full rounded-b-xl overflow-hidden";
-
-    const chartDiv = document.createElement('div');
-    chartDiv.className = "relative h-[80%] w-full bg-black/20";
-    container.appendChild(chartDiv);
-
-    const hudDiv = document.createElement('div');
-    hudDiv.className = "h-[20%] w-full flex justify-between items-center px-4 text-[10px] font-bold bg-white/5 border-t border-white/5 backdrop-blur-sm";
-    hudDiv.innerHTML = `
-        <span class="text-[#4ade80] drop-shadow-sm tracking-wide">WINS: ${winCount || 0}</span>
-        <span class="text-[#e5e7eb] drop-shadow-sm tracking-wide">SPINS: ${historyArray ? Math.max(0, historyArray.length - 1) : 0}</span>
-        <span class="text-[#f87171] drop-shadow-sm tracking-wide">LOSSES: ${lossCount || 0}</span>
-    `;
-    container.appendChild(hudDiv);
-
-    if (!historyArray || historyArray.length < 2) {
-        chartDiv.innerHTML = `<div class="flex items-center justify-center h-full text-xs text-[#8E8E93] font-mono animate-pulse">Waiting for Data...</div>`;
-        return;
-    }
-
-    const vWidth = 600;
-    const vHeight = 200;
-    const padding = 10;
-
-    const maxVal = Math.max(...historyArray);
-    const minVal = Math.min(...historyArray);
-    let range = maxVal - minVal;
-    if (range === 0) range = 2;
-
-    const getX = i => (i / (historyArray.length - 1)) * (vWidth - 2 * padding) + padding;
-    const getY = v => vHeight - padding - ((v - minVal) / range) * (vHeight - 2 * padding);
-
-    let pathD = `M ${getX(0)} ${getY(historyArray[0])}`;
-    for (let i = 1; i < historyArray.length; i++) {
-        pathD += ` L ${getX(i)} ${getY(historyArray[i])}`;
-    }
-
-    const zeroY = getY(0);
-    let zeroOffset = 0;
-    if (maxVal > 0 && minVal < 0) {
-        zeroOffset = (maxVal / range) * 100;
-    } else if (minVal >= 0) {
-        zeroOffset = 100;
-    }
-
-    const svgContent = `
-        <svg viewBox="0 0 ${vWidth} ${vHeight}" width="100%" height="100%" preserveAspectRatio="none" style="overflow: visible;">
-            <defs>
-                <linearGradient id="profitGrad-${containerId}" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#4ade80" />
-                    <stop offset="${zeroOffset}%" stop-color="#4ade80" />
-                    <stop offset="${zeroOffset}%" stop-color="#f87171" />
-                    <stop offset="100%" stop-color="#f87171" />
-                </linearGradient>
-            </defs>
-            <line x1="${padding}" y1="${zeroY}" x2="${vWidth - padding}" y2="${zeroY}" 
-                  stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 6" opacity="0.3" vector-effect="non-scaling-stroke" />
-            <path d="${pathD}" fill="none" stroke="url(#profitGrad-${containerId})" 
-                  stroke-width="3" stroke-linecap="round" stroke-linejoin="round" 
-                  vector-effect="non-scaling-stroke" 
-                  style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));" />
-        </svg>
-    `;
-
-    chartDiv.innerHTML = svgContent;
-}
 
 function updatePatternHeatmap(patternData) {
     const tbody = document.getElementById('heatmapBody');
