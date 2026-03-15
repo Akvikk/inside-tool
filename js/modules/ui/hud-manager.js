@@ -124,42 +124,65 @@
         };
     }
 
-    function buildHudSummary(options) {
-        const {
-            displayLabel,
-            strategyCopy,
-            sampleValue,
-            sampleCopy,
-            leader,
-            leaderPercent,
-            leaderSampleSize,
-            modeLabel
-        } = options;
+    function getHudWindowHistory(history, windowSetting) {
+        const historyArray = Array.isArray(history) ? history : [];
+        if (windowSetting === 'all' || windowSetting === Infinity || windowSetting === null) {
+            return historyArray.slice();
+        }
 
-        const leaderRatio = leader
-            ? `${leader.hits}/${Math.max(0, leaderSampleSize || 0)}`
-            : '0/0';
-        const leaderCopy = leader
-            ? `${leaderRatio} | ${leaderPercent}% ${modeLabel.toLowerCase()}`
-            : 'No dominant read';
+        const parsedWindow = Number.parseInt(windowSetting, 10);
+        const safeWindow = Number.isNaN(parsedWindow)
+            ? DEFAULT_HUD_RECENT_WINDOW
+            : Math.max(1, Math.min(60, parsedWindow));
+        return historyArray.slice(-safeWindow);
+    }
 
-        return `
-            <div class="hud-summary-card">
-                <div class="hud-summary-label">Strategy</div>
-                <div class="hud-summary-value">${displayLabel}</div>
-                <div class="hud-summary-copy">${strategyCopy}</div>
+    function buildHudSummary(faceStats) {
+        return faceStats.map((faceStat) => `
+            <div class="hud-summary-card" style="border-color:${faceStat.color}33; background:linear-gradient(180deg, ${faceStat.backgroundTop}, ${faceStat.backgroundBottom});">
+                <div class="hud-summary-label" style="color:${faceStat.color};">${faceStat.label}</div>
+                <div class="hud-summary-value">${faceStat.hits}</div>
+                <div class="hud-summary-copy">${faceStat.percent}% coverage | g${faceStat.gap}</div>
             </div>
-            <div class="hud-summary-card">
-                <div class="hud-summary-label">Sample</div>
-                <div class="hud-summary-value">${sampleValue}</div>
-                <div class="hud-summary-copy">${sampleCopy}</div>
-            </div>
-            <div class="hud-summary-card">
-                <div class="hud-summary-label">Leader</div>
-                <div class="hud-summary-value">${leader ? leader.label : '--'}</div>
-                <div class="hud-summary-copy">${leaderCopy}</div>
-            </div>
-        `;
+        `).join('');
+    }
+
+    function buildHudFaceStats(historyWindow) {
+        const scopedHistory = Array.isArray(historyWindow) ? historyWindow : [];
+        const validSpins = scopedHistory.filter((spin) => Array.isArray(spin && spin.faces));
+        const sampleSize = validSpins.length;
+        const facePalette = window.FACES || {};
+        const faceStats = [];
+
+        for (let faceId = 1; faceId <= 5; faceId++) {
+            let hits = 0;
+            let lastSeenIndex = -1;
+
+            for (let index = 0; index < validSpins.length; index++) {
+                const faces = validSpins[index].faces;
+                if (faces.includes(faceId)) {
+                    hits++;
+                    lastSeenIndex = index;
+                }
+            }
+
+            const percent = sampleSize > 0 ? Math.round((hits / sampleSize) * 100) : 0;
+            const gap = lastSeenIndex < 0 ? sampleSize : Math.max(0, (sampleSize - 1) - lastSeenIndex);
+            const palette = facePalette[faceId] || {};
+            const color = palette.color || '#f5f5f7';
+
+            faceStats.push({
+                label: `F${faceId}`,
+                hits,
+                percent,
+                gap,
+                color,
+                backgroundTop: `${color}20`,
+                backgroundBottom: 'rgba(255, 255, 255, 0.02)'
+            });
+        }
+
+        return faceStats;
     }
 
     function buildHudEmptyState(message) {
@@ -471,21 +494,12 @@
         const modeLabel = isHudColdMode ? 'Cold' : 'Hot';
         const isRecentScope = hudHistoryScope === 'recent';
         const scopeSummary = getHudScopeSummary();
-        const displayData = getHudDisplayData(history, hudStrategy, isRecentScope ? recentWindow : 'all');
+        const windowSetting = isRecentScope ? recentWindow : 'all';
+        const historyWindow = getHudWindowHistory(history, windowSetting);
+        const faceStats = buildHudFaceStats(historyWindow);
+        const displayData = getHudDisplayData(history, hudStrategy, windowSetting);
         const displayCombos = Array.isArray(displayData.items) ? displayData.items.slice() : [];
         const sampleSize = Number.isFinite(displayData.sampleSize) ? displayData.sampleSize : 0;
-
-        if (isHudColdMode) {
-            displayCombos.sort((a, b) => b.coldPercent - a.coldPercent || b.sampleMisses - a.sampleMisses || a.hits - b.hits);
-        } else {
-            displayCombos.sort((a, b) => b.hotPercent - a.hotPercent || b.hits - a.hits || a.sampleMisses - b.sampleMisses);
-        }
-
-        const leader = sampleSize > 0 && displayCombos.length > 0 ? displayCombos[0] : null;
-        const leaderPercent = leader ? (isHudColdMode ? leader.coldPercent : leader.hotPercent) : 0;
-        const leaderSampleSize = leader
-            ? (Number.isFinite(leader.sampleSize) ? leader.sampleSize : sampleSize)
-            : sampleSize;
 
         syncHudStrategyButtons(hudStrategy);
         syncHudColdButton(isHudColdMode);
@@ -518,21 +532,18 @@
         }
 
         if (hudSummary) {
-            hudSummary.innerHTML = buildHudSummary({
-                displayLabel: displayData.strategyLabel,
-                strategyCopy: `${displayData.strategyCopy} | ${modeLabel}`,
-                sampleValue: `${sampleSize}`,
-                sampleCopy: `${scopeSummary} | ${displayData.sampleCopy}`,
-                leader,
-                leaderPercent,
-                leaderSampleSize,
-                modeLabel
-            });
+            hudSummary.innerHTML = buildHudSummary(faceStats);
         }
 
         if (hudColumnLabel) hudColumnLabel.innerText = displayData.columnLabel;
         if (hudMetricLabel) hudMetricLabel.innerText = 'Activity';
         if (hudRateLabel) hudRateLabel.innerText = `${modeLabel} %`;
+
+        if (isHudColdMode) {
+            displayCombos.sort((a, b) => b.coldPercent - a.coldPercent || b.sampleMisses - a.sampleMisses || a.hits - b.hits);
+        } else {
+            displayCombos.sort((a, b) => b.hotPercent - a.hotPercent || b.hits - a.hits || a.sampleMisses - b.sampleMisses);
+        }
 
         if (sampleSize === 0 || displayCombos.length === 0) {
             content.innerHTML = buildHudEmptyState('Awaiting telemetry...');
