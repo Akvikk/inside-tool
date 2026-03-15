@@ -622,38 +622,69 @@
     <!-- ANALYTICS HUD (FLOATING) -->
     <div id="analyticsHUD"
         class="hidden fixed z-[40] flex-col glass-menu overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.8)] border border-white/10"
-        style="width: 260px; top: 80px; right: 16px;">
+        style="width: 340px; top: 80px; right: 16px;">
         <div id="hudHeader"
-            class="p-2 border-b border-white/10 flex justify-between items-center cursor-move select-none bg-white/5">
-            <span class="text-[9px] font-black tracking-[0.16em] uppercase text-[#30D158] flex items-center">
-                <i class="fas fa-satellite-dish mr-1"></i> Live Feed
-            </span>
-            <div class="flex items-center gap-1.5">
-                <div class="flex items-center rounded bg-black/30 border border-white/10 p-0.5">
-                    <button onclick="setHudAnalyticsStrategy('series')" id="hudStrategySeriesBtn"
-                        class="px-1.5 min-w-[28px] h-4 flex items-center justify-center rounded text-[8px] font-black tracking-[0.12em] text-white/55 transition-colors"
-                        title="Show series strategy in HUD">SER</button>
-                    <button onclick="setHudAnalyticsStrategy('combo')" id="hudStrategyComboBtn"
-                        class="px-1.5 min-w-[28px] h-4 flex items-center justify-center rounded text-[8px] font-black tracking-[0.12em] text-white/55 transition-colors"
-                        title="Show combo strategy in HUD">COM</button>
+            class="cursor-move select-none">
+            <div class="hud-header-copy">
+                <div class="hud-header-kicker">Analytics HUD</div>
+                <div id="hudHeaderTitle" class="hud-header-title">
+                    <i class="fas fa-satellite-dish"></i>
+                    <span>Live Feed</span>
                 </div>
-                <button onclick="openHindsightModal()"
-                    class="px-1.5 h-4 flex items-center justify-center rounded bg-white/10 border border-white/10 text-[10px] font-bold text-[#bf5af2] hover:text-white transition-colors"
-                    title="AI Hindsight Review"><i class="fas fa-brain"></i></button>
-                <button onclick="toggleHudColdMode()" id="hudColdBtn"
-                    class="px-1.5 h-4 flex items-center justify-center rounded bg-white/10 border border-white/10 text-[10px] font-bold text-gray-500 hover:text-white transition-colors"
-                    title="Toggle cold/hot mode"><i class="fas fa-snowflake"></i></button>
-                <button onclick="toggleHudHistoryScope()" id="hudScopeBtn"
-                    class="px-1.5 h-4 flex items-center justify-center rounded bg-white/10 border border-white/10 text-[8px] font-bold text-white/70 hover:text-white transition-colors"
-                    title="Toggle recent/all scope">ALL</button>
-                <button onclick="toggleAnalyticsHUD()"
-                    class="text-gray-500 hover:text-white transition-colors text-[10px]"><i
-                        class="fas fa-times"></i></button>
+            </div>
+            <div class="hud-header-meta">
+                <div id="hudWindowValue" class="hud-window-pill">All History</div>
+                <button onclick="toggleAnalyticsHUD()" class="hud-close-btn" title="Close analytics HUD">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
         </div>
-        <div class="flex-1 flex flex-col overflow-hidden relative">
-            <div id="hudStats" class="p-2 text-[10px] text-gray-300 custom-scroll overflow-y-auto">
-                <div class="py-4 text-center text-white/30 italic">Awaiting telemetry...</div>
+        <div id="hudBody" class="flex-1 flex flex-col overflow-hidden relative">
+            <div class="hud-toolbar">
+                <div class="hud-segment">
+                    <button onclick="setHudAnalyticsStrategy('series')" id="hudStrategySeriesBtn"
+                        class="hud-segment-btn" title="Show series strategy in HUD">Series</button>
+                    <button onclick="setHudAnalyticsStrategy('combo')" id="hudStrategyComboBtn"
+                        class="hud-segment-btn" title="Show combo strategy in HUD">Combo</button>
+                </div>
+                <button onclick="toggleHudColdMode()" id="hudColdBtn" class="hud-toolbar-btn"
+                    title="Toggle hot/cold mode">
+                    <i class="fas fa-fire"></i>
+                    <span id="hudColdBtnLabel">Hot</span>
+                </button>
+                <button onclick="toggleHudHistoryScope()" id="hudScopeBtn" class="hud-toolbar-btn"
+                    title="Toggle recent/all scope">All</button>
+                <button onclick="openHindsightModal()" id="hudAiBtn" class="hud-toolbar-btn hud-toolbar-btn-ai"
+                    title="AI Hindsight Review">
+                    <i class="fas fa-brain"></i>
+                </button>
+            </div>
+            <div id="hudSummary" class="hud-summary-grid">
+                <div class="hud-summary-card">
+                    <div class="hud-summary-label">Strategy</div>
+                    <div class="hud-summary-value">Series</div>
+                    <div class="hud-summary-copy">Awaiting feed</div>
+                </div>
+                <div class="hud-summary-card">
+                    <div class="hud-summary-label">Window</div>
+                    <div class="hud-summary-value">0</div>
+                    <div class="hud-summary-copy">No transitions</div>
+                </div>
+                <div class="hud-summary-card">
+                    <div class="hud-summary-label">Leader</div>
+                    <div class="hud-summary-value">--</div>
+                    <div class="hud-summary-copy">No dominant read</div>
+                </div>
+            </div>
+            <div class="hud-table-shell">
+                <div class="hud-table-head">
+                    <div id="hudColumnLabel">Sequence</div>
+                    <div>Activity</div>
+                    <div>Rate</div>
+                </div>
+                <div id="hudStats" class="hud-table-body custom-scroll overflow-y-auto">
+                    <div class="hud-empty-state">Awaiting telemetry...</div>
+                </div>
             </div>
         </div>
         <div id="hudResizeHandle"
