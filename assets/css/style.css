@@ -249,7 +249,7 @@ button:active,
 
 /* Active iOS-style Toggles */
 .grid-red {
-    background: #0A84FF !important; /* Apple Blue */
+    background: #b02a2a !important;
     color: #ffffff !important;
     border: none !important;
 }
@@ -261,7 +261,7 @@ button:active,
 }
 
 .grid-black {
-    background: rgba(255, 255, 255, 0.2) !important;
+    background: #1a1c1c !important;
     color: #ffffff !important;
     border: none !important;
 }
