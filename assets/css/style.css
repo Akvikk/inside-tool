@@ -46,8 +46,8 @@ body {
     background: var(--glass-bg);
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
-    border: 0.5px solid var(--glass-border);
-    border-radius: 12px;
+    border: 0.5px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
     box-shadow: var(--glass-shadow);
     transition: transform 0.2s var(--ease-strike), box-shadow 0.2s, border-color 0.2s;
 }
@@ -59,19 +59,19 @@ body {
 }
 
 .glass-header {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(25px);
-    border-bottom: 0.5px solid var(--glass-border);
+    background: rgba(28, 28, 30, 0.65);
+    backdrop-filter: blur(40px) saturate(180%);
+    border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Inner plates (Dashboards, Tables) */
 .frosted-plate {
-    background: rgba(255, 255, 255, 0.03) !important;
-    border: 0.5px solid rgba(255, 255, 255, 0.08) !important;
+    background: rgba(28, 28, 30, 0.65) !important;
+    border: 0.5px solid rgba(255, 255, 255, 0.1) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
-    border-radius: 12px !important; /* Softer radius */
+    border-radius: 20px !important; /* Softer radius */
     transition: transform 0.2s var(--ease-strike), border-color 0.2s, box-shadow 0.2s !important;
-    backdrop-filter: blur(25px);
+    backdrop-filter: blur(40px) saturate(180%);
 }
 
 .frosted-plate:hover {
@@ -193,13 +193,11 @@ button:active,
 
 /* SIDEBAR GRID */
 .mesmer-grid {
-    background: rgba(15, 15, 18, 0.85);
+    background: rgba(28, 28, 30, 0.65);
     /* Deep Roulette Felt Green */
-    backdrop-filter: blur(30px) saturate(150%);
-    border-right: 2px solid rgba(212, 175, 55, 0.3);
-    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.8);
-    border-right: 2px solid rgba(212, 175, 55, 0.4);
-    box-shadow: inset -10px 0 40px rgba(0, 0, 0, 0.5), 10px 0 30px rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(40px) saturate(180%);
+    border-right: 0.5px solid rgba(255, 255, 255, 0.1);
+    box-shadow: none;
     position: relative;
 }
 
@@ -222,9 +220,9 @@ button:active,
 /* --- THE NUMBERS (Grid Buttons) --- */
 .grid-btn {
     position: relative;
-    background: #111111;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 0.5px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
     backdrop-filter: blur(10px);
     font-weight: 600;
     font-size: 1.15rem;
@@ -234,65 +232,38 @@ button:active,
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    /* Physical Chip 3D Default State */
-    box-shadow:
-        0 6px 12px rgba(0, 0, 0, 0.6),
-        inset 0 2px 4px rgba(255, 255, 255, 0.15),
-        inset 0 -2px 6px rgba(0, 0, 0, 0.4);
+    box-shadow: none;
     transform: translateY(0);
-    border-bottom-width: 4px;
     text-shadow: none !important;
-}
-
-.grid-btn::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.08) 0%, transparent 75%);
-    opacity: 0;
-    transition: opacity 0.3s ease;
 }
 
 .grid-btn:hover {
     transform: translateY(-1px);
     color: #ffffff;
-    border-color: var(--theme-gold);
-    z-index: 5;
+    background: rgba(255, 255, 255, 0.15);
 }
 
-.grid-btn:hover::after {
-    opacity: 1;
-}
-
-/* Physical Press Effect */
 .grid-btn:active {
-    transform: translateY(4px) scale(0.98);
-    border-bottom-width: 1px;
-    box-shadow:
-        0 1px 2px rgba(0, 0, 0, 0.8),
-        inset 0 4px 8px rgba(0, 0, 0, 0.6);
+    transform: scale(0.96) !important;
 }
 
-/* Physical Casino Table Style Blocks */
+/* Active iOS-style Toggles */
 .grid-red {
-    background: #b02a2a !important;
+    background: #0A84FF !important; /* Apple Blue */
     color: #ffffff !important;
-    border-color: #d14949 !important;
-    border-bottom-color: #8e0000 !important;
+    border: none !important;
 }
 
 .grid-green {
-    background: #148043 !important;
+    background: #30D158 !important; /* Apple Green */
     color: #ffffff !important;
-    border-color: #1f9e56 !important;
-    border-bottom-color: #004d1f !important;
+    border: none !important;
 }
 
 .grid-black {
-    background: #1a1c1c !important;
+    background: rgba(255, 255, 255, 0.2) !important;
     color: #ffffff !important;
-    border-color: #333333 !important;
-    border-bottom-color: #000000 !important;
+    border: none !important;
 }
 
 
@@ -301,7 +272,7 @@ button:active,
 .ios-btn {
     transition: all 0.2s var(--ease-strike);
     position: relative;
-    border-radius: 8px;
+    border-radius: 14px;
     font-weight: 500;
     letter-spacing: 0.05em;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -324,7 +295,7 @@ button:active,
 /* Header action buttons: solid premium button shape with accent tint */
 .top-nav-btn {
     --accent-rgb: 255, 255, 255;
-    border-radius: 10px;
+    border-radius: 14px;
     border: 1px solid rgba(var(--accent-rgb), 0.3);
     background:
         linear-gradient(180deg, rgba(var(--accent-rgb), 0.14), rgba(var(--accent-rgb), 0.05) 58%, rgba(8, 8, 12, 0.74)),
@@ -386,44 +357,36 @@ button:active,
     /* Green */
 }
 
-/* Dynamic Metallic Foil Shimmer Keyframes */
-@keyframes goldShimmer {
-    0% {
-        background-position: -200% center;
-    }
 
-    20% {
-        background-position: 200% center;
-    }
-
-    100% {
-        background-position: 200% center;
-    }
-}
 
 #addSpinBtn {
-    background: linear-gradient(110deg, #d4af37 0%, #ffe680 20%, #d4af37 40%, #997a00 100%) !important;
-    background-size: 200% auto !important;
-    border-color: #ffe680 !important;
-    color: #000000 !important;
+    background: #0A84FF !important; /* Apple Blue */
+    border: none !important;
+    border-radius: 14px !important;
+    color: #ffffff !important;
     text-shadow: none !important;
-    box-shadow: 0 4px 10px rgba(212, 175, 55, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.6) !important;
-    animation: goldShimmer 8s infinite linear !important;
-    border-bottom: 3px solid #806600 !important;
+    box-shadow: none !important;
+    animation: none !important;
+    /* Ensure it inherits button transitions */
 }
 
 #addSpinBtn:hover {
-    box-shadow: 0 6px 25px rgba(212, 175, 55, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.8) !important;
+    background: #007aff !important; /* Slightly lighter blue */
     transform: translateY(-1px);
 }
 
 #addSpinBtn:active {
-    border-bottom: 1px solid #806600 !important;
-    transform: translateY(2px) scale(0.98);
+    transform: scale(0.96);
 }
 
 #headerAiBtn {
-    --accent-rgb: 191, 90, 242;
+    background: #BF5AF2; /* Apple Purple */
+    border: none;
+    border-radius: 14px;
+    color: #ffffff;
+}
+#headerAiBtn:hover {
+    background: #a940d5; /* Darker purple */
 }
 
 #headerAiBtn.ai-offline {
@@ -1175,9 +1138,9 @@ button.bg-gradient-to-b:active {
     background: rgba(10, 10, 10, 0.95);
     backdrop-filter: blur(40px) saturate(150%);
     -webkit-backdrop-filter: blur(40px) saturate(150%);
-    border: 1px solid rgba(212, 175, 55, 0.2);
-    box-shadow: 0 34px 110px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
+    border: 0.5px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    border-radius: 20px;
 }
 
 .glass-menu::before,
