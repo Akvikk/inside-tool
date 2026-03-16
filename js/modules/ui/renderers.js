@@ -946,18 +946,37 @@ e                         <div class="text-[14px] leading-tight font-bold tracki
         const vHeight = 200;
         const padding = 10;
 
-        const maxVal = Math.max(...normalizedHistory);
-        const minVal = Math.min(...normalizedHistory);
+        const maxVal = Math.max(...normalizedHistory, 0); // Include 0 in range
+        const minVal = Math.min(...normalizedHistory, 0); // Include 0 in range
         let range = maxVal - minVal;
         if (range === 0) range = 2;
 
         const getX = i => (i / (normalizedHistory.length - 1)) * (vWidth - 2 * padding) + padding;
         const getY = v => vHeight - padding - ((v - minVal) / range) * (vHeight - 2 * padding);
 
-        let pathD = `M ${getX(0)} ${getY(normalizedHistory[0])}`;
-        for (let i = 1; i < normalizedHistory.length; i++) {
-            pathD += ` L ${getX(i)} ${getY(normalizedHistory[i])}`;
-        }
+        const points = normalizedHistory.map((v, i) => ({ x: getX(i), y: getY(v) }));
+
+        const controlPoint = (current, previous, next, reverse) => {
+            const p = previous || current;
+            const n = next || current;
+            const smoothing = 0.2;
+            const o = {
+                length: Math.sqrt(Math.pow(n.x - p.x, 2) + Math.pow(n.y - p.y, 2)) * smoothing,
+                angle: Math.atan2(n.y - p.y, n.x - p.x)
+            };
+            const angle = o.angle + (reverse ? Math.PI : 0);
+            const x = current.x + Math.cos(angle) * o.length;
+            const y = current.y + Math.sin(angle) * o.length;
+            return [x, y];
+        };
+
+        const bezierCommand = (point, i, a) => {
+            const [cpsX, cpsY] = controlPoint(a[i - 1], a[i - 2], point);
+            const [cpeX, cpeY] = controlPoint(point, a[i - 1], a[i + 1], true);
+            return `C ${cpsX},${cpsY} ${cpeX},${cpeY} ${point.x},${point.y}`;
+        };
+
+        const pathD = points.reduce((acc, p, i, a) => i === 0 ? `M ${p.x},${p.y}` : `${acc} ${bezierCommand(p, i, a)}`, '');
 
         const zeroY = getY(0);
         let zeroOffset = 0;
@@ -975,20 +994,41 @@ e                         <div class="text-[14px] leading-tight font-bold tracki
         svg.style.overflow = 'visible';
 
         const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-        const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-        gradient.id = `profitGrad-${containerId}`;
-        gradient.setAttribute('x1', '0%');
-        gradient.setAttribute('y1', '0%');
-        gradient.setAttribute('x2', '0%');
-        gradient.setAttribute('y2', '100%');
-        gradient.innerHTML = `
+
+        const strokeGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+        strokeGradient.id = `profitGrad-${containerId}`;
+        strokeGradient.setAttribute('x1', '0%');
+        strokeGradient.setAttribute('y1', '0%');
+        strokeGradient.setAttribute('x2', '0%');
+        strokeGradient.setAttribute('y2', '100%');
+        strokeGradient.innerHTML = `
             <stop offset="0%" stop-color="#4ade80" />
             <stop offset="${zeroOffset}%" stop-color="#4ade80" />
             <stop offset="${zeroOffset}%" stop-color="#f87171" />
             <stop offset="100%" stop-color="#f87171" />
         `;
-        defs.appendChild(gradient);
+        defs.appendChild(strokeGradient);
+
+        const fillGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+        fillGradient.id = `profitFillGrad-${containerId}`;
+        fillGradient.setAttribute('x1', '0%');
+        fillGradient.setAttribute('y1', '0%');
+        fillGradient.setAttribute('x2', '0%');
+        fillGradient.setAttribute('y2', '100%');
+        fillGradient.innerHTML = `
+            <stop offset="0%" stop-color="#4ade80" stop-opacity="0.2" />
+            <stop offset="${zeroOffset}%" stop-color="#4ade80" stop-opacity="0.05" />
+            <stop offset="${zeroOffset}%" stop-color="#f87171" stop-opacity="0.05" />
+            <stop offset="100%" stop-color="#f87171" stop-opacity="0.0" />
+        `;
+        defs.appendChild(fillGradient);
         svg.appendChild(defs);
+        
+        const areaPathD = `${pathD} L ${getX(points.length - 1)},${vHeight} L ${getX(0)},${vHeight} Z`;
+        const areaPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        areaPath.setAttribute('d', areaPathD);
+        areaPath.setAttribute('fill', `url(#profitFillGrad-${containerId})`);
+        svg.appendChild(areaPath);
 
         const zeroLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         zeroLine.setAttribute('x1', padding);
@@ -996,21 +1036,32 @@ e                         <div class="text-[14px] leading-tight font-bold tracki
         zeroLine.setAttribute('x2', vWidth - padding);
         zeroLine.setAttribute('y2', zeroY);
         zeroLine.setAttribute('stroke', '#9ca3af');
-        zeroLine.setAttribute('stroke-width', '2');
-        zeroLine.setAttribute('stroke-dasharray', '6 6');
+        zeroLine.setAttribute('stroke-width', '1');
+        zeroLine.setAttribute('stroke-dasharray', '4 4');
         zeroLine.setAttribute('opacity', '0.3');
         zeroLine.setAttribute('vector-effect', 'non-scaling-stroke');
         svg.appendChild(zeroLine);
+        
+        const glowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        glowPath.setAttribute('d', pathD);
+        glowPath.setAttribute('fill', 'none');
+        glowPath.setAttribute('stroke', `url(#profitGrad-${containerId})`);
+        glowPath.setAttribute('stroke-width', '5');
+        glowPath.setAttribute('stroke-linecap', 'round');
+        glowPath.setAttribute('stroke-linejoin', 'round');
+        glowPath.setAttribute('vector-effect', 'non-scaling-stroke');
+        glowPath.style.filter = 'blur(4px)';
+        glowPath.style.opacity = '0.5';
+        svg.appendChild(glowPath);
 
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('d', pathD);
         path.setAttribute('fill', 'none');
         path.setAttribute('stroke', `url(#profitGrad-${containerId})`);
-        path.setAttribute('stroke-width', '3');
+        path.setAttribute('stroke-width', '2');
         path.setAttribute('stroke-linecap', 'round');
         path.setAttribute('stroke-linejoin', 'round');
         path.setAttribute('vector-effect', 'non-scaling-stroke');
-        path.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
         svg.appendChild(path);
 
         const hoverPoint = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -1044,17 +1095,13 @@ e                         <div class="text-[14px] leading-tight font-bold tracki
             });
 
             hitArea.addEventListener('mousemove', (e) => {
-                const ctm = svg.getScreenCTM();
-                const svgX = (e.clientX - ctm.e) / ctm.a;
-                const svgY = (e.clientY - ctm.f) / ctm.d;
-                
                 hoverPoint.setAttribute('cx', x);
                 hoverPoint.setAttribute('cy', y);
                 
                 tooltip.style.left = `${e.clientX}px`;
                 tooltip.style.top = `${e.clientY}px`;
                 
-                const val = value > 0 ? `+${value}` : value;
+                const val = value > 0 ? `+${value.toFixed(2)}` : value.toFixed(2);
                 tooltip.innerHTML = `<div>Net: <strong>${val}</strong></div><div class="text-white/50">Spin: ${i}</div>`;
             });
             
