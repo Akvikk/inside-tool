@@ -41,6 +41,13 @@
                 if (window.renderAnalytics) window.renderAnalytics();
             };
         }
+
+        const patternBtn = document.getElementById('patternsToggleBtn');
+        if (patternBtn) {
+            patternBtn.onclick = function (e) {
+                window.togglePatternFilterPopover();
+            };
+        }
     }
 
     function handleGridClick(n) {
@@ -218,6 +225,27 @@
         input.value = '';
     };
 
+    function getPatternMetaData() {
+        const activeStrategyKey = (window.state && window.state.currentGameplayStrategy) ? window.state.currentGameplayStrategy : 'series';
+        const strategy = window.StrategyRegistry ? window.StrategyRegistry[activeStrategyKey] : null;
+        if (strategy && strategy.PATTERN_FILTER_META) {
+            return strategy.PATTERN_FILTER_META;
+        }
+        if (window.PATTERN_FILTER_META) {
+            return window.PATTERN_FILTER_META;
+        }
+        if (window.PERIMETER_COMBOS) {
+            return Object.fromEntries(window.PERIMETER_COMBOS.map(combo => [combo.label, {
+                label: combo.label,
+                hint: `Track ${combo.label} inside the prediction engine and dashboard flow.`,
+                icon: 'fa-link',
+                accent: combo.color
+            }]));
+        }
+        const configObj = (window.state && window.state.patternConfig) ? window.state.patternConfig : {};
+        return Object.fromEntries(Object.keys(configObj).map(k => [k, { label: k, accent: 'var(--theme-blue)' }]));
+    }
+
     // --- GENERIC UI & MODALS ---
     // --- PATTERN FILTER RECOVERY ---
     window.togglePatternFilterPopover = function (forceOpen = null) {
@@ -247,13 +275,9 @@
 
     window.renderPatternFilterList = function () {
         const list = document.getElementById('patternsList');
-        if (!list || !window.state || !window.StrategyRegistry) return;
+        if (!list || !window.state) return;
 
-        const activeStrategyKey = window.state.currentGameplayStrategy || 'series';
-        const strategy = window.StrategyRegistry[activeStrategyKey];
-        if (!strategy) return;
-
-        const metaData = strategy.PATTERN_FILTER_META || {};
+        const metaData = getPatternMetaData();
         const config = window.state.patternConfig || {};
 
         let entries = [];
@@ -308,13 +332,10 @@
         const button = document.getElementById('patternsToggleBtn');
         const summary = document.getElementById('patternFilterSummary');
         const popover = document.getElementById('patternFilterPopover');
-        if (!window.state || !window.state.patternConfig || !window.StrategyRegistry) return;
+        const badge = document.getElementById('patternsActiveCount');
+        if (!window.state || !window.state.patternConfig) return;
 
-        const activeStrategyKey = window.state.currentGameplayStrategy || 'series';
-        const strategy = window.StrategyRegistry[activeStrategyKey];
-        if (!strategy) return;
-
-        const metaData = strategy.PATTERN_FILTER_META || {};
+        const metaData = getPatternMetaData();
         const config = window.state.patternConfig;
 
         let enabledCount = 0;
@@ -327,6 +348,11 @@
 
         if (summary) {
             summary.innerText = `${enabledCount} of ${totalCount} active`;
+        }
+
+        if (badge) {
+            badge.innerText = String(enabledCount);
+            badge.classList.toggle('pattern-toggle-badge-off', enabledCount === 0);
         }
 
         if (popover) {
