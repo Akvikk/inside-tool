@@ -8,6 +8,16 @@
         name: 'Inside Patterns',
         key: 'inside',
         
+        PATTERN_FILTER_META: {
+            'rptng': { label: 'RPTng', hint: 'Repeating Pattern', accent: '#30D158' },
+            '1c-rptng': { label: '1C RPTng', hint: 'One Cut Repeating Pattern', accent: '#30D158' },
+            'brkt': { label: 'brkt', hint: 'Bracket Pattern', accent: '#30D158' },
+            '121': { label: '1-2-1', hint: '1-2-1 Pattern', accent: '#30D158' },
+            '123': { label: '1-2-3', hint: '1-2-3 Pattern', accent: '#30D158' },
+            '22': { label: '2-2', hint: '2-2 Pattern', accent: '#30D158' },
+            'seqvarbrkt': { label: 'SeqVarBrkt', hint: 'Sequence and Variation Bracket', accent: '#30D158' }
+        },
+
         // Registry for all sub-patterns
         patterns: {},
         
@@ -68,7 +78,9 @@
          */
         buildPatternConfig(enabled = true) {
             const config = {};
-            for (const key of Object.keys(this.patterns)) {
+            // Follow metadata order if available
+            const keys = this.PATTERN_FILTER_META ? Object.keys(this.PATTERN_FILTER_META) : Object.keys(this.patterns);
+            for (const key of keys) {
                 config[key] = enabled;
             }
             return config;

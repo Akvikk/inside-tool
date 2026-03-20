@@ -138,7 +138,10 @@
 
         const config = ensureActivePatternConfig();
         const meta = getPatternMeta();
-        const keys = Object.keys(config);
+        
+        // Prioritize order from metadata if available, otherwise use keys from config
+        const metaKeys = Object.keys(meta);
+        const keys = metaKeys.length > 0 ? metaKeys : Object.keys(config);
 
         if (keys.length === 0) {
             list.innerHTML = '<div class="pattern-filter-card pattern-filter-card-off"><div class="pattern-filter-title">No filters available</div></div>';

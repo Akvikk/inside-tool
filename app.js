@@ -562,7 +562,7 @@ window.resetData = function () {
         window.state.faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
         window.state.engineSnapshot = null;
         window.state.currentNeuralSignal = null;
-        window.state.strategySyncCache = { series: null, combo: null };
+        window.state.strategySyncCache = { series: null, combo: null, inside: null };
     }
     window.currentAlerts = [];
     if (window.EngineCore) window.EngineCore.reset();
@@ -1397,9 +1397,16 @@ window.updateAiConfigModalUI = function() {
         if (window.ComboStrategy) window.StrategyRegistry.combo = window.ComboStrategy;
         if (window.InsideStrategy) window.StrategyRegistry.inside = window.InsideStrategy;
     }
+
 window.changePredictionStrategy = async function (val) {
     if (window.state) {
         window.state.currentGameplayStrategy = val;
+        
+        // Auto-switch analytics tab
+        if (window.setAnalyticsDisplayStrategy) {
+            window.setAnalyticsDisplayStrategy(val);
+        }
+
         if (window.syncStrategyUi) {
             window.syncStrategyUi();
         }
@@ -1420,6 +1427,9 @@ window.changePredictionStrategy = async function (val) {
         }
     }
 };
+
+window.setGameplayStrategy = window.changePredictionStrategy;
+
 window.openAiConfigModal = function () { 
     if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
     const keyInput = document.getElementById('aiApiKeyInput');
