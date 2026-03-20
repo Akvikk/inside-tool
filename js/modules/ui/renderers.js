@@ -7,7 +7,7 @@
             : { totalWins: 0, totalLosses: 0, netUnits: 0 };
         const totalSignals = coreStats.totalWins + coreStats.totalLosses;
         const hitRate = totalSignals === 0 ? 0 : Math.round((coreStats.totalWins / totalSignals) * 100);
-        const recentFaces = state.history.slice(-8).map(spin => window.FON_PRIMARY_FACE_MAP[spin.num] || 0).filter(Boolean);
+        const recentFaces = (window.state.history || []).slice(-8).map(spin => window.FON_PRIMARY_FACE_MAP[spin.num] || 0).filter(Boolean);
         const faceCounts = recentFaces.reduce((acc, face) => {
             acc[face] = (acc[face] || 0) + 1;
             return acc;
@@ -15,11 +15,11 @@
         const dominantFaceEntry = Object.entries(faceCounts).sort((a, b) => b[1] - a[1])[0] || null;
         const dominantFace = dominantFaceEntry ? Number(dominantFaceEntry[0]) : null;
         const dominantHits = dominantFaceEntry ? dominantFaceEntry[1] : 0;
-        const topGapEntry = Object.entries(state.faceGaps).sort((a, b) => b[1] - a[1])[0] || ['0', 0];
+        const topGapEntry = Object.entries(window.state.faceGaps || {}).sort((a, b) => b[1] - a[1])[0] || ['0', 0];
         const topGapFace = Number(topGapEntry[0]) || null;
         const topGapValue = Number(topGapEntry[1]) || 0;
-        const neuralConfidence = state.currentNeuralSignal && Number.isFinite(state.currentNeuralSignal.confidence)
-            ? state.currentNeuralSignal.confidence
+        const neuralConfidence = window.state.currentNeuralSignal && Number.isFinite(window.state.currentNeuralSignal.confidence)
+            ? window.state.currentNeuralSignal.confidence
             : 0;
         const trendBonus = dominantHits >= 4 ? 16 : dominantHits >= 3 ? 8 : 0;
         const gapBonus = topGapValue >= 8 ? 10 : topGapValue >= 6 ? 5 : 0;
@@ -30,10 +30,10 @@
         let verdict = 'Feed more spins to the local brain before acting.';
         let pivot = '';
 
-        if (state.history.length < 8) {
+        if (!window.state.history || window.state.history.length < 8) {
             verdict = 'Sample too thin. Let the wheel print a cleaner rhythm before trusting any push.';
-        } else if (state.currentNeuralSignal && state.currentNeuralSignal.status === 'SIT_OUT') {
-            verdict = state.currentNeuralSignal.reason || 'Noise detected. Local brain says stand down and wait for a cleaner edge.';
+        } else if (window.state.currentNeuralSignal && window.state.currentNeuralSignal.status === 'SIT_OUT') {
+            verdict = window.state.currentNeuralSignal.reason || 'Noise detected. Local brain says stand down and wait for a cleaner edge.';
             pivot = 'Pivot: sit out until the table stops chopping.';
         } else if (coreStats.netUnits <= -4) {
             verdict = 'The session is bleeding. Tighten exposure and only touch a signal if math and rhythm agree.';
@@ -49,8 +49,8 @@
             pivot = 'Pivot: let structure form before increasing risk.';
         }
 
-        if (state.currentNeuralSignal && state.currentNeuralSignal.status === 'GO' && state.currentNeuralSignal.targetFace) {
-            pivot = `Pivot: AI leans F${state.currentNeuralSignal.targetFace} at ${state.currentNeuralSignal.confidence || 0}% confidence.`;
+        if (window.state.currentNeuralSignal && window.state.currentNeuralSignal.status === 'GO' && window.state.currentNeuralSignal.targetFace) {
+            pivot = `Pivot: AI leans F${window.state.currentNeuralSignal.targetFace} at ${window.state.currentNeuralSignal.confidence || 0}% confidence.`;
         }
 
         return {
@@ -80,7 +80,7 @@
     }
 
     window.applyAnalyticsTabUI = function () {
-        const displayMode = state ? state.analyticsDisplayStrategy : 'series';
+        const displayMode = window.state ? window.state.analyticsDisplayStrategy : 'series';
         const select = document.getElementById('analyticsStrategySelect');
         if (select) {
             select.value = displayMode;
@@ -93,7 +93,7 @@
 
         container.innerHTML = '';
         for (let f = 1; f <= 5; f++) {
-            const gap = state.faceGaps[f] || 0;
+            const gap = window.state.faceGaps ? window.state.faceGaps[f] || 0 : 0;
             let colorClass = 'text-[#22c55e]';
             if (gap > 10) colorClass = 'text-[#d4af37]';
             if (gap > 15) colorClass = 'text-[#d33838]';
@@ -175,7 +175,7 @@
                      title="${isAiLoading ? 'AI read in progress' : 'Click to toggle confirmation'}"
                      style="--border-base: ${borderBase}; --border-pulse: ${borderPulse}; --shadow-base: ${shadowBase}; --shadow-pulse: ${shadowPulse}; border-left: 4px solid ${accent}; ${bgStyle};">
                     <div class="flex items-start justify-between gap-3">
-e                         <div class="text-[14px] leading-tight font-bold tracking-wide drop-shadow-sm uppercase ${titleClass}" data-text="${mainText}">${mainText}</div>
+                         <div class="text-[14px] leading-tight font-bold tracking-wide drop-shadow-sm uppercase ${titleClass}" data-text="${mainText}">${mainText}</div>
                         <div class="text-[9px] font-bold tracking-[0.18em] uppercase ${confirmationTone}">${confirmationLabel}</div>
                     </div>
                     <div class="text-[10px] leading-tight text-white/70 font-semibold mt-1 font-mono">${subText}</div>
@@ -281,13 +281,13 @@ e                         <div class="text-[14px] leading-tight font-bold tracki
 
     window.renderComboCell = function (spin) {
         const registry = window.StrategyRegistry || {};
-        const stratKey = state.currentGameplayStrategy || 'series';
+        const stratKey = window.state.currentGameplayStrategy || 'series';
         const strategy = registry[stratKey];
         if (!strategy || typeof strategy.detectBridge !== 'function') return '<span class="text-gray-600">-</span>';
         if (spin.index <= 0) return '<span class="text-gray-600 font-mono text-[10px]">-</span>';
 
         const currMask = window.FON_MASK_MAP ? window.FON_MASK_MAP[spin.num] : 0;
-        const prevSpin = state.history[spin.index - 1];
+        const prevSpin = window.state.history ? window.state.history[spin.index - 1] : null;
         if (!prevSpin) return '<span class="text-gray-600 font-mono text-[10px]">-</span>';
 
         const prevMask = window.FON_MASK_MAP ? window.FON_MASK_MAP[prevSpin.num] : 0;
@@ -859,9 +859,9 @@ e                         <div class="text-[14px] leading-tight font-bold tracki
 
     function renderStrategyAnalytics() {
         let displayStrategy = 'series';
-        if (state) {
-            if (state.analyticsDisplayStrategy === 'combo') displayStrategy = 'combo';
-            else if (state.analyticsDisplayStrategy === 'inside') displayStrategy = 'inside';
+        if (window.state) {
+            if (window.state.analyticsDisplayStrategy === 'combo') displayStrategy = 'combo';
+            else if (window.state.analyticsDisplayStrategy === 'inside') displayStrategy = 'inside';
         }
 
         const analytics = window.EngineCore && typeof window.EngineCore.getAnalyticsData === 'function'
@@ -1036,7 +1036,7 @@ e                         <div class="text-[14px] leading-tight font-bold tracki
         `;
         defs.appendChild(fillGradient);
         svg.appendChild(defs);
-        
+
         const areaPathD = `${pathD} L ${getX(points.length - 1)},${vHeight} L ${getX(0)},${vHeight} Z`;
         const areaPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         areaPath.setAttribute('d', areaPathD);
@@ -1054,7 +1054,7 @@ e                         <div class="text-[14px] leading-tight font-bold tracki
         zeroLine.setAttribute('opacity', '0.3');
         zeroLine.setAttribute('vector-effect', 'non-scaling-stroke');
         svg.appendChild(zeroLine);
-        
+
         const glowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         glowPath.setAttribute('d', pathD);
         glowPath.setAttribute('fill', 'none');
@@ -1081,7 +1081,7 @@ e                         <div class="text-[14px] leading-tight font-bold tracki
         hoverPoint.setAttribute('class', 'graph-hover-point');
         hoverPoint.style.opacity = 0;
         svg.appendChild(hoverPoint);
-        
+
         const tooltip = document.getElementById('graphTooltip');
         const interactionLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         const pointWidth = (vWidth - 2 * padding) / (normalizedHistory.length - 1);
@@ -1096,7 +1096,7 @@ e                         <div class="text-[14px] leading-tight font-bold tracki
             hitArea.setAttribute('width', pointWidth);
             hitArea.setAttribute('height', vHeight);
             hitArea.setAttribute('fill', 'transparent');
-            
+
             hitArea.addEventListener('mouseenter', () => {
                 hoverPoint.style.opacity = 1;
                 tooltip.classList.remove('hidden');
@@ -1110,14 +1110,14 @@ e                         <div class="text-[14px] leading-tight font-bold tracki
             hitArea.addEventListener('mousemove', (e) => {
                 hoverPoint.setAttribute('cx', x);
                 hoverPoint.setAttribute('cy', y);
-                
+
                 tooltip.style.left = `${e.clientX}px`;
                 tooltip.style.top = `${e.clientY}px`;
-                
+
                 const val = value > 0 ? `+${value.toFixed(2)}` : value.toFixed(2);
                 tooltip.innerHTML = `<div>Net: <strong>${val}</strong></div><div class="text-white/50">Spin: ${i}</div>`;
             });
-            
+
             interactionLayer.appendChild(hitArea);
         });
 

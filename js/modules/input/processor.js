@@ -1,6 +1,8 @@
 
 (function () {
-    const state = window.state;
+    function getState() {
+        return window.state || { history: [], faceGaps: {}, activeBets: [] };
+    }
     window.InputProcessor = {
         init,
         addSpin,
@@ -41,7 +43,7 @@
     }
 
     function enqueueSpin(val) {
-        state.spinProcessingQueue = state.spinProcessingQueue
+        window.state.spinProcessingQueue = (window.state.spinProcessingQueue || Promise.resolve())
             .catch(error => {
                 // Recover the queue so one failed spin does not block all future input.
                 console.error('Recovered spin queue after an error:', error);
@@ -51,7 +53,7 @@
             })
             .then(() => processSpinValue(val));
 
-        return state.spinProcessingQueue;
+        return window.state.spinProcessingQueue;
     }
 
     async function addSpin() {
@@ -88,13 +90,14 @@
         });
     }
     async function undoSpin() {
-        if (state.history.length === 0) return;
+        const stateRef = getState();
+        if (!stateRef.history || stateRef.history.length === 0) return;
 
         // 1. Remove the last spin
-        state.history.pop();
+        stateRef.history.pop();
 
         // 2. Clone the remaining spins to rebuild state
-        const remainingSpins = state.history.map(s => s.num);
+        const remainingSpins = stateRef.history.map(s => s.num);
 
         // 3. Rebuild in background so large histories don't lock the UI.
         if (window.rebuildSessionFromSpins) await window.rebuildSessionFromSpins(remainingSpins, { scrollToEnd: false });
@@ -102,7 +105,8 @@
 
     async function processSpinValue(val, options = {}) {
         // Animate the Plus Icon on Add
-        const btn = state.cachedAddSpinBtn || document.getElementById('addSpinBtn');
+        const stateRef = getState();
+        const btn = stateRef.cachedAddSpinBtn || document.getElementById('addSpinBtn');
         if (btn && !options.silent) {
             const icon = btn.querySelector('.fa-plus');
             if (icon) {
@@ -120,26 +124,41 @@
             : 0;
 
         // Update Gaps for ALL matching faces
-        for (let f = 1; f <= 5; f++) state.faceGaps[f]++;
-        matchedFaces.forEach(f => state.faceGaps[f] = 0);
+        for (let f = 1; f <= 5; f++) stateRef.faceGaps[f] = (stateRef.faceGaps[f] || 0) + 1;
+        matchedFaces.forEach(f => stateRef.faceGaps[f] = 0);
 
-        const currentSpinIndex = state.history.length;
+        const currentSpinIndex = stateRef.history.length;
 
         // 1. RESOLVE PREVIOUS BETS
-        // RESOLVE ALL BETS (Active & Background) via EngineCore
-        const resolvedBets = window.EngineCore.resolveTurn(
-            val,
-            matchedFaceMask,
-            state.activeBets,
-            state.currentGameplayStrategy,
-            window.updateUserStats || function () { },
-            {
-                historyLength: currentSpinIndex,
-                faceMasks: window.FACE_MASKS,
-                faces: window.FACES
-            }
-        );
-        state.activeBets = [];
+        let resolvedBets = [];
+        if (stateRef.activeBets && stateRef.activeBets.length > 0) {
+            stateRef.activeBets.forEach(bet => {
+                if (bet.status === 'SIT_OUT' || !bet.targetFace) return;
+                const targetMask = window.FACE_MASKS ? window.FACE_MASKS[bet.targetFace] : 0;
+                const isWin = (matchedFaceMask & targetMask) !== 0;
+                resolvedBets.push({
+                    patternName: bet.patternName || 'Unknown',
+                    filterKey: bet.filterKey || bet.patternName,
+                    strategy: bet.strategy || '',
+                    targetFace: bet.targetFace,
+                    isWin: isWin,
+                    label: `BET F${bet.targetFace}`,
+                    confirmed: bet.confirmed === true
+                });
+            });
+        }
+
+        // Also call the engine's internal resolver so it can update its own internal state if needed
+        if (window.EngineCore && typeof window.EngineCore.resolveTurn === 'function') {
+            try {
+                window.EngineCore.resolveTurn(val, matchedFaceMask, stateRef.activeBets, stateRef.currentGameplayStrategy, null, {
+                    historyLength: currentSpinIndex,
+                    faceMasks: window.FACE_MASKS,
+                    faces: window.FACES
+                });
+            } catch (e) { console.error("EngineCore resolve error:", e); }
+        }
+        stateRef.activeBets = [];
 
         // 1.5 AMBIENT AUDIO FEEDBACK
         if (!options.silent && resolvedBets.length > 0 && window.AudioEngine) {
@@ -158,9 +177,9 @@
             index: currentSpinIndex,
             resolvedBets: resolvedBets, // Store results
             newSignals: [],             // Placeholder for signals generated this turn
-            id: ++state.globalSpinIdCounter
+            id: ++stateRef.globalSpinIdCounter || 1
         };
-        state.history.push(spinObj);
+        stateRef.history.push(spinObj);
         // 3. SCAN FOR NEW PATTERNS
         let scanResult = { nextBets: [], resultsByStrategy: {} };
         try {
@@ -174,15 +193,15 @@
         }
 
         // Bridge: Capture the engine's produced bets for dashboard display and next turn resolution
-        state.activeBets = scanResult.nextBets || [];
+        stateRef.activeBets = scanResult.nextBets || [];
         window.currentAlerts = Array.isArray(scanResult.notifications) ? scanResult.notifications : [];
-        if (state.strategySyncCache && typeof state.strategySyncCache === 'object') {
-            const strategyKey = state.currentGameplayStrategy || 'series';
-            state.strategySyncCache[strategyKey] = scanResult;
+        if (stateRef.strategySyncCache && typeof stateRef.strategySyncCache === 'object') {
+            const strategyKey = stateRef.currentGameplayStrategy || 'series';
+            stateRef.strategySyncCache[strategyKey] = scanResult;
         }
 
         // CRITICAL: Attach active MATH signals permanently to history row BEFORE we modify activeBets for AI
-        spinObj.newSignals = state.activeBets.map(b => ({
+        spinObj.newSignals = stateRef.activeBets.map(b => ({
             patternName: b.patternName,
             filterKey: b.filterKey || b.patternName,
             targetFace: b.targetFace,
@@ -194,9 +213,9 @@
             signalSource: b.signalSource || 'math'
         }));
 
-        if (state.neuralPredictionEnabled && !options.silent && options.skipNeural !== true) {
+        if (stateRef.neuralPredictionEnabled && !options.silent && options.skipNeural !== true) {
             // Override Dashboard Cards with an AI Loading Card
-            state.activeBets = [{
+            stateRef.activeBets = [{
                 patternName: 'Neural Net',
                 targetFace: '?',
                 confidence: 0,
@@ -219,6 +238,27 @@
                 ? window.EngineContract.sanitizeSpinObject(spinObj, currentSpinIndex)
                 : spinObj;
             window.AppStore.dispatch('history/append', safeSpin);
+        } else if (options.skipStoreSync !== true) {
+            // MASSIVE FAILSAFE: Direct UI update if AppStore is completely missing
+            if (!window.state.engineStats) window.state.engineStats = { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {}, signalLog: [] };
+            const eStats = window.state.engineStats;
+            resolvedBets.forEach(bet => {
+                const count = window.FACES && window.FACES[bet.targetFace] ? window.FACES[bet.targetFace].nums.length : 0;
+                const unitChange = bet.isWin ? (35 - count) : -count;
+                const pName = bet.patternName || 'Unknown';
+                if (bet.isWin) { eStats.totalWins++; eStats.currentStreak = eStats.currentStreak >= 0 ? eStats.currentStreak + 1 : 1; }
+                else { eStats.totalLosses++; eStats.currentStreak = eStats.currentStreak <= 0 ? eStats.currentStreak - 1 : -1; }
+                eStats.netUnits += unitChange;
+                eStats.bankrollHistory.push(eStats.netUnits);
+                if (!eStats.patternStats[pName]) eStats.patternStats[pName] = { wins: 0, losses: 0 };
+                if (bet.isWin) eStats.patternStats[pName].wins++; else eStats.patternStats[pName].losses++;
+                eStats.signalLog.push({ result: bet.isWin ? 'WIN' : 'LOSS', units: unitChange, patternName: pName, spinIndex: spinObj.index, spinNum: spinObj.num });
+                if (bet.confirmed && window.updateUserStats) window.updateUserStats(bet.isWin, bet, spinObj.index, unitChange);
+            });
+
+            if (window.renderRow) window.renderRow(spinObj);
+            if (window.renderGapStats) window.renderGapStats();
+            if (window.renderDashboardSafe) window.renderDashboardSafe(stateRef.activeBets || []);
         }
 
         if (!options.preserveInput) {

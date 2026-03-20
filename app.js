@@ -1,3 +1,28 @@
+window.state = window.state || {};
+window.state.history = window.state.history || [];
+window.state.activeBets = window.state.activeBets || [];
+window.state.faceGaps = window.state.faceGaps || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+window.state.spinProcessingQueue = window.state.spinProcessingQueue || Promise.resolve();
+window.state.globalSpinIdCounter = window.state.globalSpinIdCounter || 0;
+window.state.predictionPerimeterWindow = window.state.predictionPerimeterWindow || 14;
+window.state.perimeterRuleEnabled = window.state.perimeterRuleEnabled !== false;
+window.state.patternConfig = window.state.patternConfig || {};
+window.state.engineStats = window.state.engineStats || { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {}, signalLog: [] };
+window.state.userStats = window.state.userStats || { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
+window.state.engineSnapshot = window.state.engineSnapshot || null;
+window.state.currentNeuralSignal = window.state.currentNeuralSignal || null;
+window.state.strategySyncCache = window.state.strategySyncCache || { series: null, combo: null, inside: null };
+window.state.currentGameplayStrategy = window.state.currentGameplayStrategy || 'series';
+window.state.analyticsDisplayStrategy = window.state.analyticsDisplayStrategy || 'series';
+window.state.currentAnalyticsTab = window.state.currentAnalyticsTab || 'strategy';
+window.state.currentIntelligenceMode = window.state.currentIntelligenceMode || 'brief';
+window.state.currentInputLayout = window.state.currentInputLayout || 'grid';
+window.state.aiEnabled = window.state.aiEnabled || false;
+window.state.aiApiKey = window.state.aiApiKey || '';
+window.state.aiProvider = window.state.aiProvider || 'gemini';
+window.state.neuralPredictionEnabled = window.state.neuralPredictionEnabled || false;
+window.state.aiRelayAvailable = window.state.aiRelayAvailable || false;
+
 const state = window.state;
 
 function getLatestMathBets() {
@@ -16,8 +41,8 @@ async function requestTacticalAudit() {
     }
     return window.AiBrain.requestTacticalAudit({
         history: state.history,
-        netUnits: window.EngineCore && window.EngineCore.stats
-            ? window.EngineCore.stats.netUnits
+        netUnits: window.state && window.state.engineStats
+            ? window.state.engineStats.netUnits
             : 0
     });
 }
@@ -41,8 +66,8 @@ async function requestNeuralPrediction(options = {}) {
     const signal = await window.AiBrain.requestNeuralPrediction({
         history: state.history,
         strategy: state.currentGameplayStrategy,
-        netUnits: window.EngineCore && window.EngineCore.stats
-            ? window.EngineCore.stats.netUnits
+        netUnits: window.state && window.state.engineStats
+            ? window.state.engineStats.netUnits
             : 0,
         recentHits,
         mathLabel: mathSignal ? (mathSignal.comboLabel || mathSignal.action || 'Math') : 'No math signal',
@@ -276,6 +301,11 @@ window.addEventListener('DOMContentLoaded', async () => {
                         else eStats.patternStats[pName].losses++;
 
                         eStats.signalLog.push({ result: isWin ? 'WIN' : 'LOSS', units: unitChange, patternName: pName, spinIndex: spin.index, spinNum: spin.num });
+
+                        // Map to User Stats if they actively clicked it
+                        if (bet.confirmed && window.updateUserStats) {
+                            window.updateUserStats(isWin, bet, spin.index, unitChange);
+                        }
                     });
                 }
 
@@ -706,12 +736,30 @@ window.syncAppStore = function () {
                 snapshot: window.state.engineSnapshot
             };
         window.AppStore.dispatch('engine/sync', storePatch);
+    } else {
+        if (window.renderDashboardSafe) window.renderDashboardSafe(window.state.activeBets || []);
     }
 };
 
 window.toggleBetConfirmation = function (index) {
     if (window.state && window.state.activeBets && window.state.activeBets[index]) {
-        window.state.activeBets[index].confirmed = !window.state.activeBets[index].confirmed;
+        const bet = window.state.activeBets[index];
+        bet.confirmed = !bet.confirmed;
+
+        // Force immediate visual update without relying on external renderers
+        const dash = document.getElementById('dashboard');
+        if (dash && dash.children[index]) {
+            const card = dash.children[index];
+            const accent = bet.accentColor || '#FF3B30';
+            if (bet.confirmed) {
+                card.style.background = `linear-gradient(135deg, ${accent}50, ${accent}15)`;
+                card.style.borderColor = accent;
+            } else {
+                card.style.background = `linear-gradient(135deg, ${accent}25, ${accent}05)`;
+                card.style.borderColor = `${accent}40`;
+            }
+        }
+
         if (window.renderDashboardSafe) {
             window.renderDashboardSafe(window.state.activeBets);
         } else if (window.renderDashboard) {
@@ -729,6 +777,12 @@ window.updateUserStats = function (isWin, bet, spinIndex, unitChange) {
 
     // Only log actual user bets that were confirmed via double-click on the dashboard
     if (!bet || bet.confirmed !== true) return;
+
+    // Prevent double counting if called multiple times for the same spin
+    const spinId = `${spinIndex}-${bet.targetFace}`;
+    if (!window.state.userStats._trackedBets) window.state.userStats._trackedBets = new Set();
+    if (window.state.userStats._trackedBets.has(spinId)) return;
+    window.state.userStats._trackedBets.add(spinId);
 
     const uStats = window.state.userStats;
 
@@ -850,6 +904,52 @@ window.renderAdvancementAnalytics = function () {
         advPanel.innerHTML = '<div class="text-white/40 text-center py-6 text-xs italic tracking-wide">Advancements tracking active. Awaiting threshold breaches.</div>';
     }
 };
+
+window.renderDashboardSafe = function (activeBets) {
+    const dash = document.getElementById('dashboard');
+    if (!dash) return;
+
+    if (!activeBets || activeBets.length === 0) {
+        const snapshot = window.state && window.state.engineSnapshot ? window.state.engineSnapshot : {};
+        let emptyLabel = 'SCANNING...';
+
+        if (snapshot.engineState === 'BUILDING') {
+            emptyLabel = `BUILDING ENGINE • ${snapshot.spinsUntilNextCheckpoint || 14} SPINS UNTIL FIRST READ`;
+        } else if (snapshot.engineState === 'WAITING') {
+            emptyLabel = `NEXT READ IN ${snapshot.spinsUntilNextCheckpoint || 1} SPINS`;
+        } else if (snapshot.engineState === 'WATCHLIST') {
+            emptyLabel = `WATCHLIST • ${snapshot.dominantCombo ? snapshot.dominantCombo.label : 'NO ACTION'}`;
+        } else if (snapshot.engineState === 'NO_SIGNAL') {
+            emptyLabel = 'NO SIGNAL • CHECKPOINT CLEAR';
+        }
+
+        dash.innerHTML = `<div class="dashboard-empty w-full text-center text-[10px] font-medium text-[#8E8E93]/60 border border-dashed border-white/5 rounded-xl p-2 select-none tracking-wide flex items-center justify-center h-[60px]"><span>${emptyLabel}</span></div>`;
+        return;
+    }
+
+    let cards = [];
+    activeBets.forEach((bet, index) => {
+        const subtitle = bet.subtitle || (bet.comboLabel ? `${bet.comboLabel} combo` : bet.patternName);
+        const accent = bet.accentColor || '#FF3B30';
+        const bgStyle = bet.confirmed ? `background: linear-gradient(135deg, ${accent}50, ${accent}15)` : `background: linear-gradient(135deg, ${accent}25, ${accent}05)`;
+        const borderStyle = bet.confirmed ? `border-color: ${accent}` : `border-color: ${accent}40`;
+
+        cards.push(`
+            <div class="min-w-[250px] h-[64px] px-3 py-2 rounded-lg border flex items-center justify-between cursor-pointer select-none transition-all hover:brightness-110"
+                 ondblclick="window.toggleBetConfirmation(${index})"
+                 title="Double-click to ${bet.confirmed ? 'unselect' : 'select'}"
+                 style="border-left: 3px solid ${accent}; ${borderStyle}; ${bgStyle}; box-shadow: 0 4px 15px ${accent}15;">
+                <div class="min-w-0">
+                    <div class="text-[15px] leading-tight font-black text-white tracking-wide drop-shadow-sm">BET F${bet.targetFace}</div>
+                    <div class="text-[11px] leading-tight text-white/80 font-semibold mt-0.5">${subtitle}</div>
+                </div>
+            </div>
+        `);
+    });
+
+    dash.innerHTML = cards.join('');
+};
+window.renderDashboard = window.renderDashboardSafe;
 
 window.renderAnalytics = function () {
     if (!window.state) return;
@@ -1440,7 +1540,11 @@ window.updateAiConfigModalUI = function () {
 
 window.toggleModal = function (id) {
     const el = document.getElementById(id);
-    if (el) el.classList.toggle('hidden');
+    if (!el) {
+        alert(`UI Component Error: The modal '${id}' could not be found.\n\nPlease ensure your js/modules/ui/components files are loaded and correctly placed.`);
+        return;
+    }
+    el.classList.toggle('hidden');
 };
 
 window.toggleAccordion = function (id) {
