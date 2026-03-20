@@ -81,3 +81,4 @@
         if (scramblers.length > 0) { const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*!'; window.aiScrambleInterval = setInterval(() => { scramblers.forEach(el => { const original = el.dataset.text; let scrambled = ''; for (let i = 0; i < original.length; i++) { if (original[i] === ' ') scrambled += ' '; else scrambled += Math.random() > 0.75 ? chars[Math.floor(Math.random() * chars.length)] : original[i]; } el.innerText = scrambled; }); }, 50); }
     };
 })();
+// Moved to js/modules/ui/renderers/dashboard.js
