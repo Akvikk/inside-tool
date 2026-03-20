@@ -133,9 +133,10 @@
             return `M ${x} ${y} h ${width} v ${height} h ${-width} Z`;
         };
 
+        const RED_NUMS = window.config && window.config.RED_NUMS ? window.config.RED_NUMS : [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
         let getColorClass = (num) => {
             if (num === 0) return 'rt-green';
-            return config.RED_NUMS.includes(num) ? 'rt-red' : 'rt-black';
+            return RED_NUMS.includes(num) ? 'rt-red' : 'rt-black';
         };
 
         let paths = '';
@@ -149,29 +150,63 @@
         paths += `<line x1="${cx - innerR}" y1="380" x2="${cx + innerR}" y2="520" stroke="rgba(255,255,255,0.05)" stroke-width="2" />`;
         paths += `<path d="M ${cx - innerR} 640 C ${cx - innerR + 20} 600, ${cx + innerR - 20} 600, ${cx + innerR} 640" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2" />`;
 
-        // Zero
-        paths += `<path d="${getWedgePath(cx, cy1, innerR, outerR, 180, 360)}" class="rt-zero" onclick="handleGridClick(0)"/>`;
-        texts += `<text x="${cx}" y="${cy1 - 50}" class="rt-text">0</text>`;
+        // Static text overlays (Rotated down for elegant fit)
+        texts += `<text x="${cx}" y="150" transform="rotate(90, ${cx}, 150)" class="rt-label">TIER</text>`;
+        texts += `<text x="${cx}" y="300" transform="rotate(90, ${cx}, 300)" class="rt-label">ORPHELINS</text>`;
+        texts += `<text x="${cx}" y="480" transform="rotate(90, ${cx}, 480)" class="rt-label">VOISINS</text>`;
+        texts += `<text x="${cx}" y="690" transform="rotate(90, ${cx}, 690)" class="rt-label">ZERO</text>`;
 
-        // Right side (1st 12 group mixed with others)
-        rightArray.forEach((num, i) => {
-            paths += `<path d="${getRectPath(cx + innerR, cy1 + i * blockH, trackThickness, blockH)}" class="${getColorClass(num)}" onclick="handleGridClick(${num})"/>`;
-            texts += `<text x="${cx + innerR + 22}" y="${cy1 + i * blockH + 25}" class="rt-text" transform="rotate(90, ${cx + innerR + 22}, ${cy1 + i * blockH + 25})">${num}</text>`;
-        });
+        let createGroup = (num, pathD, tx, ty) => {
+            return `<g class="rt-seg" onclick="handleGridClick(${num})">
+                <path d="${pathD}" />
+                <text x="${tx}" y="${ty}" class="rt-num ${getColorClass(num)}" text-anchor="middle" dominant-baseline="central">${num}</text>
+            </g>`;
+        };
 
-        // Bottom curved part with numbers
-        // We'll put some numbers here or leave it for special bets.
-        // For simplicity, let's keep it clean since it's a HUD.
+        // 1. Right Straight (Top down)
+        for (let i = 0; i < 16; i++) {
+            let n = rightArray[i];
+            let x = cx + innerR;
+            let y = cy1 + i * blockH;
+            paths += createGroup(n, getRectPath(x, y, trackThickness, blockH), x + trackThickness / 2, y + blockH / 2);
+        }
 
-        // Left side
-        leftArray.forEach((num, i) => {
-            // Drawn from bottom up
-            const idx = leftArray.length - 1 - i;
-            paths += `<path d="${getRectPath(cx - outerR, cy1 + idx * blockH, trackThickness, blockH)}" class="${getColorClass(num)}" onclick="handleGridClick(${num})"/>`;
-            texts += `<text x="${cx - outerR + 22}" y="${cy1 + idx * blockH + 25}" class="rt-text" transform="rotate(-90, ${cx - outerR + 22}, ${cy1 + idx * blockH + 25})">${num}</text>`;
-        });
+        // 2. Left Straight (Bottom up to match clockwise)
+        for (let i = 0; i < 16; i++) {
+            let n = leftArray[i];
+            let x = cx - outerR;
+            let y = cy2 - (i + 1) * blockH;
+            paths += createGroup(n, getRectPath(x, y, trackThickness, blockH), x + trackThickness / 2, y + blockH / 2);
+        }
 
-        return { paths, texts };
+        // 3. Bottom Arc
+        let tr = innerR + trackThickness / 2; // 62
+        paths += createGroup(3, getWedgePath(cx, cy2, innerR, outerR, 0, 60), cx + tr * Math.cos(30 * Math.PI / 180), cy2 + tr * Math.sin(30 * Math.PI / 180));
+        paths += createGroup(26, getWedgePath(cx, cy2, innerR, outerR, 60, 120), cx, cy2 + tr);
+        paths += createGroup(0, getWedgePath(cx, cy2, innerR, outerR, 120, 180), cx + tr * Math.cos(150 * Math.PI / 180), cy2 + tr * Math.sin(150 * Math.PI / 180));
+
+        // 4. Top Arc
+        paths += createGroup(23, getWedgePath(cx, cy1, innerR, outerR, 180, 270), cx + tr * Math.cos(225 * Math.PI / 180), cy1 + tr * Math.sin(225 * Math.PI / 180));
+        paths += createGroup(10, getWedgePath(cx, cy1, innerR, outerR, 270, 360), cx + tr * Math.cos(315 * Math.PI / 180), cy1 + tr * Math.sin(315 * Math.PI / 180));
+
+        return `
+            <svg id="racetrackSvg" width="100%" viewBox="0 0 ${svgW} ${svgH}" class="max-w-[220px] pointer-events-auto drop-shadow-2xl">
+                <style>
+                    .rt-num { font-family: 'Space Mono', monospace; font-size: 20px; font-weight: 800; pointer-events: none; }
+                    .rt-num.rt-red { fill: #ff5050; text-shadow: 0 0 10px rgba(255,80,80,0.5); }
+                    .rt-num.rt-black { fill: #bbbbbb; }
+                    .rt-num.rt-green { fill: #00ff66; text-shadow: 0 0 10px rgba(0,255,102,0.5); }
+                    
+                    .rt-seg path { fill: #2a2a2e; stroke: rgba(255,255,255,0.06); stroke-width: 1px; transition: all 0.15s ease; cursor: pointer; }
+                    .rt-seg:hover path { fill: rgba(255, 26, 51, 0.15); stroke: rgba(255, 26, 51, 0.6); filter: drop-shadow(0 0 10px rgba(255,26,51,0.3)); }
+                    
+                    .rt-inner { fill: transparent; stroke: rgba(255,255,255,0.06); stroke-width: 2px; }
+                    .rt-label { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 800; letter-spacing: 5px; text-anchor: middle; dominant-baseline: central; fill: rgba(255,255,255,0.15); pointer-events: none; }
+                </style>
+                ${paths}
+                ${texts}
+            </svg>
+        `;
     }
 
     function initDesktopGrid() {
@@ -179,13 +214,9 @@
         if (!grid) return;
         grid.innerHTML = '';
         if (state.currentInputLayout === 'racetrack') {
-            const { paths, texts } = buildRacetrackSVG();
             grid.innerHTML = `
-                <div class="flex items-center justify-center h-full w-full py-4">
-                    <svg width="240" height="880" viewBox="0 0 240 880" class="roulette-racetrack drop-shadow-2xl">
-                        <g>${paths}</g>
-                        <g>${texts}</g>
-                    </svg>
+                <div class="flex items-center justify-center h-full w-full py-4 fade-in">
+                    ${buildRacetrackSVG()}
                 </div>
             `;
             grid.className = "hidden md:block w-[240px] shrink-0 overflow-y-auto custom-scroll refined-glass h-full";
@@ -289,7 +320,7 @@
             const meta = metaData[key];
             const isEnabled = config[key] !== false;
             const accent = meta.accent || 'var(--apple-p3-blue)';
-            
+
             entries.push(`
                 <div class="flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 hover:bg-white/[0.03] active:scale-[0.98] cursor-pointer" onclick="togglePatternFilter('${key}')">
                     <div class="flex flex-col">

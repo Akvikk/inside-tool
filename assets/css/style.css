@@ -48,10 +48,11 @@ header {
 
 /* Refined Glass Material */
 .refined-glass {
-    background: rgba(28, 28, 30, 0.45) !important;
+    background: rgba(28, 28, 30, 0.8) !important; /* INCREASE OPACITY FOR STABILITY */
     backdrop-filter: blur(40px) saturate(180%) !important;
     -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: white !important;
 }
 
 /* Data Fonts */
@@ -757,8 +758,10 @@ button.bg-gradient-to-b:active {
     text-transform: uppercase;
     letter-spacing: 0.15em;
     position: sticky;
-    top: 56px; /* ALIGN WITH HEADER HEIGHT */
-    z-index: 20;
+    top: 0; /* INSIDE SCROLL CONTAINER */
+    z-index: 30;
+    background: #1C1C1E !important; /* SOLID BACKGROUND TO PREVENT GHOSTING */
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
     background: rgba(28, 28, 30, 0.75); /* Standard glass bg */
     backdrop-filter: blur(40px) saturate(180%);
     border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
