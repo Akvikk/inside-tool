@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// --- CONFIGURATION ---
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// --- CONFIGURATION ---
 const RED_NUMS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
 const PERIMETER_RULE_KEY = 'Perimeter Rule';
 const PREDICTION_PERIMETER_PATTERN = 'Prediction Perimeter';
@@ -309,9 +309,11 @@ window.onload = async () => {
 
         // Hamburger Menu
         const burgerMenu = document.getElementById('hamburgerMenu');
-        const burgerBtn = burgerMenu ? burgerMenu.previousElementSibling : null;
+        const burgerBtn = document.getElementById('headerMenuBtn');
         if (burgerMenu && !burgerMenu.classList.contains('hidden') && !burgerMenu.contains(e.target) && (!burgerBtn || !burgerBtn.contains(e.target))) {
             burgerMenu.classList.add('hidden');
+            const backdrop = document.getElementById('hamburgerBackdrop');
+            if (backdrop) backdrop.classList.add('hidden');
         }
     });
 

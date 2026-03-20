@@ -48,6 +48,14 @@
                 window.togglePatternFilterPopover();
             };
         }
+
+        const menuBtn = document.getElementById('headerMenuBtn');
+        if (menuBtn) {
+            menuBtn.onclick = function (e) {
+                e.stopPropagation();
+                window.toggleHamburgerMenu();
+            };
+        }
     }
 
     function handleGridClick(n) {
@@ -225,6 +233,29 @@
         input.value = '';
     };
 
+    window.importLogFile = importLogFile;
+    window.importSpins = importLogFile;
+
+    window.exportSpins = function () {
+        const historyRef = (window.state && window.state.history) ? window.state.history : [];
+        if (historyRef.length === 0) {
+            alert("No spins to export!");
+            return;
+        }
+        const spins = historyRef.map(h => h.num);
+        const data = { timestamp: Date.now(), spins: spins };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const dateStr = new Date().toISOString().slice(0, 10);
+        a.download = `Roulette_Spins_${dateStr}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
     function getPatternMetaData() {
         const activeStrategyKey = (window.state && window.state.currentGameplayStrategy) ? window.state.currentGameplayStrategy : 'series';
         const strategy = window.StrategyRegistry ? window.StrategyRegistry[activeStrategyKey] : null;
@@ -371,6 +402,14 @@
         const patternPopover = document.getElementById('patternFilterPopover');
         if (patternShell && patternPopover && !patternPopover.classList.contains('hidden') && !patternShell.contains(e.target)) {
             window.closePatternFilterPopover();
+        }
+
+        const hamburgerMenu = document.getElementById('hamburgerMenu');
+        const menuBtn = document.getElementById('headerMenuBtn');
+        if (hamburgerMenu && !hamburgerMenu.classList.contains('hidden')) {
+            if (!hamburgerMenu.contains(e.target) && (!menuBtn || !menuBtn.contains(e.target))) {
+                window.toggleHamburgerMenu();
+            }
         }
     });
 
