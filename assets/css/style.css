@@ -176,7 +176,8 @@ button:active,
 /* SIDEBAR GRID */
 .mesmer-grid {
     background: rgba(20, 20, 22, 0.65);
-    backdrop-filter: blur(40px) saturate(180%);
+    backdrop-filter: blur(40px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
     border-right: 0.5px solid rgba(255, 255, 255, 0.1);
     box-shadow: none;
     position: relative;
@@ -825,6 +826,8 @@ button.bg-gradient-to-b:active {
     line-height: 1.45;
     text-align: right;
     word-break: break-word;
+    word-wrap: break-word;
+    white-space: normal;
 }
 
 .prediction-entry-note {
@@ -832,6 +835,8 @@ button.bg-gradient-to-b:active {
     font-size: 12px;
     line-height: 1.45;
     text-align: right;
+    word-wrap: break-word;
+    white-space: normal;
 }
 
 .prediction-empty {
@@ -1106,15 +1111,11 @@ button.bg-gradient-to-b:active {
     position: relative;
     isolation: isolate;
     background: rgba(28, 28, 30, 0.65);
-    backdrop-filter: blur(40px) saturate(180%);
-    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    backdrop-filter: blur(40px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
     border: 0.5px solid rgba(255, 255, 255, 0.15);
     box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
     border-radius: 20px;
-}
-
-.glass-menu::after {
-    display: none;
 }
 
 .glass-menu>* {
@@ -1705,4 +1706,19 @@ input[type=number] {
     r: 5;
     pointer-events: none;
     transition: opacity 0.2s;
+}
+
+@media (max-width: 768px) {
+    .history-table {
+        table-layout: auto !important;
+    }
+
+    .history-table th:nth-child(1), .history-table td:nth-child(1),
+    .history-table th:nth-child(4), .history-table td:nth-child(4) {
+        display: none !important;
+    }
+
+    .history-table th:nth-child(5), .history-table td:nth-child(5) {
+        width: 100% !important;
+    }
 }
