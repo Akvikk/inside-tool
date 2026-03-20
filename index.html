@@ -194,10 +194,11 @@
                         <i class="fas fa-chess-knight mr-2 text-[#0A84FF]"></i>
                         Active Strategy
                     </label>
-                    <select id="hamburgerStrategySelect" onchange="changePredictionStrategy(this.value)"
-                        class="w-full bg-white/5 border border-white/10 text-white text-xs rounded p-2 outline-none appearance-none cursor-pointer focus:border-[#0A84FF]/50 transition-colors">
-                        <option value="series" class="bg-gray-900">Series Strategy (1-2-3)</option>
-                        <option value="combo" class="bg-gray-900">Combo Strategy (Pair Scan)</option>
+                    <select id="hamburgerStrategySelect" onchange="setGameplayStrategy(this.value)"
+                        class="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#30D158] transition-all">
+                        <option value="series">SERIES</option>
+                        <option value="combo">COMBOS</option>
+                        <option value="inside">INSIDE PATTERNS</option>
                     </select>
                 </div>
             </div>
@@ -731,6 +732,16 @@
     <!-- STRATEGIES -->
     <script src="js/strategies/strategy.series.js"></script>
     <script src="js/strategies/strategy.combo.js"></script>
+    
+    <!-- INSIDE PATTERNS (Modular Directory) -->
+    <script src="js/strategies/inside/index.js"></script>
+    <script src="js/strategies/inside/patterns/pattern.rptng.js"></script>
+    <script src="js/strategies/inside/patterns/pattern.1c-rptng.js"></script>
+    <script src="js/strategies/inside/patterns/pattern.brkt.js"></script>
+    <script src="js/strategies/inside/patterns/pattern.121.js"></script>
+    <script src="js/strategies/inside/patterns/pattern.123.js"></script>
+    <script src="js/strategies/inside/patterns/pattern.22.js"></script>
+    <script src="js/strategies/inside/patterns/pattern.seqvarbrkt.js"></script>
 
     <!-- UI -->
     <script src="js/modules/ui/renderers.js"></script>

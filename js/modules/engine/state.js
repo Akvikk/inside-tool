@@ -41,7 +41,7 @@
             betLog: []
         },
         currentPredictionStrategy: 'series',
-        currentGameplayStrategy: 'series', // 'series' or 'combo'
+        currentGameplayStrategy: 'series', // 'series', 'combo', 'inside'
         strategies: {},
         changeStrategyTimeout: null,
         cachedAddSpinBtn: null,
@@ -56,7 +56,7 @@
         lastActionableCheckpointSpin: 0,
         analyticsDisplayStrategy: 'series',
         historyRenderVersion: 0,
-        strategySyncCache: { series: null, combo: null }
+        strategySyncCache: { series: null, combo: null, inside: null }
     };
     window.currentAlerts = [];
 })();

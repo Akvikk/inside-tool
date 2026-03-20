@@ -177,10 +177,17 @@ window.EngineCore = {
             history: [0], patterns: {}
         };
 
+        const insideLabels = ['RPTng', '1C RPTng', 'brkt', '1-2-1', '1-2-3', '2-2', 'SeqVarBrkt'];
+
         this.stats.signalLog.forEach(log => {
-            const isMatch = (displayStrategy === 'series')
-                ? (log.rawStrategy === 'Sequence' || log.rawStrategy === 'TripleCs')
-                : (log.rawStrategy === 'Combo');
+            let isMatch = false;
+            if (displayStrategy === 'series') {
+                isMatch = (log.rawStrategy === 'Sequence' || log.rawStrategy === 'TripleCs');
+            } else if (displayStrategy === 'combo') {
+                isMatch = (log.rawStrategy === 'Combo');
+            } else if (displayStrategy === 'inside') {
+                isMatch = (log.rawStrategy === 'Inside' || insideLabels.includes(log.rawPattern));
+            }
 
             if (isMatch) {
                 if (log.result === 'WIN') {

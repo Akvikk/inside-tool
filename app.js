@@ -1391,6 +1391,12 @@ window.updateAiConfigModalUI = function() {
 };
 
 // --- MISC. SETTINGS ---
+// --- REGISTER STRATEGIES ---
+    if (window.StrategyRegistry) {
+        if (window.SeriesStrategy) window.StrategyRegistry.series = window.SeriesStrategy;
+        if (window.ComboStrategy) window.StrategyRegistry.combo = window.ComboStrategy;
+        if (window.InsideStrategy) window.StrategyRegistry.inside = window.InsideStrategy;
+    }
 window.changePredictionStrategy = async function (val) {
     if (window.state) {
         window.state.currentGameplayStrategy = val;
