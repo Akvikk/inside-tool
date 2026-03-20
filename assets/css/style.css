@@ -1199,6 +1199,82 @@ button.bg-gradient-to-b:active {
     letter-spacing: 0.1em;
 }
 
+/* --- RACETRACK (PROGRADE) --- */
+.roulette-racetrack {
+    max-width: 200px;
+    margin: 0 auto;
+    pointer-events: auto;
+    filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
+}
+
+.rt-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 800;
+    pointer-events: none;
+    dominant-baseline: central;
+    text-anchor: middle;
+    transition: all 0.2s var(--ease-strike);
+}
+
+.rt-num-red { fill: var(--theme-red); text-shadow: 0 0 10px rgba(255, 59, 48, 0.4); }
+.rt-num-black { fill: rgba(235, 235, 245, 0.8); }
+.rt-num-green { fill: var(--theme-green); text-shadow: 0 0 10px rgba(52, 199, 89, 0.4); }
+
+.rt-seg {
+    cursor: pointer;
+}
+
+.rt-seg path {
+    fill: rgba(28, 28, 30, 0.65);
+    stroke: rgba(255, 255, 255, 0.08);
+    stroke-width: 1px;
+    transition: all 0.2s var(--ease-strike);
+}
+
+.rt-seg:hover path {
+    fill: rgba(255, 255, 255, 0.12);
+    stroke: rgba(255, 255, 255, 0.4);
+    filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.15));
+}
+
+.rt-seg:active path {
+    fill: rgba(255, 255, 255, 0.2);
+    transition: all 0.05s;
+}
+
+.rt-seg:hover .rt-num {
+    font-size: 15px;
+    text-shadow: 0 0 12px currentColor;
+}
+
+.rt-inner {
+    fill: rgba(20, 20, 22, 0.4);
+    stroke: rgba(255, 255, 255, 0.1);
+    stroke-width: 1.5px;
+}
+
+.rt-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.3em;
+    text-anchor: middle;
+    dominant-baseline: central;
+    fill: rgba(235, 235, 245, 0.25);
+    pointer-events: none;
+    transition: fill 0.3s var(--ease-strike);
+}
+
+.roulette-racetrack:hover .rt-label {
+    fill: rgba(235, 235, 245, 0.4);
+}
+
+.rt-div-line {
+    stroke: rgba(255, 255, 255, 0.08);
+    stroke-width: 1.5px;
+}
+
 /* --- TABS --- */
 .segmented-control {
     background: rgba(118, 118, 128, 0.24);

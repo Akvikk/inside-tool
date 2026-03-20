@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// --- CONFIGURATION ---
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// --- CONFIGURATION ---
 const RED_NUMS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
 const PERIMETER_RULE_KEY = 'Perimeter Rule';
 const PREDICTION_PERIMETER_PATTERN = 'Prediction Perimeter';
@@ -1238,17 +1238,17 @@ function updateAnalyticsHUD() {
 }
 
 function buildRacetrackSVG() {
-    const svgW = 240;
-    const svgH = 880;
+    const svgW = 200;
+    const svgH = 520;
 
-    const trackThickness = 44;
-    const innerR = 40;
-    const outerR = innerR + trackThickness; // 84
+    const trackThickness = 36;
+    const innerR = 26;
+    const outerR = innerR + trackThickness; // 62
 
-    const cx = 120;
-    const cy1 = 100;
-    const cy2 = 740;
-    const blockH = 40; // 16 * 40 = 640
+    const cx = 100;
+    const cy1 = 84;
+    const cy2 = 436; // 84 + (16 * 22)
+    const blockH = 22; // 16 * 22 = 352
 
     const rightArray = [5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35];
     const leftArray = [32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8];
@@ -1272,8 +1272,8 @@ function buildRacetrackSVG() {
     };
 
     let getColorClass = (num) => {
-        if (num === 0) return 'rt-green';
-        return RED_NUMS.includes(num) ? 'rt-red' : 'rt-black';
+        if (num === 0) return 'rt-num-green';
+        return RED_NUMS.includes(num) ? 'rt-num-red' : 'rt-num-black';
     };
 
     let paths = '';
@@ -1283,20 +1283,20 @@ function buildRacetrackSVG() {
     paths += `<path d="M ${cx - innerR} ${cy1} L ${cx - innerR} ${cy2} A ${innerR} ${innerR} 0 0 0 ${cx + innerR} ${cy2} L ${cx + innerR} ${cy1} A ${innerR} ${innerR} 0 0 0 ${cx - innerR} ${cy1} Z" class="rt-inner" />`;
 
     // Division Lines inside the track
-    paths += `<line x1="${cx - innerR}" y1="230" x2="${cx + innerR}" y2="230" stroke="rgba(255,255,255,0.05)" stroke-width="2" />`;
-    paths += `<line x1="${cx - innerR}" y1="380" x2="${cx + innerR}" y2="520" stroke="rgba(255,255,255,0.05)" stroke-width="2" />`;
-    paths += `<path d="M ${cx - innerR} 640 C ${cx - innerR + 20} 600, ${cx + innerR - 20} 600, ${cx + innerR} 640" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2" />`;
+    paths += `<line x1="${cx - innerR}" y1="180" x2="${cx + innerR}" y2="180" class="rt-div-line" />`;
+    paths += `<line x1="${cx - innerR}" y1="280" x2="${cx + innerR}" y2="280" class="rt-div-line" />`;
+    paths += `<path d="M ${cx - innerR} 380 C ${cx - innerR + 10} 360, ${cx + innerR - 10} 360, ${cx + innerR} 380" fill="none" class="rt-div-line" />`;
 
     // Static text overlays (Rotated down for elegant fit)
-    texts += `<text x="${cx}" y="150" transform="rotate(90, ${cx}, 150)" class="rt-label">TIER</text>`;
-    texts += `<text x="${cx}" y="300" transform="rotate(90, ${cx}, 300)" class="rt-label">ORPHELINS</text>`;
-    texts += `<text x="${cx}" y="480" transform="rotate(90, ${cx}, 480)" class="rt-label">VOISINS</text>`;
-    texts += `<text x="${cx}" y="690" transform="rotate(90, ${cx}, 690)" class="rt-label">ZERO</text>`;
+    texts += `<text x="${cx}" y="130" transform="rotate(90, ${cx}, 130)" class="rt-label">TIER</text>`;
+    texts += `<text x="${cx}" y="230" transform="rotate(90, ${cx}, 230)" class="rt-label">ORPHELINS</text>`;
+    texts += `<text x="${cx}" y="330" transform="rotate(90, ${cx}, 330)" class="rt-label">VOISINS</text>`;
+    texts += `<text x="${cx}" y="415" transform="rotate(90, ${cx}, 415)" class="rt-label">ZERO</text>`;
 
     let createGroup = (num, pathD, tx, ty) => {
         return `<g class="rt-seg" onclick="handleGridClick(${num})">
             <path d="${pathD}" />
-            <text x="${tx}" y="${ty}" class="rt-num ${getColorClass(num)}" text-anchor="middle" dominant-baseline="central">${num}</text>
+            <text x="${tx}" y="${ty}" class="rt-num ${getColorClass(num)}">${num}</text>
         </g>`;
     };
 
@@ -1317,7 +1317,7 @@ function buildRacetrackSVG() {
     }
 
     // 3. Bottom Arc
-    let tr = innerR + trackThickness / 2; // 62
+    let tr = innerR + trackThickness / 2; // 44
     paths += createGroup(3, getWedgePath(cx, cy2, innerR, outerR, 0, 60), cx + tr * Math.cos(30 * Math.PI / 180), cy2 + tr * Math.sin(30 * Math.PI / 180));
     paths += createGroup(26, getWedgePath(cx, cy2, innerR, outerR, 60, 120), cx, cy2 + tr);
     paths += createGroup(0, getWedgePath(cx, cy2, innerR, outerR, 120, 180), cx + tr * Math.cos(150 * Math.PI / 180), cy2 + tr * Math.sin(150 * Math.PI / 180));
@@ -1327,19 +1327,7 @@ function buildRacetrackSVG() {
     paths += createGroup(10, getWedgePath(cx, cy1, innerR, outerR, 270, 360), cx + tr * Math.cos(315 * Math.PI / 180), cy1 + tr * Math.sin(315 * Math.PI / 180));
 
     return `
-        <svg id="racetrackSvg" width="100%" viewBox="0 0 ${svgW} ${svgH}" class="max-w-[220px] pointer-events-auto">
-            <style>
-                .rt-num { font-family: 'Space Mono', monospace; font-size: 20px; font-weight: 800; pointer-events: none; }
-                .rt-num.rt-red { fill: #ff5050; text-shadow: 0 0 10px rgba(255,80,80,0.5); }
-                .rt-num.rt-black { fill: #bbbbbb; }
-                .rt-num.rt-green { fill: #00ff66; text-shadow: 0 0 10px rgba(0,255,102,0.5); }
-                
-                .rt-seg path { fill: #2a2a2e; stroke: rgba(255,255,255,0.06); stroke-width: 1px; transition: all 0.15s ease; cursor: pointer; }
-                .rt-seg:hover path { fill: rgba(255, 26, 51, 0.15); stroke: rgba(255, 26, 51, 0.6); filter: drop-shadow(0 0 10px rgba(255,26,51,0.3)); }
-                
-                .rt-inner { fill: transparent; stroke: rgba(255,255,255,0.06); stroke-width: 2px; }
-                .rt-label { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 800; letter-spacing: 5px; text-anchor: middle; dominant-baseline: central; fill: rgba(255,255,255,0.15); pointer-events: none; }
-            </style>
+        <svg id="racetrackSvg" width="100%" viewBox="0 0 ${svgW} ${svgH}" class="roulette-racetrack">
             ${paths}
             ${texts}
         </svg>
