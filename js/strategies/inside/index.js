@@ -90,4 +90,6 @@
 
     // Attach to window for global access and registration
     window.InsideStrategy = InsideStrategy;
+    if (typeof window.StrategyRegistry === 'undefined') window.StrategyRegistry = {};
+    window.StrategyRegistry.inside = InsideStrategy;
 })();

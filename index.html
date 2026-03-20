@@ -9,17 +9,50 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
-        /* HIDE SCROLLBARS GLOBALLY */
-        * {
-            scrollbar-width: none;
-            /* Firefox */
-            -ms-overflow-style: none;
-            /* IE/Edge */
+        :root {
+            --bg-dark: #000000;
+            --glass-bg: rgba(28, 28, 30, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --accent-blue: #0A84FF;
+            --ios-green: #30D158;
+            --ios-red: #FF453A;
+            --ios-gray: #8E8E93;
+            --ios-bg: #1C1C1E;
+
+            /* REFINED APPLE TOKENS */
+            --apple-blur: 40px;
+            --apple-p3-blue: #007AFF;
+            --apple-p3-green: #34C759;
+            --apple-p3-red: #FF3B30;
+            --apple-p3-purple: #AF52DE;
         }
 
-        *::-webkit-scrollbar {
-            display: none;
-            /* Chrome/Safari/Webkit */
+        .refined-glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--apple-blur)) saturate(180%);
+            -webkit-backdrop-filter: blur(var(--apple-blur)) saturate(180%);
+            border: 1px solid var(--glass-border);
+        }
+
+        /* HIDE SCROLLBARS GLOBALLY */
+        * { scrollbar-width: none; -ms-overflow-style: none; }
+        *::-webkit-scrollbar { display: none; }
+
+        .mesh-bg {
+            background-color: #030303;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(10, 132, 255, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(191, 90, 242, 0.15) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(48, 209, 88, 0.1) 0px, transparent 50%);
+        }
+        
+        @keyframes apple-scale-in {
+            from { opacity: 0; transform: scale(0.96); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .animate-apple-in {
+            animation: apple-scale-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
     </style>
 </head>
@@ -37,81 +70,72 @@
         class="fixed inset-0 bg-[#030303]/40 backdrop-blur-[12px] hidden z-20 transition-all duration-300"
         onclick="toggleHamburgerMenu()"></div>
 
-    <!-- 1. CONTROLS HEADER (Compact) -->
-    <div class="glass-header px-4 flex justify-between items-center shrink-0 z-30 h-[56px]">
-        <div class="flex gap-3 items-center">
+    <!-- 1. REFINED GLOBAL HEADER -->
+    <div class="glass-header refined-glass px-4 flex justify-between items-center shrink-0 z-50 h-14 border-b border-white/5 shadow-2xl">
+        <!-- LEFT: INPUTS -->
+        <div class="flex items-center gap-2">
             <div class="relative">
                 <input type="text" id="spinInput" inputmode="numeric" autocomplete="off" maxlength="2"
                     onkeydown="if(event.key==='Enter'){event.preventDefault();addSpin();}"
-                    class="ios-input w-[64px] h-8 text-lg font-semibold text-center placeholder-white/20"
+                    class="ios-input w-16 h-8 text-lg font-bold text-center placeholder-white/20 bg-white/5 border border-white/10 rounded-lg focus:border-[#0A84FF] transition-all"
                     placeholder="#">
             </div>
 
             <button id="addSpinBtn" onclick="addSpin()"
-                class="ios-btn h-8 w-8 sm:w-auto px-0 sm:px-5 bg-gradient-to-b from-[#0A84FF] to-[#0066CC] hover:from-[#3399FF] hover:to-[#0A84FF] text-white font-semibold rounded-lg shadow-lg text-xs tracking-wider border border-[#0A84FF]/50 flex items-center justify-center">
-                <i class="fas fa-plus sm:hidden"></i>
-                <span class="hidden sm:inline">ADD</span>
+                class="h-8 px-4 bg-[#0A84FF] hover:bg-[#007AFF] text-white font-bold rounded-lg shadow-sm text-[10px] tracking-widest flex items-center justify-center transition-all">
+                ADD
             </button>
 
             <button onclick="undoSpin()"
-                class="ios-btn h-8 w-8 bg-[#2c2c2e] hover:bg-[#3a3a3c] text-[#8E8E93] hover:text-white font-semibold rounded-lg border border-white/10 flex items-center justify-center shadow-md">
+                class="h-8 w-8 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white rounded-lg border border-white/10 flex items-center justify-center transition-all">
                 <i class="fas fa-undo text-[10px]"></i>
             </button>
         </div>
 
-        <div class="flex gap-2 items-center">
-
+        <!-- RIGHT: TOOLS -->
+        <div class="flex items-center gap-1.5">
             <button onclick="openAiChat()" id="headerAiBtn"
-                class="ios-btn top-nav-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-[#bf5af2]/10 hover:bg-[#bf5af2]/20 text-[#bf5af2] font-semibold rounded-lg border border-[#bf5af2]/30 flex items-center justify-center gap-0 sm:gap-2 text-xs shadow-[0_0_10px_rgba(191,90,242,0.15)] transition-all">
+                class="h-8 px-3 bg-[#bf5af2]/10 hover:bg-[#bf5af2]/20 text-[#bf5af2] font-bold rounded-lg border border-[#bf5af2]/20 flex items-center gap-2 text-[10px] transition-all">
                 <i class="fas fa-brain"></i>
-                <span class="hidden sm:inline">AI CHAT</span>
-                <span id="headerAiBtnStatusDot"
-                    class="ai-chat-status-dot h-2 w-2 rounded-full bg-current shadow-[0_0_10px_currentColor]"></span>
+                <span class="hidden md:inline">NEURAL</span>
+                <div id="headerAiBtnStatusDot" class="h-1.5 w-1.5 rounded-full bg-current shadow-[0_0_8px_currentColor]"></div>
             </button>
 
             <div id="patternFilterShell" class="relative">
                 <button id="patternsToggleBtn" onclick="togglePatternFilterPopover()"
-                    class="ios-btn top-nav-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#BF5AF2] font-semibold rounded-lg border border-[#BF5AF2]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs pattern-toggle-btn">
+                    class="h-8 px-3 bg-white/5 hover:bg-white/10 text-[#BF5AF2] font-bold rounded-lg border border-[#BF5AF2]/10 flex items-center gap-2 text-[10px] transition-all">
                     <i class="fas fa-filter"></i>
-                    <span class="hidden sm:inline">PATTERNS</span>
+                    <span class="hidden md:inline">PATTERNS</span>
                 </button>
-                <div id="patternFilterPopover" class="pattern-filter-popover hidden">
-                    <div class="pattern-popover-head hud-drag-surface">
-                        <div>
-                            <div class="pattern-popover-title">Pattern Filters</div>
-                            <div id="patternFilterSummary" class="pattern-popover-meta">0 of 0 active</div>
-                        </div>
-                        <button onclick="event.stopPropagation(); closePatternFilterPopover()"
-                            class="pattern-popover-close">
-                            <i class="fas fa-times text-[10px]"></i>
-                        </button>
-                    </div>
-                    <div id="patternsList" class="pattern-filter-list"></div>
+                <div id="patternFilterPopover" class="pattern-filter-popover hidden refined-glass rounded-2xl shadow-2xl animate-apple-in">
+                    <!-- Popover content remains managed by JS -->
                 </div>
             </div>
 
-            <button id="headerBetsBtn" onclick="toggleModal('betsModal'); renderUserAnalytics();"
-                class="ios-btn top-nav-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#0A84FF] font-semibold rounded-lg border border-[#0A84FF]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs">
-                <i class="fas fa-list-check"></i> <span class="hidden sm:inline">BETS</span>
+            <button onclick="toggleModal('betsModal'); renderUserAnalytics();"
+                class="h-8 px-3 bg-white/5 hover:bg-white/10 text-[#0A84FF] font-bold rounded-lg border border-[#0A84FF]/10 flex items-center gap-2 text-[10px] transition-all">
+                <i class="fas fa-list-check"></i>
+                <span class="hidden lg:inline">BETS</span>
             </button>
 
-            <button id="headerStatsBtn" onclick="toggleModal('analyticsModal'); renderAnalytics();"
-                class="ios-btn top-nav-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#FFD60A] font-semibold rounded-lg border border-[#FFD60A]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs">
-                <i class="fas fa-chart-line"></i> <span class="hidden sm:inline">STATS</span>
+            <button onclick="toggleModal('analyticsModal'); renderAnalytics();"
+                class="h-8 px-3 bg-white/5 hover:bg-white/10 text-[#FFD60A] font-bold rounded-lg border border-[#FFD60A]/10 flex items-center gap-2 text-[10px] transition-all">
+                <i class="fas fa-chart-line"></i>
+                <span class="hidden lg:inline">STATS</span>
             </button>
 
             <button onclick="toggleAnalyticsHUD()" id="hudToggleBtn"
-                class="ios-btn top-nav-btn h-8 w-8 sm:w-auto px-0 sm:px-3 bg-white/5 hover:bg-white/10 text-[#30D158] font-semibold rounded-lg border border-[#30D158]/20 flex items-center justify-center gap-0 sm:gap-2 text-xs">
-                <i class="fas fa-chart-pie"></i> <span class="hidden sm:inline">ANALYTICS</span>
+                class="h-8 px-3 bg-white/5 hover:bg-white/10 text-[#30D158] font-bold rounded-lg border border-[#30D158]/10 flex items-center gap-2 text-[10px] transition-all">
+                <i class="fas fa-chart-pie"></i>
+                <span class="hidden lg:inline">HUD</span>
             </button>
 
-            <!-- HAMBURGER MENU -->
-            <div class="relative ml-2 border-l border-white/10 pl-2">
-                <button onclick="toggleHamburgerMenu()" id="headerMenuBtn"
-                    class="ios-btn top-nav-btn h-8 w-8 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-lg border border-white/20 flex items-center justify-center relative z-50">
-                    <i class="fas fa-bars"></i>
-                </button>
-            </div>
+            <div class="h-4 w-[1px] bg-white/10 mx-1"></div>
+
+            <button onclick="toggleHamburgerMenu()" id="headerMenuBtn"
+                class="h-8 w-8 bg-white/5 hover:bg-white/10 text-white rounded-lg border border-white/10 flex items-center justify-center transition-all">
+                <i class="fas fa-bars"></i>
+            </button>
         </div>
     </div>
 

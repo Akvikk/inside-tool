@@ -63,6 +63,31 @@
             window.HindsightModal.init();
         }
         initDesktopGrid();
+
+        // Ensure global toggleModal exists
+        if (!window.toggleModal) {
+            window.toggleModal = function (id) {
+                const el = document.getElementById(id);
+                if (el) el.classList.toggle('hidden');
+            };
+        }
+
+        // Header Buttons Data Bindings
+        const betsBtn = document.getElementById('headerBetsBtn');
+        if (betsBtn) {
+            betsBtn.onclick = function () {
+                window.toggleModal('betsModal');
+                if (window.renderUserAnalytics) window.renderUserAnalytics();
+            };
+        }
+
+        const statsBtn = document.getElementById('headerStatsBtn');
+        if (statsBtn) {
+            statsBtn.onclick = function () {
+                window.toggleModal('analyticsModal');
+                if (window.renderAnalytics) window.renderAnalytics();
+            };
+        }
     }
 
     function handleGridClick(n) {
@@ -124,154 +149,98 @@
         paths += `<line x1="${cx - innerR}" y1="380" x2="${cx + innerR}" y2="520" stroke="rgba(255,255,255,0.05)" stroke-width="2" />`;
         paths += `<path d="M ${cx - innerR} 640 C ${cx - innerR + 20} 600, ${cx + innerR - 20} 600, ${cx + innerR} 640" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2" />`;
 
-        // Static text overlays (Rotated down for elegant fit)
-        texts += `<text x="${cx}" y="150" transform="rotate(90, ${cx}, 150)" class="rt-label">TIER</text>`;
-        texts += `<text x="${cx}" y="300" transform="rotate(90, ${cx}, 300)" class="rt-label">ORPHELINS</text>`;
-        texts += `<text x="${cx}" y="480" transform="rotate(90, ${cx}, 480)" class="rt-label">VOISINS</text>`;
-        texts += `<text x="${cx}" y="690" transform="rotate(90, ${cx}, 690)" class="rt-label">ZERO</text>`;
+        // Zero
+        paths += `<path d="${getWedgePath(cx, cy1, innerR, outerR, 180, 360)}" class="rt-zero" onclick="handleGridClick(0)"/>`;
+        texts += `<text x="${cx}" y="${cy1 - 50}" class="rt-text">0</text>`;
 
-        let createGroup = (num, pathD, tx, ty) => {
-            return `<g class="rt-seg" onclick="handleGridClick(${num})">
-                <path d="${pathD}" />
-                <text x="${tx}" y="${ty}" class="rt-num ${getColorClass(num)}" text-anchor="middle" dominant-baseline="central">${num}</text>
-            </g>`;
-        };
+        // Right side (1st 12 group mixed with others)
+        rightArray.forEach((num, i) => {
+            paths += `<path d="${getRectPath(cx + innerR, cy1 + i * blockH, trackThickness, blockH)}" class="${getColorClass(num)}" onclick="handleGridClick(${num})"/>`;
+            texts += `<text x="${cx + innerR + 22}" y="${cy1 + i * blockH + 25}" class="rt-text" transform="rotate(90, ${cx + innerR + 22}, ${cy1 + i * blockH + 25})">${num}</text>`;
+        });
 
-        // 1. Right Straight (Top down)
-        for (let i = 0; i < 16; i++) {
-            let n = rightArray[i];
-            let x = cx + innerR;
-            let y = cy1 + i * blockH;
-            paths += createGroup(n, getRectPath(x, y, trackThickness, blockH), x + trackThickness / 2, y + blockH / 2);
-        }
+        // Bottom curved part with numbers
+        // We'll put some numbers here or leave it for special bets.
+        // For simplicity, let's keep it clean since it's a HUD.
 
-        // 2. Left Straight (Bottom up to match clockwise)
-        for (let i = 0; i < 16; i++) {
-            let n = leftArray[i];
-            let x = cx - outerR;
-            let y = cy2 - (i + 1) * blockH;
-            paths += createGroup(n, getRectPath(x, y, trackThickness, blockH), x + trackThickness / 2, y + blockH / 2);
-        }
+        // Left side
+        leftArray.forEach((num, i) => {
+            // Drawn from bottom up
+            const idx = leftArray.length - 1 - i;
+            paths += `<path d="${getRectPath(cx - outerR, cy1 + idx * blockH, trackThickness, blockH)}" class="${getColorClass(num)}" onclick="handleGridClick(${num})"/>`;
+            texts += `<text x="${cx - outerR + 22}" y="${cy1 + idx * blockH + 25}" class="rt-text" transform="rotate(-90, ${cx - outerR + 22}, ${cy1 + idx * blockH + 25})">${num}</text>`;
+        });
 
-        // 3. Bottom Arc
-        let tr = innerR + trackThickness / 2; // 62
-        paths += createGroup(3, getWedgePath(cx, cy2, innerR, outerR, 0, 60), cx + tr * Math.cos(30 * Math.PI / 180), cy2 + tr * Math.sin(30 * Math.PI / 180));
-        paths += createGroup(26, getWedgePath(cx, cy2, innerR, outerR, 60, 120), cx, cy2 + tr);
-        paths += createGroup(0, getWedgePath(cx, cy2, innerR, outerR, 120, 180), cx + tr * Math.cos(150 * Math.PI / 180), cy2 + tr * Math.sin(150 * Math.PI / 180));
+        return { paths, texts };
+    }
 
-        // 4. Top Arc
-        paths += createGroup(23, getWedgePath(cx, cy1, innerR, outerR, 180, 270), cx + tr * Math.cos(225 * Math.PI / 180), cy1 + tr * Math.sin(225 * Math.PI / 180));
-        paths += createGroup(10, getWedgePath(cx, cy1, innerR, outerR, 270, 360), cx + tr * Math.cos(315 * Math.PI / 180), cy1 + tr * Math.sin(315 * Math.PI / 180));
-
-        return `
-            <svg id="racetrackSvg" width="100%" viewBox="0 0 ${svgW} ${svgH}" class="max-w-[220px] pointer-events-auto">
-                <style>
-                    .rt-num { font-family: 'Space Mono', monospace; font-size: 20px; font-weight: 800; pointer-events: none; }
-                    .rt-num.rt-red { fill: #ff5050; text-shadow: 0 0 10px rgba(255,80,80,0.5); }
-                    .rt-num.rt-black { fill: #bbbbbb; }
-                    .rt-num.rt-green { fill: #00ff66; text-shadow: 0 0 10px rgba(0,255,102,0.5); }
-                    
-                    .rt-seg path { fill: #2a2a2e; stroke: rgba(255,255,255,0.06); stroke-width: 1px; transition: all 0.15s ease; cursor: pointer; }
-                    .rt-seg:hover path { fill: rgba(255, 26, 51, 0.15); stroke: rgba(255, 26, 51, 0.6); filter: drop-shadow(0 0 10px rgba(255,26,51,0.3)); }
-                    
-                    .rt-inner { fill: transparent; stroke: rgba(255,255,255,0.06); stroke-width: 2px; }
-                    .rt-label { font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 800; letter-spacing: 5px; text-anchor: middle; dominant-baseline: central; fill: rgba(255,255,255,0.15); pointer-events: none; }
-                </style>
-                ${paths}
-                ${texts}
-            </svg>
-        `;
+    function buildDesktopGrid() {
+        const layout = [
+            [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36],
+            [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35],
+            [1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34]
+        ];
+        let html = '';
+        layout.forEach(row => {
+            html += '<div class="grid-row flex shrink-0 h-[36px]">';
+            row.forEach(num => {
+                const isRed = config.RED_NUMS.includes(num);
+                const colorClass = isRed ? 'bg-red-500/80' : 'bg-zinc-900';
+                html += `<div class="grid-cell flex-1 border border-white/5 flex items-center justify-center text-xs font-bold text-white transition-all hover:bg-white/20 hover:scale-105 active:scale-90 cursor-pointer ${colorClass}" onclick="handleGridClick(${num})">${num}</div>`;
+            });
+            html += '</div>';
+        });
+        return html;
     }
 
     function initDesktopGrid() {
-        const gridWrapper = document.getElementById('desktopGrid');
-
-        if (state.currentInputLayout === 'grid') {
-            gridWrapper.className = "hidden md:block w-[240px] shrink-0 mesmer-grid p-3 overflow-y-auto custom-scroll";
-            gridWrapper.innerHTML = '<div class="grid grid-cols-3 gap-2 pb-10"></div>';
-
-            const grid = gridWrapper.firstElementChild;
-            grid.innerHTML = '<button class="grid-btn grid-green col-span-3 py-4 shadow-sm h-12 flex items-center justify-center" onclick="handleGridClick(0)">0</button>';
-
-            for (let i = 1; i <= 36; i++) {
-                let btn = document.createElement('button');
-                const isRed = config.RED_NUMS.includes(i);
-                btn.className = `grid-btn py-4 shadow-sm h-12 flex items-center justify-center ${isRed ? 'grid-red' : 'grid-black'}`;
-                btn.innerText = i;
-                btn.onclick = () => handleGridClick(i);
-                grid.appendChild(btn);
-            }
+        const grid = document.getElementById('desktopGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+        if (state.currentInputLayout === 'racetrack') {
+            const { paths, texts } = buildRacetrackSVG();
+            grid.innerHTML = `
+                <div class="flex items-center justify-center h-full w-full py-4">
+                    <svg width="240" height="880" viewBox="0 0 240 880" class="roulette-racetrack drop-shadow-2xl">
+                        <g>${paths}</g>
+                        <g>${texts}</g>
+                    </svg>
+                </div>
+            `;
         } else {
-            // RACETRACK LAYOUT (Perfect Theme Integration)
-            gridWrapper.className = "hidden md:block w-[240px] shrink-0 mesmer-grid overflow-y-auto custom-scroll";
-
-            // Remove flex center entirely to restore the ability to scroll freely to the top and bottom!
-            gridWrapper.innerHTML = '<div class="w-full flex justify-center pt-6 pb-20 fade-in"></div>';
-
-            const grid = gridWrapper.firstElementChild;
-            grid.innerHTML = buildRacetrackSVG();
+            grid.innerHTML = `
+                <div class="flex flex-col w-full max-w-[400px] bg-black/40 p-2 rounded-xl border border-white/10 shadow-2xl backdrop-blur-md">
+                    <div class="flex h-[108px]">
+                        <div class="w-12 border border-white/5 bg-green-600/80 flex items-center justify-center text-white font-bold cursor-pointer rounded-l-lg hover:bg-green-500 transition-all" onclick="handleGridClick(0)">0</div>
+                        <div class="flex-1 flex flex-col">${buildDesktopGrid()}</div>
+                    </div>
+                </div>
+            `;
         }
     }
 
-    function showToast(message, type = 'error') {
-        let container = document.getElementById('toastContainer');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'toastContainer';
-            container.className = 'fixed top-20 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none';
-            document.body.appendChild(container);
-        }
-
+    function showToast(msg, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
         const toast = document.createElement('div');
-        const bgColor = type === 'error' ? 'bg-[#ff1a33]/90 border-[#ff1a33]/50' : 'bg-[#30D158]/90 border-[#30D158]/50';
-        toast.className = `${bgColor} text-white px-5 py-2.5 rounded-xl shadow-2xl text-xs font-semibold tracking-wider backdrop-blur-md border flex items-center justify-center transition-all duration-300`;
-
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(-10px)';
-
-        toast.innerHTML = `<i class="fas ${type === 'error' ? 'fa-exclamation-triangle' : 'fa-check-circle'} mr-3 text-sm"></i> ${message}`;
-
+        toast.className = `toast-item animate-apple-in ${type}`;
+        toast.innerText = msg;
         container.appendChild(toast);
-
-        void toast.offsetWidth; // Trigger reflow
-        toast.style.opacity = '1';
-        toast.style.transform = 'translateY(0)';
-
         setTimeout(() => {
             toast.style.opacity = '0';
-            toast.style.transform = 'translateY(-10px)';
-            setTimeout(() => toast.remove(), 300);
+            toast.style.transform = 'translateY(-20px)';
+            setTimeout(() => toast.remove(), 500);
         }, 3000);
     }
 
-    // --- IMPORT / EXPORT DATA ---
-    window.exportSpins = function () {
-        if (!window.state || !window.state.history || window.state.history.length === 0) {
-            alert("No spins to export!");
-            return;
-        }
-        const spins = window.state.history.map(h => h.num);
-        const data = { timestamp: Date.now(), spins: spins };
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        const dateStr = new Date().toISOString().slice(0, 10);
-        a.download = `Roulette_Spins_${dateStr}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    };
-
-    window.importSpins = function (input) {
+    function importLogFile(input) {
         const file = input.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = async function (e) {
+        reader.onload = async (e) => {
             try {
                 const data = JSON.parse(e.target.result);
-                if (Array.isArray(data.spins)) {
+                if (data.spins && Array.isArray(data.spins)) {
                     if (window.rebuildSessionFromSpins) {
                         if (window.toggleHamburgerMenu) window.toggleHamburgerMenu();
                         await window.rebuildSessionFromSpins(data.spins);
@@ -293,6 +262,135 @@
     };
 
     // --- GENERIC UI & MODALS ---
+    // --- PATTERN FILTER RECOVERY ---
+    window.togglePatternFilterPopover = function (forceOpen = null) {
+        const popover = document.getElementById('patternFilterPopover');
+        const button = document.getElementById('patternsToggleBtn');
+        if (!popover) return;
+
+        const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : popover.classList.contains('hidden');
+
+        if (shouldOpen) {
+            window.renderPatternFilterList();
+            popover.classList.remove('hidden');
+            if (button) button.classList.add('pattern-toggle-active');
+        } else {
+            popover.classList.add('hidden');
+            if (button) button.classList.remove('pattern-toggle-active');
+        }
+        if (window.syncPatternFilterButton) window.syncPatternFilterButton();
+    };
+
+    window.closePatternFilterPopover = function () {
+        const popover = document.getElementById('patternFilterPopover');
+        const button = document.getElementById('patternsToggleBtn');
+        if (popover) popover.classList.add('hidden');
+        if (button) button.classList.remove('pattern-toggle-active');
+    };
+
+    window.renderPatternFilterList = function () {
+        const list = document.getElementById('patternsList');
+        if (!list || !window.state || !window.StrategyRegistry) return;
+
+        const activeStrategyKey = window.state.currentGameplayStrategy || 'series';
+        const strategy = window.StrategyRegistry[activeStrategyKey];
+        if (!strategy) return;
+
+        const metaData = strategy.PATTERN_FILTER_META || {};
+        const config = window.state.patternConfig || {};
+
+        let entries = [];
+        for (const key of Object.keys(metaData)) {
+            const meta = metaData[key];
+            const isEnabled = config[key] !== false;
+            const accent = meta.accent || 'var(--apple-p3-blue)';
+            
+            entries.push(`
+                <div class="flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 hover:bg-white/[0.03] active:scale-[0.98] cursor-pointer" onclick="togglePatternFilter('${key}')">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-bold text-white tracking-tight">${meta.label || key}</span>
+                        <span class="text-[8px] text-white/30 uppercase tracking-widest mt-0.5">${meta.category || 'Protocol'}</span>
+                    </div>
+                    
+                    <!-- APPLE NATIVE SWITCH -->
+                    <div class="h-6 w-11 rounded-full relative transition-all duration-300 ${isEnabled ? 'bg-[#30D158]' : 'bg-white/10'}" 
+                         style="${isEnabled ? `box-shadow: 0 0 10px ${accent}20;` : ''}">
+                        <div class="absolute top-1 left-1 h-4 w-4 rounded-full bg-white transition-transform duration-300 shadow-md" 
+                             style="transform: translateX(${isEnabled ? '20px' : '0'});"></div>
+                    </div>
+                </div>
+            `);
+        }
+
+        if (entries.length === 0) {
+            list.innerHTML = '<div class="text-[9px] font-bold uppercase tracking-widest text-white/10 text-center py-8 italic">No protocols found for this strategy.</div>';
+        } else {
+            list.innerHTML = `<div class="divide-y divide-white/[0.03]">${entries.join('')}</div>`;
+        }
+    };
+
+    window.togglePatternFilter = function (key) {
+        if (!window.state) return;
+        if (!window.state.patternConfig) window.state.patternConfig = {};
+
+        const currentState = window.state.patternConfig[key] !== false;
+        window.state.patternConfig[key] = !currentState;
+
+        window.renderPatternFilterList();
+        if (window.syncPatternFilterButton) window.syncPatternFilterButton();
+        if (window.saveSessionData) window.saveSessionData();
+
+        if (window.scanAllStrategies) {
+            window.scanAllStrategies({ silent: true }).then(result => {
+                if (window.renderDashboardSafe) window.renderDashboardSafe(window.state.activeBets || []);
+            }).catch(err => console.error("Filter scan error:", err));
+        }
+    };
+
+    window.syncPatternFilterButton = function () {
+        const button = document.getElementById('patternsToggleBtn');
+        const summary = document.getElementById('patternFilterSummary');
+        const popover = document.getElementById('patternFilterPopover');
+        if (!window.state || !window.state.patternConfig || !window.StrategyRegistry) return;
+
+        const activeStrategyKey = window.state.currentGameplayStrategy || 'series';
+        const strategy = window.StrategyRegistry[activeStrategyKey];
+        if (!strategy) return;
+
+        const metaData = strategy.PATTERN_FILTER_META || {};
+        const config = window.state.patternConfig;
+
+        let enabledCount = 0;
+        let totalCount = 0;
+
+        for (const key of Object.keys(metaData)) {
+            totalCount++;
+            if (config[key] !== false) enabledCount++;
+        }
+
+        if (summary) {
+            summary.innerText = `${enabledCount} of ${totalCount} active`;
+        }
+
+        if (popover) {
+            popover.className = "pattern-filter-popover refined-glass rounded-[24px] shadow-2xl animate-apple-in " + (popover.classList.contains('hidden') ? 'hidden' : '');
+        }
+
+        if (button) {
+            button.classList.toggle('text-[#BF5AF2]', enabledCount > 0);
+            button.classList.toggle('text-white/40', enabledCount === 0);
+        }
+    };
+
+    // Close popover when clicking outside
+    document.addEventListener('click', (e) => {
+        const patternShell = document.getElementById('patternFilterShell');
+        const patternPopover = document.getElementById('patternFilterPopover');
+        if (patternShell && patternPopover && !patternPopover.classList.contains('hidden') && !patternShell.contains(e.target)) {
+            window.closePatternFilterPopover();
+        }
+    });
+
     window.resetSession = function () {
         if (window.toggleHamburgerMenu) window.toggleHamburgerMenu();
         if (window.toggleModal) {
