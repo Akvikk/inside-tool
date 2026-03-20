@@ -99,6 +99,7 @@ window.EngineCore = {
                 resolvedTurnBets.push({
                     patternName: bet.patternName,
                     filterKey: bet.filterKey || bet.patternName,
+                    strategy: bet.strategy || currentGameplayStrategy,
                     targetFace: bet.targetFace,
                     isWin: isWin,
                     label: `BET F${bet.targetFace}`,
@@ -215,5 +216,57 @@ window.EngineCore = {
         });
 
         return displayStats;
+    },
+
+    /**
+     * Initializes global store subscriptions for stats tracking.
+     */
+    initTracker() {
+        if (window.AppStore) {
+            window.AppStore.subscribe((storeState, action) => {
+                if (action.type === 'history/append') {
+                    const spin = action.payload;
+                    if (!window.state) return;
+
+                    if (!window.state.engineStats) {
+                        window.state.engineStats = { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {}, signalLog: [] };
+                    }
+                    const eStats = window.state.engineStats;
+
+                    if (spin.resolvedBets && spin.resolvedBets.length > 0) {
+                        spin.resolvedBets.forEach(bet => {
+                            const isWin = bet.isWin;
+                            const count = window.FACES && window.FACES[bet.targetFace] ? window.FACES[bet.targetFace].nums.length : 0;
+                            const unitChange = isWin ? (35 - count) : -count;
+                            const pName = bet.patternName || 'Unknown';
+
+                            if (isWin) {
+                                eStats.totalWins++;
+                                eStats.currentStreak = eStats.currentStreak >= 0 ? eStats.currentStreak + 1 : 1;
+                            } else {
+                                eStats.totalLosses++;
+                                eStats.currentStreak = eStats.currentStreak <= 0 ? eStats.currentStreak - 1 : -1;
+                            }
+                            eStats.netUnits += unitChange;
+                            eStats.bankrollHistory.push(eStats.netUnits);
+
+                            if (!eStats.patternStats[pName]) eStats.patternStats[pName] = { wins: 0, losses: 0 };
+                            if (isWin) eStats.patternStats[pName].wins++;
+                            else eStats.patternStats[pName].losses++;
+
+                            eStats.signalLog.push({ result: isWin ? 'WIN' : 'LOSS', units: unitChange, patternName: pName, spinIndex: spin.index, spinNum: spin.num });
+
+                            if (bet.confirmed && window.updateUserStats) window.updateUserStats(isWin, bet, spin.index, unitChange);
+                        });
+                    }
+
+                    if (window.renderRow) window.renderRow(spin);
+                    if (window.renderGapStats) window.renderGapStats();
+                } else if (action.type === 'engine/sync') {
+                    if (window.renderDashboardSafe) window.renderDashboardSafe(window.state.activeBets || []);
+                    if (window.debounceHeavyUIUpdates) window.debounceHeavyUIUpdates();
+                }
+            });
+        }
     }
 };
