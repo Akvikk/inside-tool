@@ -213,24 +213,7 @@
             signalSource: b.signalSource || 'math'
         }));
 
-        if (stateRef.neuralPredictionEnabled && !options.silent && options.skipNeural !== true) {
-            // Override Dashboard Cards with an AI Loading Card
-            stateRef.activeBets = [{
-                patternName: 'Neural Net',
-                targetFace: '?',
-                confidence: 0,
-                subtitle: 'Consulting local brain...',
-                accentColor: '#bf5af2',
-                confirmed: false
-            }];
 
-            // Run AI in background (will replace activeBets again when done)
-            if (window.requestNeuralPrediction) {
-                window.requestNeuralPrediction({ renderDashboardNow: true }).catch(error => {
-                    console.error('Neural prediction request failed:', error);
-                });
-            }
-        }
 
         // 4. SYNC TO APP STORE (TRIGGER UI RENDER)
         if (options.skipStoreSync !== true && window.AppStore && typeof window.AppStore.dispatch === 'function') {

@@ -53,7 +53,7 @@ window.syncAppStore = function () {
 window.resetData = function () {
     if (window.state) {
         window.state.history = []; window.state.activeBets = []; window.state.faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-        window.state.engineSnapshot = null; window.state.currentNeuralSignal = null; window.state.strategySyncCache = { series: null, combo: null, inside: null };
+        window.state.engineSnapshot = null; window.state.strategySyncCache = { series: null, combo: null, inside: null };
         window.state.userStats = { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
         window.state.engineStats = { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {}, signalLog: [] };
     }
@@ -107,16 +107,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (restoredSession && window.state.history.length > 0) {
         const spinNumbers = window.state.history.map(s => s.num);
         if (window.rebuildSessionFromSpins) await window.rebuildSessionFromSpins(spinNumbers);
-        if (window.state.aiEnabled && window.state.aiApiKey && window.saveAiConfig) {
-            await window.saveAiConfig(true);
-        }
+
     }
 
     if (window.renderGapStats) window.renderGapStats();
     if (window.renderDashboardSafe) window.renderDashboardSafe();
     if (window.initComboBridgeAutoLayout) window.initComboBridgeAutoLayout();
     if (window.scheduleComboBridgeRelayout) window.scheduleComboBridgeRelayout();
-    if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+
 
     const resetBtn = document.getElementById('confirmResetBtn');
     if (resetBtn) resetBtn.addEventListener('click', window.resetData);

@@ -11,57 +11,10 @@
     // Make it globally accessible for the onclick attribute
     window.openHindsightModal = openHindsightModal;
 
-    async function openHindsightModal() {
-        if (!window.HindsightModal || !window.AiBrain) {
-            console.error("HindsightModal or AiBrain not initialized.");
-            return;
-        }
 
-        // Show modal immediately with a loading state
-        window.HindsightModal.open();
-
-        try {
-            // These stats need to be gathered from the engine and user history
-            const history = state.history || [];
-            const userStats = state.userStats || { netUnits: 0, betLog: [] };
-            const engineStats = window.EngineCore ? window.EngineCore.stats : { totalWins: 0, totalLosses: 0, signalLog: [] };
-
-            const analysis = await window.AiBrain.requestFullSessionReview(history, userStats, engineStats);
-
-            if (analysis.error) {
-                throw new Error(analysis.error);
-            }
-
-            // Reformat the critique for display
-            let tacticalHTML = '';
-            if (analysis.critique && analysis.critique.critiques) {
-                tacticalHTML = analysis.critique.critiques.map(c => `
-                    <div class="bg-white/5 border border-white/10 rounded-lg p-3 mb-2">
-                        <div class="font-bold text-white text-sm mb-1">${c.title}</div>
-                        <div class="text-xs text-white/70 leading-relaxed">${c.suggestion}</div>
-                    </div>
-                `).join('');
-            } else {
-                tacticalHTML = `<p class="text-sm text-white/70">No tactical critique provided.</p>`;
-            }
-
-            const formattedAnalysis = {
-                actualProfit: analysis.actualNet,
-                potentialProfit: analysis.potentialNet,
-                tacticalCritique: tacticalHTML
-            };
-
-            window.HindsightModal.render(formattedAnalysis);
-        } catch (error) {
-            console.error("Error during AI Hindsight review:", error);
-            window.HindsightModal.render({ error: error.message });
-        }
-    }
 
     function init() {
-        if (window.HindsightModal && typeof window.HindsightModal.init === 'function') {
-            window.HindsightModal.init();
-        }
+
         initDesktopGrid();
 
         // Ensure global toggleModal exists
@@ -489,73 +442,5 @@
         if (btn) { btn.classList.remove('bg-[#FFD60A]/20', 'text-[#FFD60A]', 'border-[#FFD60A]/30'); btn.classList.add('bg-[#30D158]/20', 'text-[#30D158]', 'border-[#30D158]/30'); }
     };
 
-    // --- AI MODAL CONFIG ---
-    window.openAiConfigModal = function () {
-        if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
-        const keyInput = document.getElementById('aiApiKeyInput');
-        const providerSelect = document.getElementById('aiProviderSelect');
-        if (keyInput) keyInput.value = window.state.aiApiKey || '';
-        if (providerSelect) providerSelect.value = window.state.aiProvider || 'gemini';
-        window.toggleModal('aiConfigModal');
-    };
 
-    window.openAiChat = function () { window.toggleModal('aiChatModal'); };
-
-    window.toggleAiMasterSwitch = function () {
-        if (!window.state) return;
-        window.state.aiEnabled = !window.state.aiEnabled;
-        if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
-        if (window.saveSessionData) window.saveSessionData();
-    };
-
-    window.toggleNeuralPrediction = function () {
-        if (!window.state) return;
-        window.state.neuralPredictionEnabled = !window.state.neuralPredictionEnabled;
-        if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
-        if (window.saveSessionData) window.saveSessionData();
-    };
-
-    window.toggleAiApiKeyVisibility = function () {
-        const input = document.getElementById('aiApiKeyInput');
-        const icon = document.getElementById('toggleAiKeyVisibilityIcon');
-        if (!input || !icon) return;
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
-        } else {
-            input.type = 'password';
-            icon.classList.remove('fa-eye-slash');
-            icon.classList.add('fa-eye');
-        }
-    };
-
-    window.updateAiConfigModalUI = function () {
-        if (!window.state) return;
-        const masterSwitch = document.getElementById('aiMasterSwitch'), knob = document.getElementById('aiSwitchKnob'), statusText = document.getElementById('aiMasterStatusText'), vaultSection = document.getElementById('aiVaultSection'), hindsightToggle = document.getElementById('aiHindsightToggle'), statusBadge = document.getElementById('aiStatusBadge');
-        if (masterSwitch && knob && statusText && vaultSection) {
-            if (window.state.aiEnabled) { masterSwitch.classList.replace('bg-white/10', 'bg-[#30D158]/20'); masterSwitch.classList.replace('border-white/20', 'border-[#30D158]/30'); knob.classList.replace('bg-gray-400', 'bg-[#30D158]'); knob.style.transform = 'translateX(24px)'; statusText.innerText = 'Enabled'; vaultSection.classList.remove('hidden'); }
-            else { masterSwitch.classList.replace('bg-[#30D158]/20', 'bg-white/10'); masterSwitch.classList.replace('border-[#30D158]/30', 'border-white/20'); knob.classList.replace('bg-[#30D158]', 'bg-gray-400'); knob.style.transform = 'translateX(0)'; statusText.innerText = 'Disabled'; vaultSection.classList.add('hidden'); }
-        }
-        if (hindsightToggle) {
-            const hKnob = hindsightToggle.querySelector('div');
-            if (window.state.neuralPredictionEnabled) {
-                hindsightToggle.classList.replace('bg-white/10', 'bg-[#bf5af2]/30'); hindsightToggle.classList.replace('border-white/20', 'border-[#bf5af2]/50');
-                if (hKnob) { hKnob.classList.replace('bg-gray-500', 'bg-[#bf5af2]'); hKnob.style.transform = 'translateX(20px)'; hKnob.style.boxShadow = '0 0 8px rgba(191,90,242,0.6)'; }
-            } else {
-                hindsightToggle.classList.replace('bg-[#bf5af2]/30', 'bg-white/10'); hindsightToggle.classList.replace('border-[#bf5af2]/50', 'border-white/20');
-                if (hKnob) { hKnob.classList.replace('bg-[#bf5af2]', 'bg-gray-500'); hKnob.style.transform = 'translateX(0)'; hKnob.style.boxShadow = 'none'; }
-            }
-        }
-        if (statusBadge) {
-            if (window.state.aiRelayAvailable) { statusBadge.innerText = 'CONNECTED'; statusBadge.className = 'text-[9px] font-black bg-[#30D158]/20 px-2.5 py-1 rounded-md text-[#30D158] shadow-inner'; }
-            else { statusBadge.innerText = 'NOT CONNECTED'; statusBadge.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner'; }
-        }
-        const headerAiBtn = document.getElementById('headerAiBtn');
-        if (headerAiBtn) {
-            if (window.state.aiRelayAvailable) { headerAiBtn.classList.add('ai-connected'); headerAiBtn.classList.remove('ai-offline'); }
-            else if (window.state.aiEnabled) { headerAiBtn.classList.add('ai-offline'); headerAiBtn.classList.remove('ai-connected'); }
-            else { headerAiBtn.classList.remove('ai-connected'); headerAiBtn.classList.remove('ai-offline'); }
-        }
-    };
 })();

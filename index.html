@@ -94,12 +94,7 @@
 
         <!-- RIGHT: TOOLS -->
         <div class="flex items-center gap-1.5">
-            <button onclick="openAiChat()" id="headerAiBtn"
-                class="h-8 px-3 bg-[#bf5af2]/10 hover:bg-[#bf5af2]/20 text-[#bf5af2] font-bold rounded-lg border border-[#bf5af2]/20 flex items-center gap-2 text-[10px] transition-all">
-                <i class="fas fa-brain"></i>
-                <span class="hidden md:inline">NEURAL</span>
-                <div id="headerAiBtnStatusDot" class="h-1.5 w-1.5 rounded-full bg-current shadow-[0_0_8px_currentColor]"></div>
-            </button>
+
 
             <div id="patternFilterShell" class="relative">
                 <button id="patternsToggleBtn" onclick="togglePatternFilterPopover()"
@@ -228,19 +223,7 @@
             </div>
         </div>
 
-        <button onclick="openAiConfigModal()"
-            class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:bg-white/10 hover:text-white transition-colors flex items-center justify-between group border-b border-white/5">
-            <div class="flex items-center">
-                <i
-                    class="fas fa-brain mr-3 text-[#bf5af2] w-4 text-center group-hover:scale-110 transition-transform"></i>
-                <div>
-                    <div class="font-semibold uppercase tracking-wider text-[10px]">AI Settings</div>
-                    <div class="text-[10px] text-white/35 normal-case tracking-normal">Provider, API key, neural mode
-                    </div>
-                </div>
-            </div>
-            <i class="fas fa-chevron-right text-[10px] text-white/25 group-hover:text-white/60 transition-colors"></i>
-        </button>
+
 
         <button onclick="resetSession()"
             class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:bg-[#ff1a33]/20 hover:text-[#ff1a33] transition-colors flex items-center group">
@@ -347,10 +330,7 @@
             </button>
             <button onclick="toggleHudHistoryScope()" id="hudScopeBtn" class="hud-toolbar-btn"
                 title="Toggle recent/all scope">All</button>
-            <button onclick="openHindsightModal()" id="hudAiBtn" class="hud-toolbar-btn hud-toolbar-btn-ai"
-                title="AI Hindsight Review">
-                <i class="fas fa-brain"></i>
-            </button>
+
             <button onclick="toggleAnalyticsHUD()" class="hud-close-btn" title="Close analytics HUD">
                 <i class="fas fa-times"></i>
             </button>
@@ -421,8 +401,7 @@
 
     <!-- 3. SERVICES -->
     <script src="js/modules/audio/audio-engine.js"></script>
-    <script src="js/modules/ai/brain.js"></script>
-    <script src="js/modules/ai/ai-service.js"></script>
+
 
     <!-- 4. ENGINE LAYER -->
     <script src="js/modules/engine/core.js"></script>
@@ -450,7 +429,7 @@
     <script src="js/modules/ui/renderers/analytics.js"></script>
     <script src="js/modules/ui/controller.js"></script>
     <script src="js/modules/ui/hud-manager.js"></script>
-    <script src="js/modules/ui/hindsight-modal.js"></script>
+
 
     <!-- UI COMPONENTS (Modals) -->
     <script src="js/modules/ui/components/modal-core.js"></script>
@@ -458,10 +437,9 @@
     <script src="js/modules/ui/renderers/analytics.js"></script>
     <script src="js/modules/ui/components/modal-analytics.js"></script>
     <script src="js/modules/ui/components/modal-pattern-detail.js"></script>
-    <script src="js/modules/ui/components/modal-ai-config.js"></script>
-    <script src="js/modules/ui/components/modal-ai-chat.js"></script>
+
     <script src="js/modules/ui/components/modal-confirm.js"></script>
-    <script src="js/modules/ui/components/modal-hindsight.js"></script>
+
 
     <!-- 7. APP BOOTSTRAP -->
     <script src="js/modules/input/processor.js"></script>

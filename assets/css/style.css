@@ -337,7 +337,6 @@ button:active,
 }
 
 /* --- GLOBAL ACCENT OVERRIDES (Replacing Tailwind Defaults) --- */
-#headerAiBtn,
 #headerStatsBtn {
     --accent-rgb: 212, 175, 55;
     /* Gold */
@@ -380,46 +379,7 @@ button:active,
     transform: scale(0.96);
 }
 
-#headerAiBtn {
-    background: #BF5AF2; /* Apple Purple */
-    border: none;
-    border-radius: 14px;
-    color: #ffffff;
-}
-#headerAiBtn:hover {
-    background: #a940d5; /* Darker purple */
-}
 
-#headerAiBtn.ai-offline {
-    --accent-rgb: 255, 69, 58;
-}
-
-#headerAiBtn.ai-connected {
-    --accent-rgb: 48, 209, 88;
-}
-
-#headerAiBtn.ai-connected .ai-chat-status-dot,
-#headerAiBtn.ai-offline .ai-chat-status-dot {
-    box-shadow: 0 0 6px currentColor;
-}
-
-#headerAiBtn .ai-chat-status-dot.ai-pulse {
-    animation: ai-status-pulse 1.4s ease-in-out infinite;
-}
-
-@keyframes ai-status-pulse {
-
-    0%,
-    100% {
-        opacity: 1;
-        transform: scale(1);
-    }
-
-    50% {
-        opacity: 0.45;
-        transform: scale(0.82);
-    }
-}
 
 #patternsToggleBtn {
     --accent-rgb: 191, 90, 242;
