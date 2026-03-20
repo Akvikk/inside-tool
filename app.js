@@ -733,29 +733,14 @@ window.switchAnalyticsTab = function (tab) {
 window.setAnalyticsDisplayStrategy = function (strat) {
     if (!state) return;
     state.analyticsDisplayStrategy = strat;
-    const btnSeries = document.getElementById('analyticsBtnSeries');
-    const btnCombo = document.getElementById('analyticsBtnCombo');
-    const pillBg = document.getElementById('analyticsTogglePillBg');
-
-    if (strat === 'series') {
-        if (btnSeries) btnSeries.className = "flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 text-[#30D158] transition-colors relative z-10";
-        if (btnCombo) btnCombo.className = "flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 text-gray-400 transition-colors relative z-10";
-        if (pillBg) pillBg.style.transform = 'translateX(0)';
-    } else {
-        if (btnSeries) btnSeries.className = "flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 text-gray-400 transition-colors relative z-10";
-        if (btnCombo) btnCombo.className = "flex-1 text-[10px] font-bold uppercase tracking-wider py-1.5 text-[#30D158] transition-colors relative z-10";
-        if (pillBg) pillBg.style.transform = 'translateX(100%)';
-    }
+    
     if (window.saveSessionData) window.saveSessionData();
+    if (window.renderAnalytics) window.renderAnalytics();
     if (window.HudManager && typeof window.HudManager.update === 'function') {
         window.HudManager.update();
     }
-    if (window.renderAnalytics) {
-        window.renderAnalytics();
-    } else {
-        renderStrategyAnalytics();
-    }
 };
+
 
 window.changeIntelMode = function (mode) {
     if (!state) return;

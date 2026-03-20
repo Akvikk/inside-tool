@@ -327,12 +327,13 @@
             <div class="border-b border-white/5 bg-black/20">
                 <div class="px-6 py-3 border-b border-white/5 flex justify-center items-center gap-3">
                     <span class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Strategy View:</span>
-                    <div class="flex gap-1.5 p-1.5 bg-black/40 rounded-xl mb-4 overflow-x-auto no-scrollbar border border-white/5">
-                    <button id="tabStrategy" onclick="window.setAnalyticsDisplayStrategy && window.setAnalyticsDisplayStrategy('series')" class="ios-tab-active whitespace-nowrap"><i class="fas fa-layer-group mr-1.5 text-[#0A84FF]"></i>SERIES</button>
-                    <button id="tabCombo" onclick="window.setAnalyticsDisplayStrategy && window.setAnalyticsDisplayStrategy('combo')" class="ios-tab-inactive whitespace-nowrap"><i class="fas fa-network-wired mr-1.5 text-[#BF5AF2]"></i>COMBOS</button>
-                    <button id="tabInside" onclick="window.setAnalyticsDisplayStrategy && window.setAnalyticsDisplayStrategy('inside')" class="ios-tab-inactive whitespace-nowrap"><i class="fas fa-bullseye mr-1.5 text-[#30D158]"></i>INSIDE</button>
-                    <button id="tabUser" onclick="window.setAnalyticsDisplayStrategy && window.setAnalyticsDisplayStrategy('user')" class="ios-tab-inactive whitespace-nowrap"><i class="fas fa-user-astronaut mr-1.5 text-[#FFD60A]"></i>MY BETS</button>
-                </div>
+                    <select id="analyticsStrategySelect" onchange="window.setAnalyticsDisplayStrategy && window.setAnalyticsDisplayStrategy(this.value)"
+                        class="bg-black/60 border border-white/10 rounded-lg py-1.5 px-3 text-[10px] font-bold uppercase tracking-wider text-white focus:outline-none focus:ring-1 focus:ring-[#30D158] transition-all cursor-pointer shadow-2xl backdrop-blur-md">
+                        <option value="series">SERIES VIEW</option>
+                        <option value="combo">COMBOS VIEW</option>
+                        <option value="inside">INSIDE VIEW</option>
+                        <option value="user">MY BETS</option>
+                    </select>
                 </div>
                 <div class="px-6 pt-3 flex gap-6">
                     <button onclick="switchAnalyticsTab('strategy')" id="tabBtnStrategy" data-analytics-tab="strategy"

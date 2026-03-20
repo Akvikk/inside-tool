@@ -81,15 +81,10 @@
 
     window.applyAnalyticsTabUI = function () {
         const displayMode = state ? state.analyticsDisplayStrategy : 'series';
-        const strBtn = document.getElementById('tabStrategy');
-        const cmoBtn = document.getElementById('tabCombo');
-        const insBtn = document.getElementById('tabInside'); // New Button
-        const userBtn = document.getElementById('tabUser');
-
-        strBtn && (strBtn.className = displayMode === 'series' ? "ios-tab-active" : "ios-tab-inactive");
-        cmoBtn && (cmoBtn.className = displayMode === 'combo' ? "ios-tab-active" : "ios-tab-inactive");
-        insBtn && (insBtn.className = displayMode === 'inside' ? "ios-tab-active" : "ios-tab-inactive");
-        userBtn && (userBtn.className = displayMode === 'user' ? "ios-tab-active" : "ios-tab-inactive");
+        const select = document.getElementById('analyticsStrategySelect');
+        if (select) {
+            select.value = displayMode;
+        }
     };
 
     window.renderGapStats = function () {

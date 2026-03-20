@@ -7,6 +7,7 @@
     const InsideStrategy = {
         name: 'Inside Patterns',
         key: 'inside',
+        tableHeader: 'PATTERN',
         
         PATTERN_FILTER_META: {
             'rptng': { label: 'RPTng', hint: 'Repeating Pattern', accent: '#30D158' },
