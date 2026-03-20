@@ -1183,6 +1183,9 @@ button.bg-gradient-to-b:active {
 
 .rt-seg {
     cursor: pointer;
+    transform-origin: center;
+    transform-box: fill-box;
+    transition: transform 0.15s var(--ease-strike);
 }
 
 .rt-seg path {
@@ -1196,6 +1199,10 @@ button.bg-gradient-to-b:active {
     fill: rgba(255, 255, 255, 0.12);
     stroke: rgba(255, 255, 255, 0.4);
     filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.15));
+}
+
+.rt-seg:active {
+    transform: scale(0.92);
 }
 
 .rt-seg:active path {
