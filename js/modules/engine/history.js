@@ -1,1 +1,0 @@
-// Moved to js/modules/ui/renderers/history.js

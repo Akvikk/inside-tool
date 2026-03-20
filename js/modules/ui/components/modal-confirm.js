@@ -1,2 +1,23 @@
-// This file has been moved to js/modules/ui/components/modal-confirm.js
-// You can safely delete this file.
+(function () {
+    'use strict';
+
+    const modalHtml = `
+    <div id="confirmModal" class="modal hidden fixed inset-0 z-[80] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-md" onclick="toggleModal('confirmModal')"></div>
+        <div class="relative w-full max-w-sm bg-[#1c1c1e] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col modal-surface">
+            <div class="p-6 text-center">
+                <div class="w-12 h-12 rounded-full bg-[#ff1a33]/20 text-[#ff1a33] flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-exclamation-triangle text-xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white mb-2">Reset Session Data?</h3>
+                <p class="text-sm text-white/70 mb-6">This will clear all history, active bets, and engine state. This action cannot be undone.</p>
+                <div class="flex gap-3">
+                    <button onclick="toggleModal('confirmModal')" class="flex-1 py-3 rounded-xl border border-white/10 text-white font-semibold hover:bg-white/5 transition-colors">Cancel</button>
+                    <button id="confirmResetBtn" class="flex-1 py-3 rounded-xl bg-[#ff1a33]/20 text-[#ff1a33] border border-[#ff1a33]/30 font-semibold hover:bg-[#ff1a33]/30 transition-colors">Reset Data</button>
+                </div>
+            </div>
+        </div>
+    </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+})();

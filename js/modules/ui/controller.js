@@ -293,13 +293,11 @@
     };
 
     // --- GENERIC UI & MODALS ---
-    window.toggleModal = function (id) {
-        const el = document.getElementById(id);
-        if (!el) {
-            alert(`UI Component Error: The modal '${id}' could not be found.`);
-            return;
+    window.resetSession = function () {
+        if (window.toggleHamburgerMenu) window.toggleHamburgerMenu();
+        if (window.toggleModal) {
+            window.toggleModal('confirmModal');
         }
-        el.classList.toggle('hidden');
     };
 
     window.toggleAccordion = function (id) {
@@ -398,7 +396,7 @@
         if (providerSelect) providerSelect.value = window.state.aiProvider || 'gemini';
         window.toggleModal('aiConfigModal');
     };
-    
+
     window.openAiChat = function () { window.toggleModal('aiChatModal'); };
 
     window.toggleAiMasterSwitch = function () {
