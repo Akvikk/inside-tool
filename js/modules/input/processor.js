@@ -1,7 +1,13 @@
 
 (function () {
     function getState() {
-        return window.state || { history: [], faceGaps: {}, activeBets: [] };
+        if (!window.state) {
+            window.state = { history: [], faceGaps: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }, activeBets: [] };
+        }
+        if (!window.state.history) window.state.history = [];
+        if (!window.state.faceGaps) window.state.faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        if (!window.state.activeBets) window.state.activeBets = [];
+        return window.state;
     }
     window.InputProcessor = {
         init,
@@ -21,8 +27,28 @@
                     spinInputEl.value = digitsOnly;
                 }
             });
+
+            // Add Enter key listener explicitly
+            spinInputEl.addEventListener("keypress", (e) => {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    addSpin();
+                }
+            });
             spinInputEl.focus();
         }
+
+        const addBtn = document.getElementById('addSpinBtn');
+        if (addBtn) {
+            addBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                addSpin();
+            });
+        }
+
+        // Enforce global routing to bypass legacy script conflicts
+        window.addSpin = addSpin;
+        window.handleGridClick = handleGridClick;
 
         document.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
@@ -43,7 +69,8 @@
     }
 
     function enqueueSpin(val) {
-        window.state.spinProcessingQueue = (window.state.spinProcessingQueue || Promise.resolve())
+        const stateRef = getState();
+        stateRef.spinProcessingQueue = (stateRef.spinProcessingQueue || Promise.resolve())
             .catch(error => {
                 // Recover the queue so one failed spin does not block all future input.
                 console.error('Recovered spin queue after an error:', error);
@@ -52,8 +79,7 @@
                 }
             })
             .then(() => processSpinValue(val));
-
-        return window.state.spinProcessingQueue;
+        return stateRef.spinProcessingQueue;
     }
 
     async function addSpin() {
@@ -116,11 +142,17 @@
             }
         }
 
-        const matchedFaces = Object.prototype.hasOwnProperty.call(window.FON_MAP, val)
-            ? window.FON_MAP[val].slice()
+        // Safely resolve data maps avoiding ReferenceErrors or TypeErrors
+        const fonMap = window.FON_MAP || (typeof FON_MAP !== 'undefined' ? FON_MAP : {});
+        const fonMaskMap = window.FON_MASK_MAP || (typeof FON_MASK_MAP !== 'undefined' ? FON_MASK_MAP : {});
+        const faceMasks = window.FACE_MASKS || (typeof FACE_MASKS !== 'undefined' ? FACE_MASKS : {});
+        const faces = window.FACES || (typeof FACES !== 'undefined' ? FACES : {});
+
+        const matchedFaces = Object.prototype.hasOwnProperty.call(fonMap, val)
+            ? fonMap[val].slice()
             : [];
-        const matchedFaceMask = Object.prototype.hasOwnProperty.call(window.FON_MASK_MAP, val)
-            ? window.FON_MASK_MAP[val]
+        const matchedFaceMask = Object.prototype.hasOwnProperty.call(fonMaskMap, val)
+            ? fonMaskMap[val]
             : 0;
 
         // Update Gaps for ALL matching faces
@@ -134,7 +166,7 @@
         if (stateRef.activeBets && stateRef.activeBets.length > 0) {
             stateRef.activeBets.forEach(bet => {
                 if (bet.status === 'SIT_OUT' || !bet.targetFace) return;
-                const targetMask = window.FACE_MASKS ? window.FACE_MASKS[bet.targetFace] : 0;
+                const targetMask = faceMasks[bet.targetFace] || 0;
                 const isWin = (matchedFaceMask & targetMask) !== 0;
                 resolvedBets.push({
                     patternName: bet.patternName || 'Unknown',
@@ -153,8 +185,8 @@
             try {
                 window.EngineCore.resolveTurn(val, matchedFaceMask, stateRef.activeBets, stateRef.currentGameplayStrategy, null, {
                     historyLength: currentSpinIndex,
-                    faceMasks: window.FACE_MASKS,
-                    faces: window.FACES
+                    faceMasks: faceMasks,
+                    faces: faces
                 });
             } catch (e) { console.error("EngineCore resolve error:", e); }
         }
@@ -226,7 +258,7 @@
             if (!window.state.engineStats) window.state.engineStats = { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {}, signalLog: [] };
             const eStats = window.state.engineStats;
             resolvedBets.forEach(bet => {
-                const count = window.FACES && window.FACES[bet.targetFace] ? window.FACES[bet.targetFace].nums.length : 0;
+                const count = faces[bet.targetFace] ? faces[bet.targetFace].nums.length : 0;
                 const unitChange = bet.isWin ? (35 - count) : -count;
                 const pName = bet.patternName || 'Unknown';
                 if (bet.isWin) { eStats.totalWins++; eStats.currentStreak = eStats.currentStreak >= 0 ? eStats.currentStreak + 1 : 1; }
