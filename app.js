@@ -54,7 +54,7 @@ async function requestNeuralPrediction(options = {}) {
     if (signal) {
         state.currentNeuralSignal = signal;
         if (window.updateAiFusionSnapshot) window.updateAiFusionSnapshot(state.currentNeuralSignal);
-        
+
         // Map AI signal to activeBets so it controls the Dashboard Cards
         if (signal.status === 'GO' && signal.targetFace) {
             state.activeBets = [{
@@ -114,7 +114,7 @@ window.triggerAiAudit = async function (btn) {
 }
 
 // --- AUDIO ENGINE (SYNTHESIZED AMBIENCE) ---
-window.AudioEngine = (function() {
+window.AudioEngine = (function () {
     let ctx = null;
 
     function init() {
@@ -132,17 +132,17 @@ window.AudioEngine = (function() {
         // Sharp, percussive click simulating a heavy plastic chip hitting felt
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        
+
         osc.type = 'sine';
         osc.frequency.setValueAtTime(800, ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 0.05);
-        
+
         gain.gain.setValueAtTime(0.4, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
-        
+
         osc.connect(gain);
         gain.connect(ctx.destination);
-        
+
         osc.start();
         osc.stop(ctx.currentTime + 0.05);
     }
@@ -246,7 +246,40 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (window.AppStore) {
         window.AppStore.subscribe((storeState, action) => {
             if (action.type === 'history/append') {
-                if (window.renderRow) window.renderRow(action.payload);
+                const spin = action.payload;
+
+                // Guaranteed Global Engine Stats Tracking
+                if (!window.state.engineStats) {
+                    window.state.engineStats = { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {}, signalLog: [] };
+                }
+                const eStats = window.state.engineStats;
+
+                if (spin.resolvedBets && spin.resolvedBets.length > 0) {
+                    spin.resolvedBets.forEach(bet => {
+                        const isWin = bet.isWin;
+                        const count = window.FACES && window.FACES[bet.targetFace] ? window.FACES[bet.targetFace].nums.length : 0;
+                        const unitChange = isWin ? (35 - count) : -count;
+                        const pName = bet.patternName || 'Unknown';
+
+                        if (isWin) {
+                            eStats.totalWins++;
+                            eStats.currentStreak = eStats.currentStreak >= 0 ? eStats.currentStreak + 1 : 1;
+                        } else {
+                            eStats.totalLosses++;
+                            eStats.currentStreak = eStats.currentStreak <= 0 ? eStats.currentStreak - 1 : -1;
+                        }
+                        eStats.netUnits += unitChange;
+                        eStats.bankrollHistory.push(eStats.netUnits);
+
+                        if (!eStats.patternStats[pName]) eStats.patternStats[pName] = { wins: 0, losses: 0 };
+                        if (isWin) eStats.patternStats[pName].wins++;
+                        else eStats.patternStats[pName].losses++;
+
+                        eStats.signalLog.push({ result: isWin ? 'WIN' : 'LOSS', units: unitChange, patternName: pName, spinIndex: spin.index, spinNum: spin.num });
+                    });
+                }
+
+                if (window.renderRow) window.renderRow(spin);
                 if (window.renderGapStats) window.renderGapStats();
             } else if (action.type === 'engine/sync') {
                 if (window.renderDashboardSafe) window.renderDashboardSafe(window.state.activeBets || []);
@@ -272,7 +305,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         console.log(`Session data loaded. Rebuilding state from ${window.state.history.length} spins...`);
         const spinNumbers = window.state.history.map(s => s.num);
         await safeModuleCall('rebuildSessionFromSpins', () => window.rebuildSessionFromSpins && window.rebuildSessionFromSpins(spinNumbers));
-        
+
         console.log("State rebuilt successfully.");
 
         // 2.5 Re-authenticate AI silently if enabled
@@ -459,7 +492,7 @@ window.drawComboBridge = function (layer, geom) {
     layer.style.top = `${minY}px`;
     layer.style.width = `${width}px`;
     layer.style.height = `${height}px`;
-    
+
     svg.setAttribute('width', width);
     svg.setAttribute('height', height);
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
@@ -577,6 +610,8 @@ window.resetData = function () {
         window.state.engineSnapshot = null;
         window.state.currentNeuralSignal = null;
         window.state.strategySyncCache = { series: null, combo: null, inside: null };
+        window.state.userStats = { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
+        window.state.engineStats = { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {}, signalLog: [] };
     }
     window.currentAlerts = [];
     if (window.EngineCore) window.EngineCore.reset();
@@ -598,17 +633,17 @@ window.resetData = function () {
  * Centralized trigger for the math-heavy PredictionEngine.
  * Updates state.engineSnapshot with fresh targets and metrics.
  */
-window.syncPredictionEngine = async function() {
+window.syncPredictionEngine = async function () {
     if (!window.PredictionEngine || typeof window.PredictionEngine.evaluatePredictionEngine !== 'function') {
         console.warn('PredictionEngine not found.');
         return null;
     }
-    
+
     // Evaluate the history and store result in state.engineSnapshot
     const snapshot = await window.PredictionEngine.evaluatePredictionEngine(state.history, {
         currentPredictionStrategy: state.currentGameplayStrategy === 'combo' ? 'momentum-gap' : 'legacy-face'
     });
-    
+
     state.engineSnapshot = snapshot || null;
     return state.engineSnapshot;
 };
@@ -674,8 +709,27 @@ window.syncAppStore = function () {
     }
 };
 
+window.toggleBetConfirmation = function (index) {
+    if (window.state && window.state.activeBets && window.state.activeBets[index]) {
+        window.state.activeBets[index].confirmed = !window.state.activeBets[index].confirmed;
+        if (window.renderDashboardSafe) {
+            window.renderDashboardSafe(window.state.activeBets);
+        } else if (window.renderDashboard) {
+            window.renderDashboard(window.currentAlerts || []);
+        }
+        if (window.syncAppStore) window.syncAppStore();
+    }
+};
+
 window.updateUserStats = function (isWin, bet, spinIndex, unitChange) {
-    if (!window.state || !window.state.userStats) return;
+    if (!window.state) return;
+    if (!window.state.userStats) {
+        window.state.userStats = { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
+    }
+
+    // Only log actual user bets that were confirmed via double-click on the dashboard
+    if (!bet || bet.confirmed !== true) return;
+
     const uStats = window.state.userStats;
 
     if (isWin) {
@@ -688,7 +742,7 @@ window.updateUserStats = function (isWin, bet, spinIndex, unitChange) {
 
     uStats.betLog.unshift({
         id: uStats.totalWins + uStats.totalLosses,
-        pattern: bet.patternName,
+        pattern: bet.patternName || 'Unknown',
         target: `F${bet.targetFace}`,
         spinNum: spinIndex + 1,
         result: isWin ? 'WIN' : 'LOSS',
@@ -707,7 +761,7 @@ window.debounceHeavyUIUpdates = function () {
 };
 
 // --- ANALYTICS & RENDERING ---
-function getAnalyticsTabConfig() {
+window.getAnalyticsTabConfig = function () {
     const buttons = Array.from(document.querySelectorAll('[data-analytics-tab]'));
     if (buttons.length > 0) {
         return buttons.map(button => ({
@@ -723,31 +777,31 @@ function getAnalyticsTabConfig() {
         { key: 'intelligence', button: document.getElementById('tabBtnIntelligence'), panelId: 'intelligencePanel', rendererName: 'renderIntelligencePanel' },
         { key: 'advancements', button: document.getElementById('tabBtnAdvancements'), panelId: 'advancementsPanel', rendererName: 'renderAdvancementAnalytics' }
     ].filter(tab => tab.button);
-}
+};
 
-function ensureActiveAnalyticsTab(tabs) {
-    if (!state || !Array.isArray(tabs) || tabs.length === 0) {
-        return state ? state.currentAnalyticsTab : '';
+window.ensureActiveAnalyticsTab = function (tabs) {
+    if (!window.state || !Array.isArray(tabs) || tabs.length === 0) {
+        return window.state ? window.state.currentAnalyticsTab : '';
     }
 
-    const activeExists = tabs.some(tab => tab.key === state.currentAnalyticsTab);
+    const activeExists = tabs.some(tab => tab.key === window.state.currentAnalyticsTab);
     if (!activeExists) {
-        state.currentAnalyticsTab = tabs[0].key;
+        window.state.currentAnalyticsTab = tabs[0].key;
     }
-    return state.currentAnalyticsTab;
-}
+    return window.state.currentAnalyticsTab;
+};
 
 window.switchAnalyticsTab = function (tab) {
-    if (!state) return;
-    state.currentAnalyticsTab = tab;
+    if (!window.state) return;
+    window.state.currentAnalyticsTab = tab;
     if (window.saveSessionData) window.saveSessionData();
     window.renderAnalytics();
 };
 
 window.setAnalyticsDisplayStrategy = function (strat) {
-    if (!state) return;
-    state.analyticsDisplayStrategy = strat;
-    
+    if (!window.state) return;
+    window.state.analyticsDisplayStrategy = strat;
+
     if (window.saveSessionData) window.saveSessionData();
     if (window.renderAnalytics) window.renderAnalytics();
     if (window.HudManager && typeof window.HudManager.update === 'function') {
@@ -757,17 +811,17 @@ window.setAnalyticsDisplayStrategy = function (strat) {
 
 
 window.changeIntelMode = function (mode) {
-    if (!state) return;
-    state.currentIntelligenceMode = mode;
+    if (!window.state) return;
+    window.state.currentIntelligenceMode = mode;
     if (window.saveSessionData) window.saveSessionData();
-    if (state.currentAnalyticsTab === 'intelligence' && window.renderAnalytics) {
+    if (window.state.currentAnalyticsTab === 'intelligence' && window.renderAnalytics) {
         window.renderAnalytics();
     }
 };
 
-function applyAnalyticsTabUI() {
-    const tabs = getAnalyticsTabConfig();
-    const activeTab = ensureActiveAnalyticsTab(tabs);
+window.applyAnalyticsTabUI = function () {
+    const tabs = window.getAnalyticsTabConfig();
+    const activeTab = window.ensureActiveAnalyticsTab(tabs);
 
     tabs.forEach(tab => {
         const btn = tab.button;
@@ -788,7 +842,7 @@ function applyAnalyticsTabUI() {
             }
         }
     });
-}
+};
 
 window.renderAdvancementAnalytics = function () {
     const advPanel = document.getElementById('advancementLogContainer');
@@ -798,10 +852,10 @@ window.renderAdvancementAnalytics = function () {
 };
 
 window.renderAnalytics = function () {
-    if (!state) return;
-    const tabs = getAnalyticsTabConfig();
-    const activeTab = ensureActiveAnalyticsTab(tabs);
-    applyAnalyticsTabUI();
+    if (!window.state) return;
+    const tabs = window.getAnalyticsTabConfig();
+    const activeTab = window.ensureActiveAnalyticsTab(tabs);
+    window.applyAnalyticsTabUI();
 
     const activeConfig = tabs.find(tab => tab.key === activeTab);
     if (!activeConfig || !activeConfig.rendererName) return;
@@ -821,7 +875,7 @@ window.sortEngineReadCombos = function (comboStats) {
     );
 };
 
-window.getEngineStateTone = function(stateStr) {
+window.getEngineStateTone = function (stateStr) {
     const tones = {
         BUILDING: 'text-gray-400 bg-gray-400/10 border border-gray-400/20 px-2 py-0.5 rounded',
         WAITING: 'text-gray-400 bg-gray-400/10 border border-gray-400/20 px-2 py-0.5 rounded',
@@ -833,7 +887,7 @@ window.getEngineStateTone = function(stateStr) {
     return tones[stateStr] || 'text-gray-400 bg-gray-400/10 border border-gray-400/20 px-2 py-0.5 rounded';
 };
 
-window.getMetricToneClass = function(metric, value) {
+window.getMetricToneClass = function (metric, value) {
     switch (metric) {
         case 'hits':
             if (value >= 3) return 'text-[#30D158] drop-shadow-sm font-bold';
@@ -867,7 +921,7 @@ window.getMetricToneClass = function(metric, value) {
     }
 };
 
-window.getPredictionToneClass = function(snapshot) {
+window.getPredictionToneClass = function (snapshot) {
     if (!snapshot) return 'text-gray-500';
     if (snapshot.currentPrediction) return 'text-[#30D158] font-bold drop-shadow-sm';
     if (snapshot.engineState === 'WATCHLIST') return 'text-[#FFD60A] font-bold';
@@ -875,7 +929,7 @@ window.getPredictionToneClass = function(snapshot) {
     return 'text-gray-500';
 };
 
-window.formatEnginePrediction = function(snapshot) {
+window.formatEnginePrediction = function (snapshot) {
     if (!snapshot) return 'No engine state available.';
     if (snapshot.currentPrediction) {
         const action = snapshot.currentPrediction.action || 'BET';
@@ -887,7 +941,7 @@ window.formatEnginePrediction = function(snapshot) {
     return snapshot.watchlistMessage || snapshot.leadMessage || 'No actionable signal.';
 };
 
-window.renderIntelligencePanel = function() {
+window.renderIntelligencePanel = function () {
     const content = document.getElementById('intelligenceContent');
     const stateChip = document.getElementById('intelStateChip');
     const checkpointSummary = document.getElementById('intelCheckpointSummary');
@@ -896,7 +950,7 @@ window.renderIntelligencePanel = function() {
 
     const ENGINE_PRIMARY_WINDOW = window.config ? window.config.ENGINE_PRIMARY_WINDOW : 14;
     const ENGINE_CONFIRMATION_WINDOW = window.config ? window.config.ENGINE_CONFIRMATION_WINDOW : 5;
-    
+
     const snapshot = window.state.engineSnapshot || {};
     const rankedCombos = window.sortEngineReadCombos(snapshot.comboCoverage || []);
     const leadCombo = snapshot.dominantCombo;
@@ -955,22 +1009,13 @@ window.renderIntelligencePanel = function() {
     `;
 };
 
-function renderStrategyAnalytics() {
-    const displayStrategy = state && state.analyticsDisplayStrategy === 'combo' ? 'combo' : 'series';
-    const analytics = window.EngineCore && typeof window.EngineCore.getAnalyticsData === 'function'
-        ? window.EngineCore.getAnalyticsData(displayStrategy)
-        : null;
-    const coreStats = analytics || {
-        wins: 0,
-        losses: 0,
-        net: 0,
-        streak: 0,
-        history: [0],
-        patterns: {}
-    };
+window.renderStrategyAnalytics = function () {
+    const eStats = (window.state && window.state.engineStats)
+        ? window.state.engineStats
+        : { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {} };
 
-    const totalSignals = coreStats.wins + coreStats.losses;
-    const hitRate = totalSignals === 0 ? 0 : Math.round((coreStats.wins / totalSignals) * 100);
+    const totalSignals = eStats.totalWins + eStats.totalLosses;
+    const hitRate = totalSignals === 0 ? 0 : Math.round((eStats.totalWins / totalSignals) * 100);
 
     const hrEl = document.getElementById('kpiHitRate');
     if (hrEl) {
@@ -980,14 +1025,14 @@ function renderStrategyAnalytics() {
 
     const netEl = document.getElementById('kpiNet');
     if (netEl) {
-        netEl.innerText = (coreStats.net > 0 ? '+' : '') + coreStats.net;
-        netEl.className = `text-2xl font-bold tracking-tight ${coreStats.net > 0 ? 'text-[#30D158]' : (coreStats.net < 0 ? 'text-[#FF453A]' : 'text-white')}`;
+        netEl.innerText = (eStats.netUnits > 0 ? '+' : '') + eStats.netUnits;
+        netEl.className = `text-2xl font-bold tracking-tight ${eStats.netUnits > 0 ? 'text-[#30D158]' : (eStats.netUnits < 0 ? 'text-[#FF453A]' : 'text-white')}`;
     }
 
     const sigEl = document.getElementById('kpiSignals');
     if (sigEl) sigEl.innerText = totalSignals;
 
-    const s = coreStats.streak || 0;
+    const s = eStats.currentStreak || 0;
     const formEl = document.getElementById('kpiForm');
     if (formEl) {
         formEl.innerText = s > 0 ? `W${s}` : (s < 0 ? `L${Math.abs(s)}` : '-');
@@ -995,14 +1040,16 @@ function renderStrategyAnalytics() {
     }
 
     if (typeof window.drawAdvancedGraph === 'function') {
-        window.drawAdvancedGraph(coreStats.history, coreStats.wins, coreStats.losses, 'graphContainer');
+        window.drawAdvancedGraph(eStats.bankrollHistory, eStats.totalWins, eStats.totalLosses, 'graphContainer');
     }
-    updatePatternHeatmap(coreStats.patterns);
-}
+    if (window.updatePatternHeatmap) {
+        window.updatePatternHeatmap(eStats.patternStats);
+    }
+};
 
 window.renderUserAnalytics = function () {
-    if (!state) return;
-    const uStats = state.userStats || { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
+    if (!window.state) return;
+    const uStats = window.state.userStats || { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
     const totalBets = uStats.totalWins + uStats.totalLosses;
     const hitRate = totalBets === 0 ? 0 : Math.round((uStats.totalWins / totalBets) * 100);
 
@@ -1024,12 +1071,12 @@ window.renderUserAnalytics = function () {
     if (typeof window.drawAdvancedGraph === 'function') {
         window.drawAdvancedGraph(uStats.bankrollHistory, uStats.totalWins, uStats.totalLosses, 'userGraphContainer');
     }
-    updateUserBetLog(uStats.betLog);
+    if (window.updateUserBetLog) {
+        window.updateUserBetLog(uStats.betLog);
+    }
 };
 
-
-
-function updatePatternHeatmap(patternData) {
+window.updatePatternHeatmap = function (patternData) {
     const tbody = document.getElementById('heatmapBody');
     if (!tbody) return;
     tbody.innerHTML = '';
@@ -1074,9 +1121,9 @@ function updatePatternHeatmap(patternData) {
             </tr>
         `;
     });
-}
+};
 
-function updateUserBetLog(betLog) {
+window.updateUserBetLog = function (betLog) {
     const tbody = document.getElementById('userBetsBody');
     if (!tbody) return;
     tbody.innerHTML = '';
@@ -1103,7 +1150,7 @@ function updateUserBetLog(betLog) {
             </tr>
         `;
     });
-}
+};
 
 // --- DATA IMPORT & EXPORT ---
 window.exportSpins = function () {
@@ -1190,7 +1237,7 @@ window.sendAiChatMessage = async function () {
         if (el) {
             const original = el.dataset.text;
             let scrambled = '';
-            for(let i = 0; i < original.length; i++) {
+            for (let i = 0; i < original.length; i++) {
                 if (original[i] === ' ') scrambled += ' ';
                 else scrambled += Math.random() > 0.75 ? chars[Math.floor(Math.random() * chars.length)] : original[i];
             }
@@ -1224,25 +1271,25 @@ window.sendAiChatMessage = async function () {
 };
 
 // --- AI CONFIG MODAL LOGIC ---
-window.toggleAiMasterSwitch = function() {
+window.toggleAiMasterSwitch = function () {
     if (!state) return;
     state.aiEnabled = !state.aiEnabled;
     if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
     if (window.saveSessionData) window.saveSessionData();
 };
 
-window.toggleNeuralPrediction = function() {
+window.toggleNeuralPrediction = function () {
     if (!state) return;
     state.neuralPredictionEnabled = !state.neuralPredictionEnabled;
     if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
     if (window.saveSessionData) window.saveSessionData();
 };
 
-window.toggleAiApiKeyVisibility = function() {
+window.toggleAiApiKeyVisibility = function () {
     const input = document.getElementById('aiApiKeyInput');
     const icon = document.getElementById('toggleAiKeyVisibilityIcon');
     if (!input || !icon) return;
-    
+
     if (input.type === 'password') {
         input.type = 'text';
         icon.classList.remove('fa-eye');
@@ -1254,21 +1301,21 @@ window.toggleAiApiKeyVisibility = function() {
     }
 };
 
-window.saveAiConfig = async function(silent = false) {
+window.saveAiConfig = async function (silent = false) {
     if (!state) return;
     const keyInput = document.getElementById('aiApiKeyInput');
     const providerSelect = document.getElementById('aiProviderSelect');
     const btn = document.getElementById('saveAiBtn');
-    
+
     if (!silent) {
         state.aiApiKey = keyInput ? keyInput.value.trim() : '';
         state.aiProvider = providerSelect ? providerSelect.value : 'gemini';
     }
-    
+
     if (!state.aiApiKey) return;
-    
+
     if (btn && !silent) btn.innerText = 'VERIFYING...';
-    
+
     try {
         const response = await fetch(`${state.AI_RELAY_BASE_URL}/connect`, {
             method: 'POST',
@@ -1276,12 +1323,12 @@ window.saveAiConfig = async function(silent = false) {
             body: JSON.stringify({ provider: state.aiProvider, apiKey: state.aiApiKey })
         });
         const data = await response.json();
-        
+
         if (response.ok && data.connected) {
             state.aiRelayAvailable = true;
             if (btn && !silent) {
                 btn.innerText = 'CONNECTED';
-                setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+                setTimeout(() => { if (btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
             }
         } else {
             throw new Error(data.error || 'Failed to connect');
@@ -1291,40 +1338,40 @@ window.saveAiConfig = async function(silent = false) {
         state.aiRelayAvailable = false;
         if (btn && !silent) {
             btn.innerText = 'FAILED';
-            setTimeout(() => { if(btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
+            setTimeout(() => { if (btn) btn.innerText = 'VERIFY & SAVE'; }, 2000);
             alert('AI Connection Failed: ' + error.message);
         }
     }
-    
+
     if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
     if (window.saveSessionData) window.saveSessionData();
 };
 
-window.clearAiConfig = async function() {
+window.clearAiConfig = async function () {
     if (!state) return;
     const keyInput = document.getElementById('aiApiKeyInput');
     if (keyInput) keyInput.value = '';
     state.aiApiKey = '';
     state.aiRelayAvailable = false;
-    
+
     try {
         await fetch(`${state.AI_RELAY_BASE_URL}/disconnect`, { method: 'POST' });
-    } catch(e) {}
-    
+    } catch (e) { }
+
     if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
     if (window.saveSessionData) window.saveSessionData();
 };
 
-window.updateAiConfigModalUI = function() {
+window.updateAiConfigModalUI = function () {
     if (!state) return;
-    
+
     const masterSwitch = document.getElementById('aiMasterSwitch');
     const knob = document.getElementById('aiSwitchKnob');
     const statusText = document.getElementById('aiMasterStatusText');
     const vaultSection = document.getElementById('aiVaultSection');
     const hindsightToggle = document.getElementById('aiHindsightToggle');
     const statusBadge = document.getElementById('aiStatusBadge');
-    
+
     if (masterSwitch && knob && statusText && vaultSection) {
         if (state.aiEnabled) {
             masterSwitch.classList.replace('bg-white/10', 'bg-[#30D158]/20');
@@ -1342,7 +1389,7 @@ window.updateAiConfigModalUI = function() {
             vaultSection.classList.add('hidden');
         }
     }
-    
+
     if (hindsightToggle) {
         const hKnob = hindsightToggle.querySelector('div');
         if (state.neuralPredictionEnabled) {
@@ -1363,7 +1410,7 @@ window.updateAiConfigModalUI = function() {
             }
         }
     }
-    
+
     if (statusBadge) {
         if (state.aiRelayAvailable) {
             statusBadge.innerText = 'CONNECTED';
@@ -1489,7 +1536,7 @@ window.ensureActivePatternConfig = function () {
     if (!window.state) return;
     const strategyKey = window.state.currentGameplayStrategy || 'series';
     const strategy = window.StrategyRegistry && window.StrategyRegistry[strategyKey] ? window.StrategyRegistry[strategyKey] : null;
-    
+
     if (strategy && typeof strategy.buildPatternConfig === 'function') {
         if (!window.state.patternConfig || Object.keys(window.state.patternConfig).length === 0) {
             window.state.patternConfig = strategy.buildPatternConfig(true);
@@ -1506,7 +1553,7 @@ window.renderPatternFilterUi = function () {
     const strategyKey = window.state.currentGameplayStrategy || 'series';
     const strategy = window.StrategyRegistry && window.StrategyRegistry[strategyKey] ? window.StrategyRegistry[strategyKey] : null;
     const metaMap = strategy && strategy.PATTERN_FILTER_META ? strategy.PATTERN_FILTER_META : {};
-    
+
     const entries = Object.keys(window.state.patternConfig).map(key => {
         const meta = metaMap[key] || {
             label: key,
@@ -1536,7 +1583,7 @@ window.togglePatternFilter = function (key, isChecked = null) {
     if (!window.state || !window.state.patternConfig) return;
     const nextState = typeof isChecked === 'boolean' ? isChecked : window.state.patternConfig[key] === false;
     window.state.patternConfig[key] = nextState;
-    
+
     window.renderPatternFilterUi();
     if (window.scanAllStrategies) {
         window.scanAllStrategies().then(result => {
@@ -1550,7 +1597,7 @@ window.syncPatternFilterButton = function () {
     if (!window.state) return;
     const button = document.getElementById('patternsToggleBtn');
     const summary = document.getElementById('patternFilterSummary');
-    
+
     const config = window.state.patternConfig || {};
     const keys = Object.keys(config);
     const enabledCount = keys.reduce((count, key) => count + (config[key] !== false ? 1 : 0), 0);
@@ -1636,8 +1683,8 @@ window.drawAdvancedGraph = function (historyArray, winCount, lossCount, containe
 };
 
 window.openPatternLog = function (patternName) {
-    const stats = window.EngineCore && window.EngineCore.stats ? window.EngineCore.stats : { signalLog: [] };
-    const logs = stats.signalLog.filter(s => s.patternName === patternName);
+    const stats = window.state && window.state.engineStats ? window.state.engineStats : { signalLog: [] };
+    const logs = (stats.signalLog || []).filter(s => s.patternName === patternName);
     logs.sort((a, b) => a.spinIndex - b.spinIndex);
 
     let runningROI = 0;
@@ -1688,7 +1735,7 @@ window.openPatternLog = function (patternName) {
                 </tr>
             `;
         });
-        
+
         tbody.innerHTML = `
             <div class="p-4 glass-header flex justify-between items-center border-b border-white/10 shrink-0">
                 <h2 class="font-semibold text-sm tracking-wide uppercase text-white" id="patternDetailTitle">LOG: ${patternName}</h2>
@@ -1718,16 +1765,16 @@ window.openPatternLog = function (patternName) {
 
 // --- MISC. SETTINGS ---
 // --- REGISTER STRATEGIES ---
-    if (window.StrategyRegistry) {
-        if (window.SeriesStrategy) window.StrategyRegistry.series = window.SeriesStrategy;
-        if (window.ComboStrategy) window.StrategyRegistry.combo = window.ComboStrategy;
-        if (window.InsideStrategy) window.StrategyRegistry.inside = window.InsideStrategy;
-    }
+if (window.StrategyRegistry) {
+    if (window.SeriesStrategy) window.StrategyRegistry.series = window.SeriesStrategy;
+    if (window.ComboStrategy) window.StrategyRegistry.combo = window.ComboStrategy;
+    if (window.InsideStrategy) window.StrategyRegistry.inside = window.InsideStrategy;
+}
 
 window.changePredictionStrategy = async function (val) {
     if (window.state) {
         window.state.currentGameplayStrategy = val;
-        
+
         // Auto-switch analytics tab
         if (window.setAnalyticsDisplayStrategy) {
             window.setAnalyticsDisplayStrategy(val);
@@ -1756,12 +1803,12 @@ window.changePredictionStrategy = async function (val) {
 
 window.setGameplayStrategy = window.changePredictionStrategy;
 
-window.openAiConfigModal = function () { 
+window.openAiConfigModal = function () {
     if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
     const keyInput = document.getElementById('aiApiKeyInput');
     const providerSelect = document.getElementById('aiProviderSelect');
     if (keyInput) keyInput.value = window.state.aiApiKey || '';
     if (providerSelect) providerSelect.value = window.state.aiProvider || 'gemini';
-    toggleModal('aiConfigModal'); 
+    toggleModal('aiConfigModal');
 };
 window.openAiChat = function () { toggleModal('aiChatModal'); };
