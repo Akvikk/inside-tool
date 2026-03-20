@@ -33,7 +33,7 @@ test('script order keeps safety boundary before app bootstrap', () => {
 
 test('UI id references do not introduce new missing DOM targets', () => {
     const referenced = collectReferencedIds(combinedCode);
-    const defined = collectDefinedIds(htmlCode);
+    const defined = collectDefinedIds(htmlCode + '\n' + combinedCode);
     const missing = [...referenced].filter(id => !defined.has(id)).sort();
     const allowed = new Set(baseline.allowedMissingIds || []);
     const unexpected = missing.filter(id => !allowed.has(id));
@@ -47,7 +47,7 @@ test('UI id references do not introduce new missing DOM targets', () => {
 
 test('inline HTML handlers resolve to declared app functions', () => {
     const declaredFunctions = collectFunctionNames(combinedCode);
-    const usedFunctions = collectInlineHandlerFunctionCalls(htmlCode);
+    const usedFunctions = collectInlineHandlerFunctionCalls(htmlCode + '\n' + combinedCode);
     const ignore = new Set(['if', 'event', 'confirm', 'alert']);
     const allowedMissingHandlers = new Set(baseline.allowedMissingHandlers || []);
     const missing = [...usedFunctions]

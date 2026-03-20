@@ -4,7 +4,8 @@
     window.UiController = {
         init,
         openHindsightModal,
-        initDesktopGrid
+        initDesktopGrid,
+        showToast
     };
 
     // Make it globally accessible for the onclick attribute
@@ -210,5 +211,36 @@
             const grid = gridWrapper.firstElementChild;
             grid.innerHTML = buildRacetrackSVG();
         }
+    }
+
+    function showToast(message, type = 'error') {
+        let container = document.getElementById('toastContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'fixed top-20 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        const bgColor = type === 'error' ? 'bg-[#ff1a33]/90 border-[#ff1a33]/50' : 'bg-[#30D158]/90 border-[#30D158]/50';
+        toast.className = `${bgColor} text-white px-5 py-2.5 rounded-xl shadow-2xl text-xs font-semibold tracking-wider backdrop-blur-md border flex items-center justify-center transition-all duration-300`;
+
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-10px)';
+
+        toast.innerHTML = `<i class="fas ${type === 'error' ? 'fa-exclamation-triangle' : 'fa-check-circle'} mr-3 text-sm"></i> ${message}`;
+
+        container.appendChild(toast);
+
+        void toast.offsetWidth; // Trigger reflow
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateY(0)';
+
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-10px)';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
     }
 })();

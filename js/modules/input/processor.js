@@ -45,6 +45,9 @@
             .catch(error => {
                 // Recover the queue so one failed spin does not block all future input.
                 console.error('Recovered spin queue after an error:', error);
+                if (window.UiController && window.UiController.showToast) {
+                    window.UiController.showToast('Queue recovery: ' + error.message, 'error');
+                }
             })
             .then(() => processSpinValue(val));
 
@@ -79,7 +82,9 @@
         // This makes the UI responsive and prevents hangs.
         enqueueSpin(val).catch(error => {
             console.error("Error processing spin in background:", error);
-            // Here you could show a toast or other non-blocking error message to the user
+            if (window.UiController && window.UiController.showToast) {
+                window.UiController.showToast('Failed to process spin: ' + error.message, 'error');
+            }
         });
     }
     async function undoSpin() {

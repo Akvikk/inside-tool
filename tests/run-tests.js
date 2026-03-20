@@ -165,14 +165,14 @@ async function testUiSmoke() {
 
     const combinedCode = scriptEntries.map(entry => entry.code).join('\n');
     const referenced = collectReferencedIds(combinedCode);
-    const defined = collectDefinedIds(htmlCode);
+    const defined = collectDefinedIds(htmlCode + '\n' + combinedCode);
     const missingIds = [...referenced].filter(id => !defined.has(id)).sort();
     const allowedMissingIds = new Set(baseline.allowedMissingIds || []);
     const unexpectedMissingIds = missingIds.filter(id => !allowedMissingIds.has(id));
     assert.deepEqual(unexpectedMissingIds, [], `Unexpected missing IDs:\n${unexpectedMissingIds.join('\n')}`);
 
     const declaredFunctions = collectFunctionNames(combinedCode);
-    const usedFunctions = collectInlineHandlerFunctionCalls(htmlCode);
+    const usedFunctions = collectInlineHandlerFunctionCalls(htmlCode + '\n' + combinedCode);
     const ignore = new Set(['if', 'event', 'confirm', 'alert']);
     const allowedMissingHandlers = new Set(baseline.allowedMissingHandlers || []);
     const missingHandlers = [...usedFunctions]
