@@ -5,10 +5,11 @@
     --bg-deep: #1C1C1E; /* System Gray 6 */
 
     /* Apple Pro Accents */
-    --theme-red: #FF453A;
-    --theme-green: #30D158;
-    --theme-blue: #0A84FF;
+    --theme-red: #FF3B30;
+    --theme-green: #34C759;
+    --theme-blue: #007AFF;
     --theme-gold: #FF9F0A;
+    --theme-purple: #AF52DE;
 
     /* Materials */
     --glass-bg: rgba(255, 255, 255, 0.04);
@@ -33,6 +34,24 @@ body {
     overflow: hidden;
     position: relative;
     letter-spacing: normal; /* Reset for better readability */
+}
+
+/* Global Header Constraints */
+header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    height: 56px !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+}
+
+/* Refined Glass Material */
+.refined-glass {
+    background: rgba(28, 28, 30, 0.45) !important;
+    backdrop-filter: blur(40px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 /* Data Fonts */
@@ -202,21 +221,24 @@ button:active,
 /* --- THE NUMBERS (Grid Buttons) --- */
 .grid-btn {
     position: relative;
-    background: rgba(255, 255, 255, 0.08);
-    border: 0.5px solid rgba(255, 255, 255, 0.1);
-    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
     backdrop-filter: blur(10px);
-    font-weight: 600;
-    font-size: 1.15rem;
-    transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-    color: var(--text-tertiary);
+    font-weight: 700;
+    font-size: 1rem;
+    transition: all 0.2s var(--ease-strike);
+    color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
-    box-shadow: none;
-    transform: translateY(0);
-    text-shadow: none !important;
+    height: 44px; /* FIXED HEIGHT TO PREVENT SQUEEZING */
+    width: 100%;
+}
+
+/* Single columns are squares */
+.grid-cols-3 .grid-btn:not(.col-span-3) {
+    aspect-ratio: 1;
 }
 
 .grid-btn:hover {
@@ -231,19 +253,19 @@ button:active,
 
 /* Active iOS-style Toggles */
 .grid-red {
-    background: #b02a2a !important;
+    background: var(--theme-red) !important;
     color: #ffffff !important;
     border: none !important;
 }
 
 .grid-green {
-    background: #30D158 !important; /* Apple Green */
+    background: var(--theme-green) !important;
     color: #ffffff !important;
     border: none !important;
 }
 
 .grid-black {
-    background: #1a1c1c !important;
+    background: #2C2C2E !important;
     color: #ffffff !important;
     border: none !important;
 }
@@ -338,18 +360,18 @@ button:active,
 
 
 #addSpinBtn {
-    background: #0A84FF !important; /* Apple Blue */
-    border: none !important;
+    background: linear-gradient(180deg, #FF5147 0%, #FF3B30 100%) !important;
+    border: 1px solid rgba(255, 59, 48, 0.4) !important;
     border-radius: 14px !important;
     color: #ffffff !important;
     text-shadow: none !important;
-    box-shadow: none !important;
+    box-shadow: 0 4px 12px rgba(255, 59, 48, 0.3) !important;
     animation: none !important;
-    /* Ensure it inherits button transitions */
+    transition: all 0.2s var(--ease-strike) !important;
 }
 
 #addSpinBtn:hover {
-    background: #007aff !important; /* Slightly lighter blue */
+    background: linear-gradient(180deg, #FF6961 0%, #FF453A 100%) !important;
     transform: translateY(-1px);
 }
 
@@ -459,9 +481,9 @@ button:active,
     width: min(200px, calc(100vw - 32px));
     padding: 8px;
     border-radius: 16px;
-    background: rgba(28, 28, 30, 0.65);
+    background: rgba(28, 28, 30, 0.45);
     backdrop-filter: blur(40px) saturate(180%);
-    border: 0.5px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     z-index: 80;
 }
 
@@ -735,7 +757,7 @@ button.bg-gradient-to-b:active {
     text-transform: uppercase;
     letter-spacing: 0.15em;
     position: sticky;
-    top: 0;
+    top: 56px; /* ALIGN WITH HEADER HEIGHT */
     z-index: 20;
     background: rgba(28, 28, 30, 0.75); /* Standard glass bg */
     backdrop-filter: blur(40px) saturate(180%);
@@ -806,11 +828,16 @@ button.bg-gradient-to-b:active {
 }
 
 .prediction-entry--win .prediction-entry-status {
-    color: #30D158;
+    color: var(--theme-green);
+    text-shadow: 0 0 10px rgba(52, 199, 89, 0.4);
+}
+
+.prediction-entry--loss {
+    opacity: 0.45;
 }
 
 .prediction-entry--loss .prediction-entry-status {
-    color: #FF453A;
+    color: var(--theme-red);
 }
 
 .prediction-entry-label {
@@ -1084,7 +1111,7 @@ button.bg-gradient-to-b:active {
 @keyframes modalLiftIn {
     from {
         opacity: 0;
-        transform: translateY(24px) scale(0.965) rotateX(7deg);
+        transform: translateY(24px) scale(0.96);
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.32);
     }
 
@@ -1115,7 +1142,7 @@ button.bg-gradient-to-b:active {
     -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
     border: 0.5px solid rgba(255, 255, 255, 0.15);
     box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
-    border-radius: 20px;
+    border-radius: 32px;
 }
 
 .glass-menu>* {

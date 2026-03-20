@@ -174,25 +174,6 @@
         return { paths, texts };
     }
 
-    function buildDesktopGrid() {
-        const layout = [
-            [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36],
-            [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35],
-            [1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34]
-        ];
-        let html = '';
-        layout.forEach(row => {
-            html += '<div class="grid-row flex shrink-0 h-[36px]">';
-            row.forEach(num => {
-                const isRed = config.RED_NUMS.includes(num);
-                const colorClass = isRed ? 'bg-red-500/80' : 'bg-zinc-900';
-                html += `<div class="grid-cell flex-1 border border-white/5 flex items-center justify-center text-xs font-bold text-white transition-all hover:bg-white/20 hover:scale-105 active:scale-90 cursor-pointer ${colorClass}" onclick="handleGridClick(${num})">${num}</div>`;
-            });
-            html += '</div>';
-        });
-        return html;
-    }
-
     function initDesktopGrid() {
         const grid = document.getElementById('desktopGrid');
         if (!grid) return;
@@ -207,15 +188,19 @@
                     </svg>
                 </div>
             `;
+            grid.className = "hidden md:block w-[240px] shrink-0 overflow-y-auto custom-scroll refined-glass h-full";
         } else {
-            grid.innerHTML = `
-                <div class="flex flex-col w-full max-w-[400px] bg-black/40 p-2 rounded-xl border border-white/10 shadow-2xl backdrop-blur-md">
-                    <div class="flex h-[108px]">
-                        <div class="w-12 border border-white/5 bg-green-600/80 flex items-center justify-center text-white font-bold cursor-pointer rounded-l-lg hover:bg-green-500 transition-all" onclick="handleGridClick(0)">0</div>
-                        <div class="flex-1 flex flex-col">${buildDesktopGrid()}</div>
-                    </div>
-                </div>
-            `;
+            const RED_NUMS = window.config && window.config.RED_NUMS ? window.config.RED_NUMS : [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+            let gridHtml = '<div class="grid grid-cols-3 gap-2 w-full">';
+            gridHtml += '<button class="grid-btn grid-green col-span-3 font-bold text-sm" onclick="handleGridClick(0)">ZERO</button>';
+            for (let i = 1; i <= 36; i++) {
+                const isRed = RED_NUMS.includes(i);
+                const colorClass = isRed ? 'grid-red' : 'grid-black';
+                gridHtml += `<button class="grid-btn ${colorClass} font-bold text-sm" onclick="handleGridClick(${i})">${i}</button>`;
+            }
+            gridHtml += '</div>';
+            grid.className = "hidden md:block w-[240px] shrink-0 p-3 overflow-y-auto custom-scroll refined-glass h-full";
+            grid.innerHTML = gridHtml;
         }
     }
 

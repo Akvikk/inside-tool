@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// --- CONFIGURATION ---
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿// --- CONFIGURATION ---
 const RED_NUMS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
 const PERIMETER_RULE_KEY = 'Perimeter Rule';
 const PREDICTION_PERIMETER_PATTERN = 'Prediction Perimeter';
@@ -1350,26 +1350,26 @@ function initDesktopGrid() {
     const gridWrapper = document.getElementById('desktopGrid');
 
     if (currentInputLayout === 'grid') {
-        gridWrapper.className = "hidden md:block w-[240px] shrink-0 mesmer-grid p-3 overflow-y-auto custom-scroll";
-        gridWrapper.innerHTML = '<div class="grid grid-cols-3 gap-2 pb-10"></div>';
+        gridWrapper.className = "hidden md:block w-[240px] shrink-0 refined-glass p-3 overflow-y-auto custom-scroll h-full";
+        gridWrapper.innerHTML = '<div class="grid grid-cols-3 gap-2"></div>';
 
         const grid = gridWrapper.firstElementChild;
-        grid.innerHTML = '<button class="grid-btn grid-green col-span-3 py-4 shadow-sm h-12 flex items-center justify-center" onclick="handleGridClick(0)">0</button>';
+        grid.innerHTML = '<button class="grid-btn grid-green col-span-3 font-bold text-lg" onclick="handleGridClick(0)">0</button>';
 
         for (let i = 1; i <= 36; i++) {
             let btn = document.createElement('button');
             const isRed = RED_NUMS.includes(i);
-            btn.className = `grid-btn py-4 shadow-sm h-12 flex items-center justify-center ${isRed ? 'grid-red' : 'grid-black'}`;
+            btn.className = `grid-btn ${isRed ? 'grid-red' : 'grid-black'} font-bold text-lg`;
             btn.innerText = i;
             btn.onclick = () => handleGridClick(i);
             grid.appendChild(btn);
         }
     } else {
         // RACETRACK LAYOUT (Perfect Theme Integration)
-        gridWrapper.className = "hidden md:block w-[240px] shrink-0 mesmer-grid overflow-y-auto custom-scroll";
+        gridWrapper.className = "hidden md:block w-[240px] shrink-0 refined-glass overflow-y-auto custom-scroll h-full";
 
         // Remove flex center entirely to restore the ability to scroll freely to the top and bottom!
-        gridWrapper.innerHTML = '<div class="w-full flex justify-center pt-6 pb-20 fade-in"></div>';
+        gridWrapper.innerHTML = '<div class="w-full flex justify-center py-4 fade-in"></div>';
 
         const grid = gridWrapper.firstElementChild;
         grid.innerHTML = buildRacetrackSVG();
