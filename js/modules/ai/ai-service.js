@@ -74,4 +74,90 @@
 
         return signal;
     };
+
+    window.triggerAiAudit = async function (btn) {
+        if (!btn) return;
+        const originalText = btn.innerText;
+        btn.innerText = 'AUDITING...';
+        btn.disabled = true;
+
+        const audit = await window.requestTacticalAudit();
+        btn.innerText = originalText;
+        btn.disabled = false;
+
+        const verdictEl = document.getElementById('aiBrainVerdict');
+        const scoreEl = document.getElementById('aiBrainScore');
+        const pivotEl = document.getElementById('aiBrainPivot');
+
+        if (audit && !audit.error) {
+            if (verdictEl) verdictEl.innerText = audit.verdict || "Audit complete.";
+            if (scoreEl) {
+                scoreEl.innerText = `${audit.predictabilityScore || 0}%`;
+                scoreEl.classList.remove('opacity-0');
+            }
+            if (pivotEl && audit.profitPivot) {
+                pivotEl.innerText = `Pivot Suggestion: ${audit.profitPivot}`;
+                pivotEl.classList.remove('hidden');
+            }
+        } else if (audit && audit.error) {
+            if (verdictEl) verdictEl.innerText = `Error: ${audit.error}`;
+        }
+    };
+
+    window.sendAiChatMessage = async function () {
+        const input = document.getElementById('aiChatInput');
+        const historyContainer = document.getElementById('aiChatHistory');
+        if (!input || !historyContainer || !input.value.trim()) return;
+
+        const message = input.value.trim();
+        input.value = '';
+
+        historyContainer.innerHTML += `
+            <div class="flex justify-end">
+                <div class="bg-[#bf5af2]/20 border border-[#bf5af2]/30 text-white p-3 rounded-xl rounded-tr-sm max-w-[85%] text-xs shadow-md">
+                    ${message}
+                </div>
+            </div>
+        `;
+        historyContainer.scrollTop = historyContainer.scrollHeight;
+
+        const typingId = 'typing-' + Date.now();
+        historyContainer.innerHTML += `
+            <div id="${typingId}" class="flex justify-start">
+                <div class="bg-white/5 border border-white/10 text-white/60 p-3 rounded-xl rounded-tl-sm max-w-[85%] text-xs italic animate-pulse ai-chat-scramble-text" data-text="Consulting local brain...">
+                    Consulting local brain...
+                </div>
+            </div>
+        `;
+        historyContainer.scrollTop = historyContainer.scrollHeight;
+
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*!';
+        const scrambleInterval = setInterval(() => {
+            const el = document.querySelector(`#${typingId} .ai-chat-scramble-text`);
+            if (el) {
+                const original = el.dataset.text;
+                let scrambled = '';
+                for (let i = 0; i < original.length; i++) {
+                    if (original[i] === ' ') scrambled += ' ';
+                    else scrambled += Math.random() > 0.75 ? chars[Math.floor(Math.random() * chars.length)] : original[i];
+                }
+                el.innerText = scrambled;
+            }
+        }, 50);
+
+        try {
+            if (!window.AiBrain) throw new Error("AI module unavailable.");
+            const context = window.state ? `Recent history: ${window.state.history.slice(-12).map(s => s.num).join(', ')}. Net: ${window.state.userStats ? window.state.userStats.netUnits : 0}u.` : "";
+
+            const responseText = await window.AiBrain.requestAiText(`ROLE: Elite Roulette Table Boss.\nCONTEXT: ${context}\nUSER: ${message}`, { requestMode: 'chat', maxOutputTokens: 250 });
+            clearInterval(scrambleInterval);
+            document.getElementById(typingId).remove();
+            historyContainer.innerHTML += `<div class="flex justify-start"><div class="bg-black/40 border border-white/10 text-white p-3 rounded-xl rounded-tl-sm max-w-[85%] text-xs shadow-md leading-relaxed whitespace-pre-wrap">${responseText.trim()}</div></div>`;
+        } catch (error) {
+            clearInterval(scrambleInterval);
+            document.getElementById(typingId).remove();
+            historyContainer.innerHTML += `<div class="flex justify-start"><div class="bg-[#ff1a33]/20 border border-[#ff1a33]/30 text-[#ff1a33] p-3 rounded-xl rounded-tl-sm max-w-[85%] text-xs shadow-md">Error: ${error.message}</div></div>`;
+        }
+        historyContainer.scrollTop = historyContainer.scrollHeight;
+    };
 })();

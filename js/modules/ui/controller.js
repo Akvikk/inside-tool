@@ -243,4 +243,219 @@
             setTimeout(() => toast.remove(), 300);
         }, 3000);
     }
+
+    // --- IMPORT / EXPORT DATA ---
+    window.exportSpins = function () {
+        if (!window.state || !window.state.history || window.state.history.length === 0) {
+            alert("No spins to export!");
+            return;
+        }
+        const spins = window.state.history.map(h => h.num);
+        const data = { timestamp: Date.now(), spins: spins };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const dateStr = new Date().toISOString().slice(0, 10);
+        a.download = `Roulette_Spins_${dateStr}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    window.importSpins = function (input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async function (e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (Array.isArray(data.spins)) {
+                    if (window.rebuildSessionFromSpins) {
+                        if (window.toggleHamburgerMenu) window.toggleHamburgerMenu();
+                        await window.rebuildSessionFromSpins(data.spins);
+                        const inputField = document.getElementById('spinInput');
+                        if (inputField) {
+                            inputField.value = '';
+                            inputField.focus();
+                        }
+                    }
+                } else {
+                    alert("Invalid file format: 'spins' array missing.");
+                }
+            } catch (err) {
+                alert("Error reading file: " + err.message);
+            }
+        };
+        reader.readAsText(file);
+        input.value = '';
+    };
+
+    // --- GENERIC UI & MODALS ---
+    window.toggleModal = function (id) {
+        const el = document.getElementById(id);
+        if (!el) {
+            alert(`UI Component Error: The modal '${id}' could not be found.`);
+            return;
+        }
+        el.classList.toggle('hidden');
+    };
+
+    window.toggleAccordion = function (id) {
+        const content = document.getElementById(id);
+        const icon = document.getElementById(id + 'Icon');
+        if (!content) return;
+        if (content.classList.contains('hidden')) {
+            content.classList.remove('hidden');
+            if (icon) icon.style.transform = 'rotate(180deg)';
+        } else {
+            content.classList.add('hidden');
+            if (icon) icon.style.transform = 'rotate(0deg)';
+        }
+    };
+
+    window.toggleHamburgerMenu = function () {
+        const menu = document.getElementById('hamburgerMenu');
+        const backdrop = document.getElementById('hamburgerBackdrop');
+        if (!menu) return;
+        if (menu.classList.contains('hidden')) {
+            menu.classList.remove('hidden');
+            if (backdrop) backdrop.classList.remove('hidden');
+        } else {
+            menu.classList.add('hidden');
+            if (backdrop) backdrop.classList.add('hidden');
+        }
+    };
+
+    window.toggleInputLayout = function () {
+        if (!window.state) return;
+        window.state.currentInputLayout = window.state.currentInputLayout === 'grid' ? 'racetrack' : 'grid';
+        const label = document.getElementById('layoutLabel');
+        if (label) {
+            label.innerText = window.state.currentInputLayout.toUpperCase();
+            if (window.state.currentInputLayout === 'racetrack') {
+                label.className = "text-[9px] font-black bg-[#BF5AF2]/20 px-2.5 py-1 rounded-md text-[#BF5AF2] shadow-inner";
+            } else {
+                label.className = "text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white shadow-inner";
+            }
+        }
+        window.UiController.initDesktopGrid();
+        if (window.scheduleComboBridgeRelayout) window.scheduleComboBridgeRelayout();
+        if (window.saveSessionData) window.saveSessionData();
+    };
+
+    // --- STOPWATCH ---
+    let stopwatchInterval = null;
+    let stopwatchSeconds = 0;
+
+    window.updateStopwatchDisplay = function () {
+        const display = document.getElementById('stopwatchDisplay');
+        if (display) {
+            let hrs = Math.floor(stopwatchSeconds / 3600);
+            let mins = Math.floor((stopwatchSeconds % 3600) / 60);
+            let secs = stopwatchSeconds % 60;
+            display.innerText = `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+    };
+
+    window.toggleStopwatch = function () {
+        const icon = document.getElementById('stopwatchIcon');
+        const text = document.getElementById('stopwatchText');
+        const btn = document.getElementById('stopwatchToggleBtn');
+        if (stopwatchInterval) {
+            clearInterval(stopwatchInterval);
+            stopwatchInterval = null;
+            if (icon) { icon.classList.remove('fa-pause'); icon.classList.add('fa-play'); }
+            if (text) text.innerText = 'Start';
+            if (btn) { btn.classList.remove('bg-[#FFD60A]/20', 'text-[#FFD60A]', 'border-[#FFD60A]/30'); btn.classList.add('bg-[#30D158]/20', 'text-[#30D158]', 'border-[#30D158]/30'); }
+        } else {
+            stopwatchInterval = setInterval(() => { stopwatchSeconds++; window.updateStopwatchDisplay(); }, 1000);
+            if (icon) { icon.classList.remove('fa-play'); icon.classList.add('fa-pause'); }
+            if (text) text.innerText = 'Pause';
+            if (btn) { btn.classList.remove('bg-[#30D158]/20', 'text-[#30D158]', 'border-[#30D158]/30'); btn.classList.add('bg-[#FFD60A]/20', 'text-[#FFD60A]', 'border-[#FFD60A]/30'); }
+        }
+    };
+
+    window.resetStopwatch = function () {
+        if (stopwatchInterval) { clearInterval(stopwatchInterval); stopwatchInterval = null; }
+        stopwatchSeconds = 0;
+        window.updateStopwatchDisplay();
+        const icon = document.getElementById('stopwatchIcon');
+        const text = document.getElementById('stopwatchText');
+        const btn = document.getElementById('stopwatchToggleBtn');
+        if (icon) { icon.classList.remove('fa-pause'); icon.classList.add('fa-play'); }
+        if (text) text.innerText = 'Start';
+        if (btn) { btn.classList.remove('bg-[#FFD60A]/20', 'text-[#FFD60A]', 'border-[#FFD60A]/30'); btn.classList.add('bg-[#30D158]/20', 'text-[#30D158]', 'border-[#30D158]/30'); }
+    };
+
+    // --- AI MODAL CONFIG ---
+    window.openAiConfigModal = function () {
+        if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+        const keyInput = document.getElementById('aiApiKeyInput');
+        const providerSelect = document.getElementById('aiProviderSelect');
+        if (keyInput) keyInput.value = window.state.aiApiKey || '';
+        if (providerSelect) providerSelect.value = window.state.aiProvider || 'gemini';
+        window.toggleModal('aiConfigModal');
+    };
+    
+    window.openAiChat = function () { window.toggleModal('aiChatModal'); };
+
+    window.toggleAiMasterSwitch = function () {
+        if (!window.state) return;
+        window.state.aiEnabled = !window.state.aiEnabled;
+        if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+        if (window.saveSessionData) window.saveSessionData();
+    };
+
+    window.toggleNeuralPrediction = function () {
+        if (!window.state) return;
+        window.state.neuralPredictionEnabled = !window.state.neuralPredictionEnabled;
+        if (window.updateAiConfigModalUI) window.updateAiConfigModalUI();
+        if (window.saveSessionData) window.saveSessionData();
+    };
+
+    window.toggleAiApiKeyVisibility = function () {
+        const input = document.getElementById('aiApiKeyInput');
+        const icon = document.getElementById('toggleAiKeyVisibilityIcon');
+        if (!input || !icon) return;
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    };
+
+    window.updateAiConfigModalUI = function () {
+        if (!window.state) return;
+        const masterSwitch = document.getElementById('aiMasterSwitch'), knob = document.getElementById('aiSwitchKnob'), statusText = document.getElementById('aiMasterStatusText'), vaultSection = document.getElementById('aiVaultSection'), hindsightToggle = document.getElementById('aiHindsightToggle'), statusBadge = document.getElementById('aiStatusBadge');
+        if (masterSwitch && knob && statusText && vaultSection) {
+            if (window.state.aiEnabled) { masterSwitch.classList.replace('bg-white/10', 'bg-[#30D158]/20'); masterSwitch.classList.replace('border-white/20', 'border-[#30D158]/30'); knob.classList.replace('bg-gray-400', 'bg-[#30D158]'); knob.style.transform = 'translateX(24px)'; statusText.innerText = 'Enabled'; vaultSection.classList.remove('hidden'); }
+            else { masterSwitch.classList.replace('bg-[#30D158]/20', 'bg-white/10'); masterSwitch.classList.replace('border-[#30D158]/30', 'border-white/20'); knob.classList.replace('bg-[#30D158]', 'bg-gray-400'); knob.style.transform = 'translateX(0)'; statusText.innerText = 'Disabled'; vaultSection.classList.add('hidden'); }
+        }
+        if (hindsightToggle) {
+            const hKnob = hindsightToggle.querySelector('div');
+            if (window.state.neuralPredictionEnabled) {
+                hindsightToggle.classList.replace('bg-white/10', 'bg-[#bf5af2]/30'); hindsightToggle.classList.replace('border-white/20', 'border-[#bf5af2]/50');
+                if (hKnob) { hKnob.classList.replace('bg-gray-500', 'bg-[#bf5af2]'); hKnob.style.transform = 'translateX(20px)'; hKnob.style.boxShadow = '0 0 8px rgba(191,90,242,0.6)'; }
+            } else {
+                hindsightToggle.classList.replace('bg-[#bf5af2]/30', 'bg-white/10'); hindsightToggle.classList.replace('border-[#bf5af2]/50', 'border-white/20');
+                if (hKnob) { hKnob.classList.replace('bg-[#bf5af2]', 'bg-gray-500'); hKnob.style.transform = 'translateX(0)'; hKnob.style.boxShadow = 'none'; }
+            }
+        }
+        if (statusBadge) {
+            if (window.state.aiRelayAvailable) { statusBadge.innerText = 'CONNECTED'; statusBadge.className = 'text-[9px] font-black bg-[#30D158]/20 px-2.5 py-1 rounded-md text-[#30D158] shadow-inner'; }
+            else { statusBadge.innerText = 'NOT CONNECTED'; statusBadge.className = 'text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white/50 shadow-inner'; }
+        }
+        const headerAiBtn = document.getElementById('headerAiBtn');
+        if (headerAiBtn) {
+            if (window.state.aiRelayAvailable) { headerAiBtn.classList.add('ai-connected'); headerAiBtn.classList.remove('ai-offline'); }
+            else if (window.state.aiEnabled) { headerAiBtn.classList.add('ai-offline'); headerAiBtn.classList.remove('ai-connected'); }
+            else { headerAiBtn.classList.remove('ai-connected'); headerAiBtn.classList.remove('ai-offline'); }
+        }
+    };
 })();

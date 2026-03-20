@@ -351,19 +351,26 @@
     </div>
 
     <!-- SCRIPTS -->
-    <!-- CONFIG -->
+    <!-- 1. CONFIG & STATE -->
     <script src="js/modules/config.js"></script>
-
-    <!-- ENGINE -->
     <script src="js/modules/engine/state.js"></script>
+
+    <!-- 2. STORE & PERSISTENCE -->
+    <script src="js/modules/engine/store.js"></script>
     <script src="js/modules/persistence.js"></script>
+
+    <!-- 3. SERVICES -->
+    <script src="js/modules/audio/audio-engine.js"></script>
+    <script src="js/modules/ai/brain.js"></script>
+    <script src="js/modules/ai/ai-service.js"></script>
+
+    <!-- 4. ENGINE LAYER -->
     <script src="js/modules/engine/core.js"></script>
     <script src="js/modules/engine/prediction.js"></script>
     <script src="js/modules/engine/contract.js"></script>
     <script src="js/modules/engine/adapter.js"></script>
-    <script src="js/modules/engine/store.js"></script>
 
-    <!-- STRATEGIES -->
+    <!-- 5. STRATEGIES -->
     <script src="js/strategies/strategy.series.js"></script>
     <script src="js/strategies/strategy.combo.js"></script>
 
@@ -377,12 +384,13 @@
     <script src="js/strategies/inside/patterns/pattern.22.js"></script>
     <script src="js/strategies/inside/patterns/pattern.seqvarbrkt.js"></script>
 
-    <!-- UI -->
-    <script src="js/modules/ui/renderers.js"></script>
-    <script src="js/modules/ui/modals.js"></script>
+    <!-- 6. UI RENDERERS & COMPONENTS -->
+    <script src="js/modules/ui/renderers/history.js"></script>
+    <script src="js/modules/ui/renderers/dashboard.js"></script>
+    <script src="js/modules/ui/renderers/analytics.js"></script>
+    <script src="js/modules/ui/controller.js"></script>
     <script src="js/modules/ui/hud-manager.js"></script>
     <script src="js/modules/ui/hindsight-modal.js"></script>
-    <script src="js/modules/ui/controller.js"></script>
 
     <!-- UI COMPONENTS (Modals) -->
     <script src="js/modules/ui/components/modal-bets.js"></script>
@@ -393,13 +401,8 @@
     <script src="js/modules/ui/components/modal-confirm.js"></script>
     <script src="js/modules/ui/components/modal-hindsight.js"></script>
 
-    <!-- INPUT -->
+    <!-- 7. APP BOOTSTRAP -->
     <script src="js/modules/input/processor.js"></script>
-
-    <!-- AI TACTICAL BRAIN: ISOLATED DECISION MODULE -->
-    <script src="js/modules/ai/brain.js"></script>
-
-    <!-- CORE LOGIC: UI & APPLICATION -->
     <script src="app.js"></script>
 
     <!-- Graph Tooltip -->
