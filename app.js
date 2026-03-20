@@ -221,6 +221,20 @@ window.syncStrategyUi = function () {
 
 // --- RESTORED CORE APP GLUE & INITIALIZATION ---
 window.addEventListener('DOMContentLoaded', async () => {
+    // Global Click listener for dropdowns & menus
+    document.addEventListener('click', (e) => {
+        const patternShell = document.getElementById('patternFilterShell');
+        const patternPopover = document.getElementById('patternFilterPopover');
+        if (patternShell && patternPopover && !patternPopover.classList.contains('hidden') && !patternShell.contains(e.target)) {
+            if (window.closePatternFilterPopover) window.closePatternFilterPopover();
+        }
+        const burgerMenu = document.getElementById('hamburgerMenu');
+        const burgerBtn = document.getElementById('headerMenuBtn');
+        if (burgerMenu && !burgerMenu.classList.contains('hidden') && !burgerMenu.contains(e.target) && (!burgerBtn || !burgerBtn.contains(e.target))) {
+            if (window.toggleHamburgerMenu) window.toggleHamburgerMenu();
+        }
+    });
+
     console.log("INSIDE TOOL: Bootstrapping modular architecture...");
 
     // 1. Initialize Active Modules
@@ -1373,6 +1387,333 @@ window.updateAiConfigModalUI = function() {
             headerAiBtn.classList.remove('ai-offline');
         }
     }
+};
+
+// --- RESTORED UI UTILITIES & GRAPHING ---
+
+window.toggleModal = function (id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden');
+};
+
+window.toggleAccordion = function (id) {
+    const content = document.getElementById(id);
+    const icon = document.getElementById(id + 'Icon');
+    if (!content) return;
+    if (content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        if (icon) icon.style.transform = 'rotate(180deg)';
+    } else {
+        content.classList.add('hidden');
+        if (icon) icon.style.transform = 'rotate(0deg)';
+    }
+};
+
+window.toggleHamburgerMenu = function () {
+    const menu = document.getElementById('hamburgerMenu');
+    const backdrop = document.getElementById('hamburgerBackdrop');
+    if (!menu) return;
+
+    if (menu.classList.contains('hidden')) {
+        menu.classList.remove('hidden');
+        if (backdrop) backdrop.classList.remove('hidden');
+    } else {
+        menu.classList.add('hidden');
+        if (backdrop) backdrop.classList.add('hidden');
+    }
+};
+
+window.resetSession = function () {
+    window.toggleModal('confirmModal');
+};
+
+// --- STOPWATCH ---
+let stopwatchInterval = null;
+let stopwatchSeconds = 0;
+
+function formatStopwatchTime(totalSeconds) {
+    let hrs = Math.floor(totalSeconds / 3600);
+    let mins = Math.floor((totalSeconds % 3600) / 60);
+    let secs = totalSeconds % 60;
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+window.updateStopwatchDisplay = function () {
+    const display = document.getElementById('stopwatchDisplay');
+    if (display) display.innerText = formatStopwatchTime(stopwatchSeconds);
+};
+
+window.toggleStopwatch = function () {
+    const icon = document.getElementById('stopwatchIcon');
+    const text = document.getElementById('stopwatchText');
+    const btn = document.getElementById('stopwatchToggleBtn');
+
+    if (stopwatchInterval) {
+        clearInterval(stopwatchInterval);
+        stopwatchInterval = null;
+        if (icon) { icon.classList.remove('fa-pause'); icon.classList.add('fa-play'); }
+        if (text) text.innerText = 'Start';
+        if (btn) {
+            btn.classList.remove('bg-[#FFD60A]/20', 'text-[#FFD60A]', 'border-[#FFD60A]/30');
+            btn.classList.add('bg-[#30D158]/20', 'text-[#30D158]', 'border-[#30D158]/30');
+        }
+    } else {
+        stopwatchInterval = setInterval(() => { stopwatchSeconds++; window.updateStopwatchDisplay(); }, 1000);
+        if (icon) { icon.classList.remove('fa-play'); icon.classList.add('fa-pause'); }
+        if (text) text.innerText = 'Pause';
+        if (btn) {
+            btn.classList.remove('bg-[#30D158]/20', 'text-[#30D158]', 'border-[#30D158]/30');
+            btn.classList.add('bg-[#FFD60A]/20', 'text-[#FFD60A]', 'border-[#FFD60A]/30');
+        }
+    }
+};
+
+window.resetStopwatch = function () {
+    if (stopwatchInterval) { clearInterval(stopwatchInterval); stopwatchInterval = null; }
+    stopwatchSeconds = 0;
+    window.updateStopwatchDisplay();
+    const icon = document.getElementById('stopwatchIcon');
+    const text = document.getElementById('stopwatchText');
+    const btn = document.getElementById('stopwatchToggleBtn');
+    if (icon) { icon.classList.remove('fa-pause'); icon.classList.add('fa-play'); }
+    if (text) text.innerText = 'Start';
+    if (btn) {
+        btn.classList.remove('bg-[#FFD60A]/20', 'text-[#FFD60A]', 'border-[#FFD60A]/30');
+        btn.classList.add('bg-[#30D158]/20', 'text-[#30D158]', 'border-[#30D158]/30');
+    }
+};
+
+// --- PATTERN FILTER UI ---
+
+window.ensureActivePatternConfig = function () {
+    if (!window.state) return;
+    const strategyKey = window.state.currentGameplayStrategy || 'series';
+    const strategy = window.StrategyRegistry && window.StrategyRegistry[strategyKey] ? window.StrategyRegistry[strategyKey] : null;
+    
+    if (strategy && typeof strategy.buildPatternConfig === 'function') {
+        if (!window.state.patternConfig || Object.keys(window.state.patternConfig).length === 0) {
+            window.state.patternConfig = strategy.buildPatternConfig(true);
+        }
+    } else {
+        window.state.patternConfig = {};
+    }
+};
+
+window.renderPatternFilterUi = function () {
+    const list = document.getElementById('patternsList');
+    if (!list || !window.state) return;
+
+    const strategyKey = window.state.currentGameplayStrategy || 'series';
+    const strategy = window.StrategyRegistry && window.StrategyRegistry[strategyKey] ? window.StrategyRegistry[strategyKey] : null;
+    const metaMap = strategy && strategy.PATTERN_FILTER_META ? strategy.PATTERN_FILTER_META : {};
+    
+    const entries = Object.keys(window.state.patternConfig).map(key => {
+        const meta = metaMap[key] || {
+            label: key,
+            hint: 'No description configured yet.',
+            icon: 'fa-sliders-h',
+            accent: '#8E8E93'
+        };
+        const isEnabled = window.state.patternConfig[key] !== false;
+        return `
+            <div class="pattern-filter-card ${isEnabled ? 'pattern-filter-card-on' : 'pattern-filter-card-off'}"
+                 style="--pattern-accent:${meta.accent};">
+                <div class="pattern-filter-title">${meta.label}</div>
+                <button class="pattern-filter-switch ${isEnabled ? 'pattern-filter-switch-on' : 'pattern-filter-switch-off'}"
+                        onclick="event.stopPropagation(); window.togglePatternFilter('${key}')"
+                        aria-label="Toggle ${meta.label}">
+                    <span class="pattern-filter-switch-knob"></span>
+                </button>
+            </div>
+        `;
+    });
+
+    list.innerHTML = entries.join('');
+    if (window.syncPatternFilterButton) window.syncPatternFilterButton();
+};
+
+window.togglePatternFilter = function (key, isChecked = null) {
+    if (!window.state || !window.state.patternConfig) return;
+    const nextState = typeof isChecked === 'boolean' ? isChecked : window.state.patternConfig[key] === false;
+    window.state.patternConfig[key] = nextState;
+    
+    window.renderPatternFilterUi();
+    if (window.scanAllStrategies) {
+        window.scanAllStrategies().then(result => {
+            if (window.renderDashboardSafe) window.renderDashboardSafe(result);
+            if (window.syncAppStore) window.syncAppStore();
+        });
+    }
+};
+
+window.syncPatternFilterButton = function () {
+    if (!window.state) return;
+    const button = document.getElementById('patternsToggleBtn');
+    const summary = document.getElementById('patternFilterSummary');
+    
+    const config = window.state.patternConfig || {};
+    const keys = Object.keys(config);
+    const enabledCount = keys.reduce((count, key) => count + (config[key] !== false ? 1 : 0), 0);
+    const totalCount = keys.length;
+    const popover = document.getElementById('patternFilterPopover');
+    const isOpen = popover && !popover.classList.contains('hidden');
+
+    if (summary) {
+        summary.innerText = `${enabledCount} of ${totalCount} active`;
+    }
+
+    if (button) {
+        button.classList.toggle('pattern-toggle-active', isOpen);
+    }
+};
+
+window.togglePatternFilterPopover = function (forceOpen = null) {
+    const popover = document.getElementById('patternFilterPopover');
+    if (!popover) return;
+
+    const shouldOpen = typeof forceOpen === 'boolean'
+        ? forceOpen
+        : popover.classList.contains('hidden');
+
+    if (shouldOpen) {
+        if (window.renderPatternFilterUi) window.renderPatternFilterUi();
+        popover.classList.remove('hidden');
+    } else {
+        popover.classList.add('hidden');
+    }
+
+    if (window.syncPatternFilterButton) window.syncPatternFilterButton();
+};
+
+window.closePatternFilterPopover = function () {
+    const popover = document.getElementById('patternFilterPopover');
+    const button = document.getElementById('patternsToggleBtn');
+    if (popover) popover.classList.add('hidden');
+    if (button) button.classList.remove('pattern-toggle-active');
+};
+
+window.drawAdvancedGraph = function (historyArray, winCount, lossCount, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = '';
+    container.className = "flex flex-col h-full w-full rounded-b-xl overflow-hidden";
+
+    const chartDiv = document.createElement('div');
+    chartDiv.className = "relative h-[80%] w-full bg-black/20";
+    container.appendChild(chartDiv);
+
+    const hudDiv = document.createElement('div');
+    hudDiv.className = "h-[20%] w-full flex justify-between items-center px-4 text-[10px] font-bold bg-white/5 border-t border-white/5 backdrop-blur-sm";
+    hudDiv.innerHTML = `
+            <span class="text-[#4ade80] drop-shadow-sm tracking-wide">WINS: ${winCount}</span>
+            <span class="text-[#e5e7eb] drop-shadow-sm tracking-wide">SPINS: ${historyArray ? Math.max(0, historyArray.length - 1) : 0}</span>
+            <span class="text-[#f87171] drop-shadow-sm tracking-wide">LOSSES: ${lossCount}</span>
+        `;
+    container.appendChild(hudDiv);
+
+    if (!historyArray || historyArray.length < 2) {
+        chartDiv.innerHTML = `<div class="flex items-center justify-center h-full text-xs text-[#8E8E93] font-mono animate-pulse">Waiting for Data...</div>`;
+        return;
+    }
+
+    const vWidth = 600, vHeight = 200, padding = 10;
+    const maxVal = Math.max(...historyArray);
+    const minVal = Math.min(...historyArray);
+    let range = maxVal - minVal;
+    if (range === 0) range = 2;
+
+    const getX = i => (i / (historyArray.length - 1)) * (vWidth - 2 * padding) + padding;
+    const getY = v => vHeight - padding - ((v - minVal) / range) * (vHeight - 2 * padding);
+    const zeroY = getY(0);
+
+    let pathD = `M ${getX(0)} ${getY(historyArray[0])}`;
+    for (let i = 1; i < historyArray.length; i++) pathD += ` L ${getX(i)} ${getY(historyArray[i])}`;
+
+    let zeroOffset = (maxVal > 0 && minVal < 0) ? (maxVal / range) * 100 : (minVal >= 0 ? 100 : 0);
+
+    chartDiv.innerHTML = `<svg viewBox="0 0 ${vWidth} ${vHeight}" width="100%" height="100%" preserveAspectRatio="none" style="overflow: visible;"><defs><linearGradient id="profitGrad-${containerId}" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#4ade80" /><stop offset="${zeroOffset}%" stop-color="#4ade80" /><stop offset="${zeroOffset}%" stop-color="#f87171" /><stop offset="100%" stop-color="#f87171" /></linearGradient></defs><line x1="${padding}" y1="${zeroY}" x2="${vWidth - padding}" y2="${zeroY}" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 6" opacity="0.3" vector-effect="non-scaling-stroke" /><path d="${pathD}" fill="none" stroke="url(#profitGrad-${containerId})" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));" /></svg>`;
+};
+
+window.openPatternLog = function (patternName) {
+    const stats = window.EngineCore && window.EngineCore.stats ? window.EngineCore.stats : { signalLog: [] };
+    const logs = stats.signalLog.filter(s => s.patternName === patternName);
+    logs.sort((a, b) => a.spinIndex - b.spinIndex);
+
+    let runningROI = 0;
+    let lastIndex = -1;
+
+    let displayLogs = logs.map((log, i) => {
+        runningROI += log.units;
+        let gap = (i === 0) ? 0 : (log.spinIndex - lastIndex);
+        lastIndex = log.spinIndex;
+        return { ...log, gap, roi: runningROI };
+    });
+
+    displayLogs.sort((a, b) => b.spinIndex - a.spinIndex);
+
+    const tbody = document.getElementById('patternDetailBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (displayLogs.length === 0) {
+        tbody.innerHTML = '<div class="p-8 text-center text-[#8E8E93] italic">No signals recorded yet</div>';
+    } else {
+        let rows = '';
+        displayLogs.forEach(log => {
+            let badgeClass = '';
+            if (log.spinNum === 0) badgeClass = 'bg-[#30d158]/20 text-[#30d158] border-[#30d158]/30';
+            else if (window.config && window.config.RED_NUMS && window.config.RED_NUMS.includes(log.spinNum)) badgeClass = 'bg-[#ff453a]/20 text-[#ff453a] border-[#ff453a]/30';
+            else badgeClass = 'bg-[#3a3a3c] text-gray-200 border-white/10';
+
+            const isWin = log.result === 'WIN';
+            const resClass = isWin ? 'text-[#30D158]' : 'text-[#FF453A]';
+            const unitClass = log.units > 0 ? 'text-[#30D158]' : 'text-[#FF453A]';
+            const roiClass = log.roi >= 0 ? 'text-[#30D158]' : 'text-[#FF453A]';
+            const unitSign = log.units > 0 ? '+' : '';
+            const roiSign = log.roi > 0 ? '+' : '';
+
+            rows += `
+                <tr class="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 text-xs">
+                    <td class="p-3 text-[#8E8E93] font-mono">#${log.spinIndex + 1}</td>
+                    <td class="p-3 text-center">
+                        <span class="inline-block w-8 h-6 flex items-center justify-center rounded-md border ${badgeClass} font-bold mx-auto border-opacity-50">
+                            ${log.spinNum}
+                        </span>
+                    </td>
+                    <td class="p-3 text-center text-gray-400 font-mono">${log.gap}</td>
+                    <td class="p-3 text-center font-bold ${resClass}">${log.result}</td>
+                    <td class="p-3 text-right font-mono font-bold ${unitClass}">${unitSign}${log.units}</td>
+                    <td class="p-3 text-right font-mono font-bold ${roiClass}">${roiSign}${log.roi}</td>
+                </tr>
+            `;
+        });
+        
+        tbody.innerHTML = `
+            <div class="p-4 glass-header flex justify-between items-center border-b border-white/10 shrink-0">
+                <h2 class="font-semibold text-sm tracking-wide uppercase text-white" id="patternDetailTitle">LOG: ${patternName}</h2>
+                <button onclick="toggleModal('patternDetailModal')" class="text-gray-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-0 custom-scroll max-h-[70vh]">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-black/30 text-white/50 border-b border-white/5 sticky top-0 z-10 backdrop-blur-md">
+                        <tr>
+                            <th class="p-3 font-semibold uppercase">Spin</th>
+                            <th class="p-3 font-semibold uppercase text-center">Hit</th>
+                            <th class="p-3 font-semibold uppercase text-center">Gap</th>
+                            <th class="p-3 font-semibold uppercase text-center">Result</th>
+                            <th class="p-3 font-semibold uppercase text-right">Units</th>
+                            <th class="p-3 font-semibold uppercase text-right">ROI</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    const modal = document.getElementById('patternDetailModal');
+    if (modal) modal.classList.remove('hidden');
 };
 
 // --- MISC. SETTINGS ---
