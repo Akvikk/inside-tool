@@ -15,7 +15,23 @@
         if (!window.toggleModal) {
             window.toggleModal = function (id) {
                 const el = document.getElementById(id);
-                if (el) el.classList.toggle('hidden');
+                if (!el) return;
+
+                if (!el.classList.contains('transition-all')) {
+                    el.classList.add('transition-all', 'duration-300');
+                }
+
+                const isHidden = el.classList.contains('hidden') || el.classList.contains('opacity-0');
+                if (isHidden) {
+                    el.classList.remove('hidden');
+                    void el.offsetWidth; // Force Reflow
+                    el.classList.remove('opacity-0', 'pointer-events-none');
+                    el.classList.add('opacity-100');
+                } else {
+                    el.classList.remove('opacity-100');
+                    el.classList.add('opacity-0', 'pointer-events-none');
+                    setTimeout(() => { if (el.classList.contains('opacity-0')) el.classList.add('hidden'); }, 300);
+                }
             };
         }
 
@@ -284,18 +300,24 @@
         const backdrop = document.getElementById('patternFilterBackdrop');
         if (!popover) return;
 
-        const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : popover.classList.contains('hidden');
+        const isHidden = popover.classList.contains('hidden') || popover.classList.contains('opacity-0');
+        const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : isHidden;
 
         if (shouldOpen) {
             window.renderPatternFilterList();
             popover.classList.remove('hidden');
+            void popover.offsetWidth; // Force Reflow
+            popover.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
+            popover.classList.add('opacity-100', 'scale-100');
             if (button) button.classList.add('pattern-toggle-active');
             if (backdrop) {
                 backdrop.classList.remove('opacity-0', 'pointer-events-none');
                 backdrop.classList.add('opacity-100');
             }
         } else {
-            popover.classList.add('hidden');
+            popover.classList.remove('opacity-100', 'scale-100');
+            popover.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
+            setTimeout(() => { if (popover.classList.contains('opacity-0')) popover.classList.add('hidden'); }, 300);
             if (button) button.classList.remove('pattern-toggle-active');
             if (backdrop) {
                 backdrop.classList.remove('opacity-100');
@@ -437,10 +459,10 @@
         }
 
         if (popover) {
-            if (popover.classList.contains('hidden')) {
-                popover.classList.add('animate-apple-in');
-            }
-            popover.classList.add('pattern-filter-popover', 'refined-glass', 'rounded-[24px]', 'shadow-2xl');
+            popover.classList.remove('opacity-100', 'scale-100');
+            popover.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
+            setTimeout(() => { if (popover.classList.contains('opacity-0')) popover.classList.add('hidden'); }, 300);
+            popover.classList.add('pattern-filter-popover', 'refined-glass', 'rounded-[24px]', 'shadow-2xl', 'transition-all', 'duration-300');
         }
 
         if (button) {
@@ -474,14 +496,21 @@
         const menu = document.getElementById('hamburgerMenu');
         const backdrop = document.getElementById('hamburgerBackdrop');
         if (!menu) return;
-        if (menu.classList.contains('hidden')) {
+
+        const isHidden = menu.classList.contains('hidden') || menu.classList.contains('opacity-0');
+        if (isHidden) {
             menu.classList.remove('hidden');
+            void menu.offsetWidth;
+            menu.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
+            menu.classList.add('opacity-100', 'scale-100');
             if (backdrop) {
                 backdrop.classList.remove('opacity-0', 'pointer-events-none');
                 backdrop.classList.add('opacity-100');
             }
         } else {
-            menu.classList.add('hidden');
+            menu.classList.remove('opacity-100', 'scale-100');
+            menu.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
+            setTimeout(() => { if (menu.classList.contains('opacity-0')) menu.classList.add('hidden'); }, 300);
             if (backdrop) {
                 backdrop.classList.remove('opacity-100');
                 backdrop.classList.add('opacity-0', 'pointer-events-none');
