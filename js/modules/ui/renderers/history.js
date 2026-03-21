@@ -129,6 +129,14 @@
         const tbody = targetContainer || document.getElementById('historyBody');
         if (!tbody) return;
 
+        // Spacer to push Spin 1 down so it isn't hidden under the fixed app header
+        if (spin.index === 0) {
+            const spacer = document.createElement('tr');
+            spacer.className = "h-[4.5rem] bg-transparent border-none pointer-events-none";
+            spacer.innerHTML = `<td colspan="5"></td>`;
+            tbody.appendChild(spacer);
+        }
+
         const tr = document.createElement('tr');
         tr.className = "history-row relative transition-colors bg-white/[0.01] hover:bg-white/[0.06]";
         tr.id = `row-${spin.id}`;

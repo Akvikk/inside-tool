@@ -49,6 +49,7 @@
         // Enforce global routing to bypass legacy script conflicts
         window.addSpin = addSpin;
         window.handleGridClick = handleGridClick;
+        window.undoSpin = undoSpin;
 
         document.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
@@ -119,14 +120,22 @@
         const stateRef = getState();
         if (!stateRef.history || stateRef.history.length === 0) return;
 
-        // 1. Remove the last spin
-        stateRef.history.pop();
+        // Lock to prevent multiple spins from being removed by rapid clicks
+        if (stateRef.isUndoing) return;
+        stateRef.isUndoing = true;
 
-        // 2. Clone the remaining spins to rebuild state
-        const remainingSpins = stateRef.history.map(s => s.num);
+        try {
+            // 1. Remove the last spin
+            stateRef.history.pop();
 
-        // 3. Rebuild in background so large histories don't lock the UI.
-        if (window.rebuildSessionFromSpins) await window.rebuildSessionFromSpins(remainingSpins, { scrollToEnd: false });
+            // 2. Clone the remaining spins to rebuild state
+            const remainingSpins = stateRef.history.map(s => s.num);
+
+            // 3. Rebuild in background so large histories don't lock the UI.
+            if (window.rebuildSessionFromSpins) await window.rebuildSessionFromSpins(remainingSpins, { scrollToEnd: false });
+        } finally {
+            stateRef.isUndoing = false;
+        }
     }
 
     async function processSpinValue(val, options = {}) {

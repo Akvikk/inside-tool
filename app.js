@@ -50,24 +50,31 @@ window.syncAppStore = function () {
     }
 };
 
-window.resetData = function () {
-    if (window.state) {
-        window.state.history = []; window.state.activeBets = []; window.state.faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-        window.state.engineSnapshot = null; window.state.strategySyncCache = { series: null, combo: null, inside: null };
-        window.state.userStats = { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
-        window.state.engineStats = { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {}, signalLog: [] };
-    }
-    window.currentAlerts = [];
-    if (window.EngineCore) window.EngineCore.reset();
-    const tbody = document.getElementById('historyBody'); if (tbody) tbody.innerHTML = '';
-    if (window.renderGapStats) window.renderGapStats();
-    if (window.renderDashboardSafe) window.renderDashboardSafe([]);
-    if (window.HudManager && window.HudManager.update) window.HudManager.update();
-    if (window.syncAppStore) window.syncAppStore();
-    if (window.saveSessionData) window.saveSessionData();
+window.resetData = async function () {
     const confirmModal = document.getElementById('confirmModal');
     if (confirmModal && !confirmModal.classList.contains('hidden')) confirmModal.classList.add('hidden');
+
+    if (window.rebuildSessionFromSpins) {
+        await window.rebuildSessionFromSpins([]);
+    } else {
+        if (window.state) {
+            window.state.history = []; window.state.activeBets = []; window.state.faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+            window.state.engineSnapshot = null; window.state.strategySyncCache = { series: null, combo: null, inside: null };
+            window.state.userStats = { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
+            window.state.engineStats = { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {}, signalLog: [] };
+            window.state.globalSpinIdCounter = 0;
+        }
+        window.currentAlerts = [];
+        if (window.EngineCore && window.EngineCore.reset) window.EngineCore.reset();
+        const tbody = document.getElementById('historyBody'); if (tbody) tbody.innerHTML = '';
+        if (window.renderGapStats) window.renderGapStats();
+        if (window.renderDashboardSafe) window.renderDashboardSafe([]);
+        if (window.HudManager && window.HudManager.update) window.HudManager.update();
+        if (window.syncAppStore) window.syncAppStore();
+        if (window.saveSessionData) window.saveSessionData();
+    }
 };
+window.performReset = window.resetData;
 
 window.syncUIWithStrategyMode = function () {
     const strategyKey = window.state && window.state.currentGameplayStrategy ? window.state.currentGameplayStrategy : 'series';
@@ -113,7 +120,7 @@ window.setGameplayStrategy = async function (strategyKey) {
         if (window.renderDashboardSafe) window.renderDashboardSafe(window.state.activeBets || []);
         if (window.reRenderHistory) window.reRenderHistory();
     }
-    
+
     if (window.renderPatternFilterList) window.renderPatternFilterList();
     if (window.syncPatternFilterButton) window.syncPatternFilterButton();
     if (window.saveSessionData) window.saveSessionData();
