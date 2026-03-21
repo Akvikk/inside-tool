@@ -77,7 +77,7 @@ window.StrategyRegistry.series = {
      * @param {Object} patternConfig - the global patternConfig
      */
     run(historyData, snapshot, patternConfig, options = {}) {
-        if (historyData.length < 2) return { notifications: [], nextBets: [] };
+        if (!historyData || historyData.length < 2) return { notifications: [], nextBets: [] };
 
         const notifications = [];
         const nextBets = [];

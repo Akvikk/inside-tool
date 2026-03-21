@@ -360,6 +360,10 @@ const PredictionEngine = {
             .filter(combo => combo.hits >= 3)
             .sort((a, b) => (b.hits - a.hits) || ((b.lastSeenIndex ?? -1) - (a.lastSeenIndex ?? -1)) || (a.label > b.label ? 1 : -1));
 
+        const aliveCombos = stats14.comboStats
+            .filter(combo => combo.hits >= 2 && combo.hits < 3)
+            .sort((a, b) => (b.hits - a.hits) || ((b.lastSeenIndex ?? -1) - (a.lastSeenIndex ?? -1)) || (a.label > b.label ? 1 : -1));
+
         let targetFace = null;
         let action = 'WAIT';
         let confidence = 0;

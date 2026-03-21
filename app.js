@@ -73,6 +73,10 @@ window.resetData = async function () {
         if (window.syncAppStore) window.syncAppStore();
         if (window.saveSessionData) window.saveSessionData();
     }
+
+    if (window.UiController && typeof window.UiController.showToast === 'function') {
+        window.UiController.showToast('Session data reset successfully.', 'info');
+    }
 };
 window.performReset = window.resetData;
 
