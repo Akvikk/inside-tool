@@ -290,11 +290,17 @@
             window.renderPatternFilterList();
             popover.classList.remove('hidden');
             if (button) button.classList.add('pattern-toggle-active');
-            if (backdrop) backdrop.classList.remove('hidden');
+            if (backdrop) {
+                backdrop.classList.remove('opacity-0', 'pointer-events-none');
+                backdrop.classList.add('opacity-100');
+            }
         } else {
             popover.classList.add('hidden');
             if (button) button.classList.remove('pattern-toggle-active');
-            if (backdrop) backdrop.classList.add('hidden');
+            if (backdrop) {
+                backdrop.classList.remove('opacity-100');
+                backdrop.classList.add('opacity-0', 'pointer-events-none');
+            }
         }
         if (window.syncPatternFilterButton) window.syncPatternFilterButton();
     };
@@ -305,7 +311,10 @@
         const backdrop = document.getElementById('patternFilterBackdrop');
         if (popover) popover.classList.add('hidden');
         if (button) button.classList.remove('pattern-toggle-active');
-        if (backdrop) backdrop.classList.add('hidden');
+        if (backdrop) {
+            backdrop.classList.remove('opacity-100');
+            backdrop.classList.add('opacity-0', 'pointer-events-none');
+        }
     };
 
     window.renderPatternFilterList = function () {
@@ -467,10 +476,16 @@
         if (!menu) return;
         if (menu.classList.contains('hidden')) {
             menu.classList.remove('hidden');
-            if (backdrop) backdrop.classList.remove('hidden');
+            if (backdrop) {
+                backdrop.classList.remove('opacity-0', 'pointer-events-none');
+                backdrop.classList.add('opacity-100');
+            }
         } else {
             menu.classList.add('hidden');
-            if (backdrop) backdrop.classList.add('hidden');
+            if (backdrop) {
+                backdrop.classList.remove('opacity-100');
+                backdrop.classList.add('opacity-0', 'pointer-events-none');
+            }
         }
     };
 
