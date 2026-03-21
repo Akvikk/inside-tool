@@ -74,10 +74,10 @@
     align-items: center;
     gap: 6px;
     flex-shrink: 0;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
+    font-family: inherit;
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: normal;
     white-space: nowrap;
 }
 
@@ -86,40 +86,27 @@
 }
 
 .prediction-entry--win .prediction-entry-status {
-    color: var(--theme-green);
-    text-shadow: 0 0 12px rgba(52, 199, 89, 0.25);
-    animation: softPulse 2.5s infinite alternate;
-}
-
-@keyframes softPulse {
-    from {
-        filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.05));
-    }
-
-    to {
-        filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.15));
-    }
+    color: #32D74B;
 }
 
 .prediction-entry--loss {
-    opacity: 0.45;
+    opacity: 0.6;
 }
 
 .prediction-entry--loss .prediction-entry-status {
-    color: var(--theme-red);
+    color: #FF453A;
 }
 
 .prediction-entry-label {
-    color: rgba(255, 255, 255, 0.48);
-    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.5);
 }
 
 .prediction-entry-detail {
     min-width: 0;
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.4;
     text-align: right;
     word-break: break-word;
     word-wrap: break-word;
@@ -127,18 +114,18 @@
 }
 
 .prediction-entry-note {
-    color: rgba(255, 255, 255, 0.48);
-    font-size: 12px;
-    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.75rem;
+    line-height: 1.4;
     text-align: right;
     word-wrap: break-word;
     white-space: normal;
 }
 
 .prediction-empty {
-    color: rgba(255, 255, 255, 0.32);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-    font-size: 12px;
+    color: rgba(255, 255, 255, 0.4);
+    font-family: inherit;
+    font-size: 0.875rem;
 }
 
 

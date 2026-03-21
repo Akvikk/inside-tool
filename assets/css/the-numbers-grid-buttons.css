@@ -3,24 +3,21 @@
     position: relative;
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 14px;
+    border-radius: 12px;
     backdrop-filter: blur(20px);
     font-weight: 700;
-    font-size: 1.05rem;
+    font-size: 0.95rem;
     transition: all 0.2s var(--ease-strike);
     color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 48px;
+    height: 42px;
     width: 100%;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.15);
 }
 
-/* Single columns are squares */
-.grid-cols-3 .grid-btn:not(.col-span-3) {
-    aspect-ratio: 1;
-}
+
 
 .grid-btn:hover {
     transform: translateY(-1px);

@@ -26,13 +26,13 @@
                 : `border-color: ${accent}40`;
 
             cards.push(`
-                <div class="min-w-[250px] h-[64px] px-3 py-2 rounded-[14px] border border-white/10 flex items-center justify-between cursor-pointer select-none transition-all hover:brightness-110"
+                <div class="min-w-[220px] h-[46px] px-3 py-1.5 rounded-xl border border-white/10 flex items-center justify-between cursor-pointer select-none transition-all hover:brightness-110"
                      ondblclick="if(window.toggleBetConfirmation) window.toggleBetConfirmation(${index})"
                      title="Double-click to ${bet.confirmed ? 'unselect' : 'select'}"
-                     style="border-left: 4px solid ${accent}; ${borderStyle}; ${bgStyle}; backdrop-filter: blur(20px); box-shadow: 0 8px 24px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.15);">
+                     style="border-left: 3px solid ${accent}; ${borderStyle}; ${bgStyle}; backdrop-filter: blur(20px); box-shadow: 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.15);">
                     <div class="min-w-0">
-                        <div class="text-[15px] leading-tight font-black text-white tracking-wide drop-shadow-sm">BET F${bet.targetFace}</div>
-                        <div class="text-[11px] leading-tight text-white/80 font-semibold mt-0.5">${subtitle}</div>
+                        <div class="text-[13px] leading-tight font-black text-white tracking-wide uppercase">BET F${bet.targetFace}</div>
+                        <div class="text-[10px] leading-tight text-white/50 font-bold mt-0.5 truncate">${subtitle}</div>
                     </div>
                 </div>
             `);
@@ -40,19 +40,19 @@
 
         if (cards.length === 0) {
             const snapshot = state.engineSnapshot || { engineState: 'WAITING', spinsUntilNextCheckpoint: '-' };
-            let emptyLabel = 'SCANNING...';
+            let emptyLabel = 'AWAITING PROTOCOL...';
 
             if (snapshot.engineState === 'BUILDING') {
-                emptyLabel = `BUILDING ENGINE • ${snapshot.spinsUntilNextCheckpoint} SPINS UNTIL FIRST READ`;
+                emptyLabel = `SCANNING SESSION • ${snapshot.spinsUntilNextCheckpoint} SPINS TO START`;
             } else if (snapshot.engineState === 'WAITING') {
-                emptyLabel = `NEXT READ IN ${snapshot.spinsUntilNextCheckpoint} SPINS`;
+                emptyLabel = `NEXT ENGINE READ IN ${snapshot.spinsUntilNextCheckpoint} SPINS`;
             } else if (snapshot.engineState === 'WATCHLIST') {
-                emptyLabel = `WATCHLIST • ${snapshot.dominantCombo ? snapshot.dominantCombo.label : 'NO ACTION'}`;
+                emptyLabel = `WATCHLIST • ${snapshot.dominantCombo ? snapshot.dominantCombo.label : 'IDLE'}`;
             } else if (snapshot.engineState === 'NO_SIGNAL') {
-                emptyLabel = 'NO SIGNAL • CHECKPOINT CLEAR';
+                emptyLabel = 'SIGNAL CLEAR • STANDBY';
             }
 
-            dash.innerHTML = `<div class="dashboard-empty w-full text-center text-[10px] font-bold text-white/50 border border-white/10 rounded-[14px] bg-white/5 backdrop-blur-md p-2 select-none tracking-widest flex items-center justify-center h-[60px] shadow-inner uppercase"><span>${emptyLabel}</span></div>`;
+            dash.innerHTML = `<div class="w-full text-center text-[9px] font-black text-white/10 select-none uppercase tracking-[0.3em] py-4 h-14 flex items-center justify-center">${emptyLabel}</div>`;
             return;
         }
 
