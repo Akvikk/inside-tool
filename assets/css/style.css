@@ -29,8 +29,10 @@
 }
 
 body {
-    background-color: var(--bg-deep);
-    background-image: radial-gradient(circle at 50% 50%, #121214 0%, transparent 80%);
+    background-color: #000000;
+    background-image: 
+        radial-gradient(circle at 0% 0%, rgba(10, 132, 255, 0.15) 0%, transparent 50%), 
+        radial-gradient(circle at 100% 100%, rgba(191, 90, 242, 0.12) 0%, transparent 50%);
     color: var(--text-primary);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -38,7 +40,6 @@ body {
     overflow: hidden;
     position: relative;
     letter-spacing: normal;
-    /* Reset for better readability */
 }
 
 /* Global Header Constraints */
@@ -233,20 +234,20 @@ button:active,
 /* --- THE NUMBERS (Grid Buttons) --- */
 .grid-btn {
     position: relative;
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 12px;
-    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    backdrop-filter: blur(20px);
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 1.05rem;
     transition: all 0.2s var(--ease-strike);
     color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 44px;
-    /* FIXED HEIGHT TO PREVENT SQUEEZING */
+    height: 48px;
     width: 100%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.15);
 }
 
 /* Single columns are squares */
@@ -258,6 +259,7 @@ button:active,
     transform: translateY(-1px);
     color: #ffffff;
     background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.2);
 }
 
 .grid-btn:active {
@@ -266,21 +268,24 @@ button:active,
 
 /* Active iOS-style Toggles */
 .grid-red {
-    background: var(--theme-red) !important;
+    background: linear-gradient(180deg, #FF5147 0%, #FF3B30 100%) !important;
     color: #ffffff !important;
-    border: none !important;
+    border: 1px solid rgba(255, 59, 48, 0.4) !important;
+    box-shadow: 0 4px 12px rgba(255, 59, 48, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.3) !important;
 }
 
 .grid-green {
-    background: var(--theme-green) !important;
+    background: linear-gradient(180deg, #34d65c 0%, #28a745 100%) !important;
     color: #ffffff !important;
-    border: none !important;
+    border: 1px solid rgba(52, 214, 92, 0.4) !important;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.3) !important;
 }
 
 .grid-black {
-    background: #2C2C2E !important;
+    background: linear-gradient(180deg, #3a3a3c 0%, #1c1c1e 100%) !important;
     color: #ffffff !important;
-    border: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.12) !important;
 }
 
 
@@ -718,26 +723,25 @@ button.bg-gradient-to-b:active {
 /* --- HISTORY TABLE --- */
 .history-table {
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0 4px;
+    border-collapse: collapse;
     table-layout: fixed;
     /* Force respect for column widths */
 }
 
 .history-table th {
-    color: var(--theme-gold);
-    font-size: 0.7rem;
-    font-weight: 600;
+    color: rgba(235, 235, 245, 0.6);
+    font-size: 0.65rem;
+    font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 0.15em;
+    letter-spacing: 0.08em;
     position: sticky;
     top: 0;
     /* INSIDE SCROLL CONTAINER */
     z-index: 30;
-    background: rgba(10, 10, 12, 0.65) !important;
+    background: rgba(28, 28, 30, 0.65) !important;
     /* Retinal Soft Base */
     backdrop-filter: blur(40px) saturate(180%);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+    border-bottom: 0.5px solid rgba(255, 255, 255, 0.1) !important;
     box-shadow: none !important;
     padding: 12px 10px;
     text-align: center;
@@ -745,11 +749,10 @@ button.bg-gradient-to-b:active {
 }
 
 .history-table td {
-    padding: 3px 5px;
+    padding: 8px 5px;
     vertical-align: middle;
     text-align: center;
-    border-bottom: 0;
-    /* Removed overflow:hidden to prevent bridge clipping */
+    border-bottom: 0.5px solid rgba(255, 255, 255, 0.05);
 }
 
 .history-table td.combo-cell {
@@ -966,20 +969,23 @@ button.bg-gradient-to-b:active {
 }
 
 .bg-red {
-    background: rgba(255, 69, 58, 0.5);
-    /* translucent red */
+    background: linear-gradient(180deg, #FF5147 0%, #FF3B30 100%);
+    box-shadow: 0 4px 10px rgba(255, 59, 48, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 59, 48, 0.8);
     color: white;
 }
 
 .bg-black {
-    background: rgba(80, 80, 80, 0.5);
-    /* translucent gray */
+    background: linear-gradient(180deg, #3a3a3c 0%, #1c1c1e 100%);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     color: white;
 }
 
 .bg-green {
-    background: rgba(48, 209, 88, 0.5);
-    /* translucent green */
+    background: linear-gradient(180deg, #34d65c 0%, #28a745 100%);
+    box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(52, 214, 92, 0.8);
     color: white;
 }
 

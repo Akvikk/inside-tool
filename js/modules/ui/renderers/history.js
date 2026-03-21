@@ -95,7 +95,7 @@
         if (!tbody) return;
 
         const tr = document.createElement('tr');
-        tr.className = "history-row relative hover:bg-white/[0.03]";
+        tr.className = "history-row relative transition-colors bg-white/[0.01] hover:bg-white/[0.06]";
 
         const RED_NUMS = window.config && window.config.RED_NUMS ? window.config.RED_NUMS : [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
         let bgClass = spin.num === 0 ? 'bg-green' : (RED_NUMS.includes(spin.num) ? 'bg-red' : 'bg-black');
