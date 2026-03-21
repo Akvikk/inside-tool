@@ -144,85 +144,107 @@
 
     <!-- HAMBURGER DROPDOWN MENU -->
     <div id="hamburgerMenu"
-        class="hidden fixed top-[64px] right-4 w-64 rounded-xl border border-white/10 bg-[#0A0A0C]/95 backdrop-blur-[40px] shadow-[0_20px_50px_rgba(0,0,0,0.9)] z-50 overflow-hidden transform origin-top-right transition-all duration-200">
+        class="hidden fixed top-[64px] right-4 w-[280px] rounded-[24px] border border-white/10 bg-[#1C1C1E]/80 backdrop-blur-[40px] saturate-150 shadow-2xl z-50 overflow-hidden transform origin-top-right transition-all duration-300 flex flex-col animate-apple-in">
 
         <!-- STOPWATCH SECTION -->
-        <div class="px-4 py-3 border-b border-white/5 bg-white/5 flex flex-col items-center justify-center">
-            <div class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 w-full text-left">Session
+        <div class="p-4 flex flex-col items-center justify-center relative">
+            <div class="text-[10px] font-black text-white/40 uppercase tracking-widest mb-2 w-full text-left">Session
                 Timer</div>
             <div id="stopwatchDisplay"
-                class="text-2xl font-mono text-white mb-3 tracking-widest font-semibold drop-shadow-md">00:00:00</div>
+                class="text-3xl font-mono text-white mb-3 tracking-widest font-semibold drop-shadow-md">00:00:00</div>
             <div class="flex gap-2 w-full justify-center">
                 <button onclick="toggleStopwatch()" id="stopwatchToggleBtn"
-                    class="flex-1 text-[10px] font-semibold uppercase tracking-wider bg-[#30D158]/20 text-[#30D158] hover:bg-[#30D158]/30 py-2 rounded-lg flex items-center justify-center transition-colors border border-[#30D158]/30">
+                    class="flex-1 text-[11px] font-bold tracking-wide bg-[#30D158]/20 text-[#30D158] hover:bg-[#30D158]/30 py-2.5 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-[0.98]">
                     <i class="fas fa-play mr-2" id="stopwatchIcon"></i> <span id="stopwatchText">Start</span>
                 </button>
                 <button onclick="resetStopwatch()"
-                    class="flex-1 text-[10px] font-semibold uppercase tracking-wider bg-[#ff1a33]/20 text-[#ff1a33] hover:bg-[#ff1a33]/30 py-2 rounded-lg flex items-center justify-center transition-colors border border-[#ff1a33]/30">
+                    class="flex-1 text-[11px] font-bold tracking-wide bg-[#FF453A]/20 text-[#FF453A] hover:bg-[#FF453A]/30 py-2.5 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-[0.98]">
                     <i class="fas fa-undo mr-2"></i> Reset
                 </button>
             </div>
         </div>
 
-        <!-- DATA SECTION -->
-        <div class="px-4 py-3 border-b border-white/5 bg-white/5 flex justify-between items-center cursor-pointer hover:bg-white/10 transition-colors"
-            onclick="toggleAccordion('dataSubMenu')">
-            <span class="text-[10px] font-semibold text-gray-300 uppercase tracking-wider">Data Settings</span>
-            <i class="fas fa-chevron-down text-gray-500 text-xs transition-transform duration-200"
-                id="dataSubMenuIcon"></i>
-        </div>
-        <div id="dataSubMenu" class="hidden bg-black/40 overflow-hidden transition-all duration-200">
-            <button onclick="exportSpins()"
-                class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:bg-white/10 hover:text-white transition-colors flex items-center group">
-                <i
-                    class="fas fa-download mr-3 text-[#0A84FF] w-4 text-center group-hover:scale-110 transition-transform"></i>
-                Export History
-            </button>
-            <label
-                class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:bg-white/10 hover:text-white border-b border-white/5 transition-colors cursor-pointer flex items-center m-0 group">
-                <i
-                    class="fas fa-upload mr-3 text-[#30D158] w-4 text-center group-hover:scale-110 transition-transform"></i>
-                Import History
-                <input type="file" id="importFile" class="hidden" accept=".json" onchange="importSpins(this)">
-            </label>
-        </div>
+        <div class="h-[1px] bg-white/[0.05] mx-2"></div>
 
-        <!-- INPUT SECTION -->
-        <div class="px-4 py-3 border-b border-white/5 bg-white/5 flex justify-between items-center cursor-pointer hover:bg-white/10 transition-colors"
-            onclick="toggleAccordion('inputSubMenu')">
-            <span class="text-[10px] font-semibold text-gray-300 uppercase tracking-wider">Input Settings</span>
-            <i class="fas fa-chevron-down text-gray-500 text-xs transition-transform duration-200"
-                id="inputSubMenuIcon"></i>
-        </div>
-        <div id="inputSubMenu" class="hidden bg-black/40 overflow-hidden transition-all duration-200">
-            <div class="px-4 py-3 border-b border-white/5 hover:bg-white/10 transition-colors flex items-center justify-between cursor-pointer group"
-                onclick="toggleInputLayout()">
-                <div class="text-xs text-gray-300 group-hover:text-white flex items-center">
+        <div class="p-2 flex flex-col gap-1">
+            <!-- DATA SECTION -->
+            <div class="flex items-center justify-between p-3 rounded-xl transition-all duration-300 hover:bg-white/[0.05] active:scale-[0.98] cursor-pointer group"
+                onclick="toggleAccordion('dataSubMenu')">
+                <span class="text-[11px] font-bold text-white/90 tracking-wide flex items-center gap-3">
                     <i
-                        class="fas fa-th mr-3 text-[#BF5AF2] w-4 text-center group-hover:scale-110 transition-transform"></i>
-                    Layout Map
-                </div>
-                <span id="layoutLabel"
-                    class="text-[9px] font-bold bg-white/10 px-2.5 py-1 rounded-md text-white shadow-inner">GRID</span>
+                        class="fas fa-database text-white/40 group-hover:text-[#0A84FF] transition-colors w-4 text-center"></i>
+                    Data Settings
+                </span>
+                <i class="fas fa-chevron-down text-white/30 text-[10px] transition-transform duration-300"
+                    id="dataSubMenuIcon"></i>
             </div>
-        </div>
+            <div id="dataSubMenu"
+                class="hidden overflow-hidden transition-all duration-300 flex flex-col gap-1 px-2 pb-1">
+                <button onclick="exportSpins()"
+                    class="flex items-center p-2.5 rounded-lg transition-all duration-300 hover:bg-white/[0.03] active:scale-[0.98] group/item text-left w-full">
+                    <i
+                        class="fas fa-download mr-3 text-[#0A84FF] w-4 text-center text-[10px] group-hover/item:scale-110 transition-transform"></i>
+                    <span
+                        class="text-[11px] font-bold text-white/70 group-hover/item:text-white/90 tracking-wide">Export
+                        History</span>
+                </button>
+                <label
+                    class="flex items-center p-2.5 rounded-lg transition-all duration-300 hover:bg-white/[0.03] active:scale-[0.98] group/item text-left w-full cursor-pointer m-0">
+                    <i
+                        class="fas fa-upload mr-3 text-[#30D158] w-4 text-center text-[10px] group-hover/item:scale-110 transition-transform"></i>
+                    <span
+                        class="text-[11px] font-bold text-white/70 group-hover/item:text-white/90 tracking-wide">Import
+                        History</span>
+                    <input type="file" id="importFile" class="hidden" accept=".json" onchange="importSpins(this)">
+                </label>
+            </div>
 
-        <!-- STRATEGY SETTINGS -->
-        <div class="px-4 py-3 border-b border-white/5 bg-white/5 flex justify-between items-center cursor-pointer hover:bg-white/10 transition-colors"
-            onclick="toggleAccordion('strategySubMenu')">
-            <span class="text-[10px] font-semibold text-gray-300 uppercase tracking-wider">Strategy Settings</span>
-            <i class="fas fa-chevron-down text-gray-500 text-xs transition-transform duration-200"
-                id="strategySubMenuIcon"></i>
-        </div>
-        <div id="strategySubMenu" class="hidden bg-black/40 overflow-hidden transition-all duration-200">
-            <div class="px-4 py-3 border-b border-white/5">
-                <div class="flex flex-col gap-2">
-                    <label for="hamburgerStrategySelect" class="text-xs text-gray-300 flex items-center">
-                        <i class="fas fa-chess-knight mr-2 text-[#0A84FF]"></i>
+            <!-- INPUT SECTION -->
+            <div class="flex items-center justify-between p-3 rounded-xl transition-all duration-300 hover:bg-white/[0.05] active:scale-[0.98] cursor-pointer group"
+                onclick="toggleAccordion('inputSubMenu')">
+                <span class="text-[11px] font-bold text-white/90 tracking-wide flex items-center gap-3">
+                    <i
+                        class="fas fa-keyboard text-white/40 group-hover:text-[#BF5AF2] transition-colors w-4 text-center"></i>
+                    Input Settings
+                </span>
+                <i class="fas fa-chevron-down text-white/30 text-[10px] transition-transform duration-300"
+                    id="inputSubMenuIcon"></i>
+            </div>
+            <div id="inputSubMenu"
+                class="hidden overflow-hidden transition-all duration-300 flex flex-col gap-1 px-2 pb-1">
+                <div class="flex items-center justify-between p-2.5 rounded-lg transition-all duration-300 hover:bg-white/[0.03] active:scale-[0.98] cursor-pointer group/item"
+                    onclick="toggleInputLayout()">
+                    <div
+                        class="text-[11px] font-bold text-white/70 group-hover/item:text-white/90 tracking-wide flex items-center">
+                        <i
+                            class="fas fa-th mr-3 text-[#BF5AF2] w-4 text-center text-[10px] group-hover/item:scale-110 transition-transform"></i>
+                        Layout Map
+                    </div>
+                    <span id="layoutLabel"
+                        class="text-[9px] font-black bg-white/10 px-2 py-1 rounded-md text-white shadow-inner uppercase tracking-widest">GRID</span>
+                </div>
+            </div>
+
+            <!-- STRATEGY SETTINGS -->
+            <div class="flex items-center justify-between p-3 rounded-xl transition-all duration-300 hover:bg-white/[0.05] active:scale-[0.98] cursor-pointer group"
+                onclick="toggleAccordion('strategySubMenu')">
+                <span class="text-[11px] font-bold text-white/90 tracking-wide flex items-center gap-3">
+                    <i
+                        class="fas fa-chess-knight text-white/40 group-hover:text-[#FFD60A] transition-colors w-4 text-center"></i>
+                    Strategy Settings
+                </span>
+                <i class="fas fa-chevron-down text-white/30 text-[10px] transition-transform duration-300"
+                    id="strategySubMenuIcon"></i>
+            </div>
+            <div id="strategySubMenu"
+                class="hidden overflow-hidden transition-all duration-300 flex flex-col gap-1 px-2 pb-1">
+                <div class="p-2.5">
+                    <label for="hamburgerStrategySelect"
+                        class="text-[10px] font-black text-white/50 uppercase tracking-widest flex items-center mb-2">
                         Active Strategy
                     </label>
                     <select id="hamburgerStrategySelect" onchange="setGameplayStrategy(this.value)"
-                        class="w-full bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#30D158] transition-all">
+                        class="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-3 text-[11px] font-bold text-white/90 tracking-wide focus:outline-none focus:ring-1 focus:ring-[#30D158] transition-all cursor-pointer">
                         <option value="series">SERIES</option>
                         <option value="combo">COMBOS</option>
                         <option value="inside">INSIDE PATTERNS</option>
@@ -231,14 +253,17 @@
             </div>
         </div>
 
+        <div class="h-[1px] bg-white/[0.05] mx-2"></div>
 
-
-        <button onclick="resetSession()"
-            class="w-full text-left px-4 py-3 text-xs text-gray-300 hover:bg-[#ff1a33]/20 hover:text-[#ff1a33] transition-colors flex items-center group">
-            <i
-                class="fas fa-power-off mr-3 text-red-500/70 group-hover:text-[#ff1a33] w-4 text-center transition-colors"></i>
-            Reset Session
-        </button>
+        <div class="p-2">
+            <button onclick="resetSession()"
+                class="flex items-center p-3 rounded-xl transition-all duration-300 hover:bg-[#FF453A]/10 active:scale-[0.98] group w-full text-left">
+                <i
+                    class="fas fa-power-off mr-3 text-[#FF453A]/70 group-hover:text-[#FF453A] w-4 text-center transition-colors"></i>
+                <span class="text-[11px] font-bold text-[#FF453A]/90 group-hover:text-[#FF453A] tracking-wide">Reset
+                    Session</span>
+            </button>
+        </div>
     </div>
 
 
@@ -291,7 +316,8 @@
             <!-- DASHBOARD (Relocated to Right Column to allow Grid Height Expansion) -->
             <div id="dashboard"
                 class="px-4 py-1.5 flex gap-2 overflow-x-auto h-[68px] shrink-0 items-center bg-[#1C1C1E]/30 backdrop-blur-[20px] border-b border-white/[0.04] transition-colors duration-300 z-40">
-                <div class="dashboard-empty w-full text-center text-[10px] font-medium text-[#8E8E93]/80 border border-dashed border-white/[0.08] rounded-xl p-2 select-none tracking-wide flex items-center justify-center h-[50px]">
+                <div
+                    class="dashboard-empty w-full text-center text-[10px] font-medium text-[#8E8E93]/80 border border-dashed border-white/[0.08] rounded-xl p-2 select-none tracking-wide flex items-center justify-center h-[50px]">
                     AWAITING ENGINE ACTIVITY...
                 </div>
             </div>

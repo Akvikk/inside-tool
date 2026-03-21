@@ -354,17 +354,17 @@
             }
 
             entries.push(`
-                <div class="flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 hover:bg-white/[0.03] active:scale-[0.98] cursor-pointer" onclick="togglePatternFilter('${key}')">
+                <div class="flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 hover:bg-white/[0.05] active:scale-[0.98] cursor-pointer" 
+                     onclick="event.stopPropagation(); togglePatternFilter('${key}')">
                     <div class="flex flex-col">
-                        <span class="text-[10px] font-bold text-white tracking-tight flex items-center">${meta.label || key}${accuracyText}</span>
-                        <span class="text-[8px] text-white/30 uppercase tracking-widest mt-0.5">${meta.category || 'Protocol'}</span>
+                        <span class="text-[11px] font-bold text-white/90 tracking-wide">${meta.label || key}${accuracyText}</span>
+                        ${meta.hint ? `<span class="text-[9px] text-white/30 font-medium mt-0.5">${meta.hint}</span>` : ''}
                     </div>
                     
                     <!-- APPLE NATIVE SWITCH -->
-                    <div class="h-6 w-11 rounded-full relative transition-all duration-300 ${isEnabled ? 'bg-[#30D158]' : 'bg-white/10'}" 
-                         style="${isEnabled ? `box-shadow: 0 0 10px ${accent}20;` : ''}">
-                        <div class="absolute top-1 left-1 h-4 w-4 rounded-full bg-white transition-transform duration-300 shadow-md" 
-                             style="transform: translateX(${isEnabled ? '20px' : '0'});"></div>
+                    <div class="h-5 w-9 rounded-full relative transition-all duration-300 ${isEnabled ? 'bg-[#30D158]' : 'bg-white/10'}">
+                        <div class="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white transition-transform duration-300 shadow-md" 
+                             style="transform: translateX(${isEnabled ? '16px' : '0'});"></div>
                     </div>
                 </div>
             `);
@@ -423,7 +423,10 @@
         }
 
         if (popover) {
-            popover.className = "pattern-filter-popover refined-glass rounded-[24px] shadow-2xl animate-apple-in " + (popover.classList.contains('hidden') ? 'hidden' : '');
+            if (popover.classList.contains('hidden')) {
+                popover.classList.add('animate-apple-in');
+            }
+            popover.classList.add('pattern-filter-popover', 'refined-glass', 'rounded-[24px]', 'shadow-2xl');
         }
 
         if (button) {
