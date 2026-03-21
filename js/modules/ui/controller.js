@@ -273,19 +273,7 @@
         if (strategy && strategy.PATTERN_FILTER_META) {
             return strategy.PATTERN_FILTER_META;
         }
-        if (window.PATTERN_FILTER_META) {
-            return window.PATTERN_FILTER_META;
-        }
-        if (window.PERIMETER_COMBOS) {
-            return Object.fromEntries(window.PERIMETER_COMBOS.map(combo => [combo.label, {
-                label: combo.label,
-                hint: `Track ${combo.label} inside the prediction engine and dashboard flow.`,
-                icon: 'fa-link',
-                accent: combo.color
-            }]));
-        }
-        const configObj = (window.state && window.state.patternConfig) ? window.state.patternConfig : {};
-        return Object.fromEntries(Object.keys(configObj).map(k => [k, { label: k, accent: 'var(--theme-blue)' }]));
+        return {};
     }
 
     // --- GENERIC UI & MODALS ---
@@ -320,7 +308,22 @@
         if (!list || !window.state) return;
 
         const metaData = getPatternMetaData();
-        const config = window.state.patternConfig || {};
+
+        // Active Badge Reset: disable pattern configs that don't belong to the active strategy
+        if (!window.state.patternConfig) window.state.patternConfig = {};
+        for (const key of Object.keys(window.state.patternConfig)) {
+            if (!metaData[key]) {
+                window.state.patternConfig[key] = false;
+            }
+        }
+        // Initialize newly exposed strategy patterns if they don't exist
+        for (const key of Object.keys(metaData)) {
+            if (window.state.patternConfig[key] === undefined) {
+                window.state.patternConfig[key] = true;
+            }
+        }
+
+        const config = window.state.patternConfig;
 
         let entries = [];
         for (const key of Object.keys(metaData)) {

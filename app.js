@@ -87,6 +87,9 @@ window.syncUIWithStrategyMode = function () {
 
     const strategySelect = document.getElementById('hamburgerStrategySelect');
     if (strategySelect) strategySelect.value = strategyKey;
+
+    // Re-render the pattern filter list so it instantly rebuilds with correct toggles
+    if (window.renderPatternFilterList) window.renderPatternFilterList();
 };
 
 window.setGameplayStrategy = async function (strategyKey) {
