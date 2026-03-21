@@ -7,11 +7,11 @@
 }
 
 .history-table th {
-    color: rgba(235, 235, 245, 0.6);
-    font-size: 0.65rem;
-    font-weight: 500;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 10px;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.15em;
     position: sticky;
     top: 0;
     /* INSIDE SCROLL CONTAINER */
@@ -19,9 +19,9 @@
     background: rgba(28, 28, 30, 0.65) !important;
     /* Retinal Soft Base */
     backdrop-filter: blur(40px) saturate(180%);
-    border-bottom: 0.5px solid rgba(255, 255, 255, 0.1) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
     box-shadow: none !important;
-    padding: 12px 10px;
+    padding: 14px 10px;
     text-align: center;
     /* ALIGNED text to match content */
 }
@@ -75,8 +75,8 @@
     gap: 6px;
     flex-shrink: 0;
     font-family: inherit;
-    font-size: 0.875rem;
-    font-weight: 500;
+    font-size: 13px;
+    font-weight: 800;
     letter-spacing: normal;
     white-space: nowrap;
 }
@@ -104,8 +104,8 @@
 .prediction-entry-detail {
     min-width: 0;
     color: rgba(255, 255, 255, 0.9);
-    font-size: 0.875rem;
-    font-weight: 500;
+    font-size: 13px;
+    font-weight: 800;
     line-height: 1.4;
     text-align: right;
     word-break: break-word;
@@ -154,7 +154,7 @@
 }
 
 .history-row:hover {
-    background-color: rgba(255, 255, 255, 0.03) !important;
+    background-color: rgba(255, 255, 255, 0.04) !important;
 }
 
 .history-table td:first-child {

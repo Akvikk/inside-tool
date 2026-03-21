@@ -84,7 +84,7 @@
                                      data-curr-face="${bridge.matchedCurrFace}"
                                      data-color="${bridge.color}"></div>
                                 <div class="relative z-[2] inline-flex items-center justify-center">
-                                    <span class="combo-badge relative px-3 py-1 rounded-md text-[10px] font-black font-mono tracking-widest border shadow-2xl transition-all duration-300"
+                            <span class="combo-badge relative px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase border shadow-2xl transition-all duration-300"
                                           style="color:${bridge.color}; border-color:${bridge.color}55; background-color:#0b0b0d; box-shadow: 0 0 8px ${bridge.color}40, inset 0 0 4px ${bridge.color}15;">
                                         ${bridge.label}
                                     </span>
@@ -111,7 +111,7 @@
             if (label !== '-') {
                 return `
                     <div class="relative z-[2] inline-flex items-center justify-center py-1">
-                        <span class="combo-badge relative px-3 py-1 rounded-md text-[10px] font-black font-mono tracking-widest border shadow-2xl transition-all duration-300"
+                    <span class="combo-badge relative px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase border shadow-2xl transition-all duration-300"
                               style="color:${color}; border-color:${color}55; background-color:#0b0b0d; box-shadow: 0 0 8px ${color}40, inset 0 0 4px ${color}15;">
                             ${label}
                         </span>
@@ -131,7 +131,7 @@
 
         // No spacer needed, the table header provides the context.
         const tr = document.createElement('tr');
-        tr.className = "history-row relative transition-colors bg-white/[0.01] hover:bg-white/[0.06]";
+        tr.className = "history-row relative transition-all duration-300 bg-transparent hover:bg-white/[0.04]";
         tr.id = `row-${spin.id}`;
 
         const RED_NUMS = window.config && window.config.RED_NUMS ? window.config.RED_NUMS : [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
@@ -150,7 +150,7 @@
         const predictionHTML = window.renderPredictionCell ? window.renderPredictionCell(spin) : '<span class="text-gray-600">-</span>';
 
         tr.innerHTML = `
-            <td class="text-center font-mono text-xs text-gray-400">#${spin.index + 1}</td>
+        <td class="text-center text-[11px] font-black tracking-widest text-white/30">#${spin.index + 1}</td>
             <td class="text-center"><div class="num-box ${bgClass}">${spin.num}</div></td>
             <td class="text-center relative z-[5]">${faceHTML}</td>
             <td class="text-center relative overflow-visible z-[1]">${comboHTML}</td>
