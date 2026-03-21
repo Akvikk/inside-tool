@@ -36,4 +36,37 @@
         strategySyncCache: { series: null, combo: null, inside: null }
     };
     window.currentAlerts = [];
+
+    window.updateUserStats = function(isWin, bet, spinIndex, unitChange) {
+        if (!window.state || !window.state.userStats) return;
+        const stats = window.state.userStats;
+
+        if (isWin) {
+            stats.totalWins++;
+        } else {
+            stats.totalLosses++;
+        }
+        stats.netUnits += unitChange;
+        
+        if (!stats.bankrollHistory) stats.bankrollHistory = [0];
+        stats.bankrollHistory.push(stats.netUnits);
+
+        if (!stats.betLog) stats.betLog = [];
+        stats.betLog.unshift({
+            id: stats.totalWins + stats.totalLosses,
+            patternName: bet.patternName || bet.comboLabel || 'Unknown',
+            targetFace: bet.targetFace,
+            accentColor: bet.accentColor || '#ffffff',
+            isWin: isWin,
+            spinIndex: spinIndex,
+            unitChange: unitChange
+        });
+
+        if (stats.betLog.length > 500) stats.betLog.length = 500;
+
+        // Auto-refresh the DOM if modal is open
+        if (typeof window.renderUserAnalytics === 'function') {
+            window.renderUserAnalytics();
+        }
+    };
 })();
