@@ -281,6 +281,7 @@
     window.togglePatternFilterPopover = function (forceOpen = null) {
         const popover = document.getElementById('patternFilterPopover');
         const button = document.getElementById('patternsToggleBtn');
+        const backdrop = document.getElementById('patternFilterBackdrop');
         if (!popover) return;
 
         const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : popover.classList.contains('hidden');
@@ -289,9 +290,11 @@
             window.renderPatternFilterList();
             popover.classList.remove('hidden');
             if (button) button.classList.add('pattern-toggle-active');
+            if (backdrop) backdrop.classList.remove('hidden');
         } else {
             popover.classList.add('hidden');
             if (button) button.classList.remove('pattern-toggle-active');
+            if (backdrop) backdrop.classList.add('hidden');
         }
         if (window.syncPatternFilterButton) window.syncPatternFilterButton();
     };
@@ -299,8 +302,10 @@
     window.closePatternFilterPopover = function () {
         const popover = document.getElementById('patternFilterPopover');
         const button = document.getElementById('patternsToggleBtn');
+        const backdrop = document.getElementById('patternFilterBackdrop');
         if (popover) popover.classList.add('hidden');
         if (button) button.classList.remove('pattern-toggle-active');
+        if (backdrop) backdrop.classList.add('hidden');
     };
 
     window.renderPatternFilterList = function () {
