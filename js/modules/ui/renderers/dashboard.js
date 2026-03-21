@@ -26,13 +26,13 @@
                 : `border-color: ${accent}40`;
 
             cards.push(`
-                <div class="min-w-[220px] h-[46px] px-3 py-1.5 rounded-xl border border-white/10 flex items-center justify-between cursor-pointer select-none transition-all hover:brightness-110"
+                <div class="min-w-[220px] h-[54px] px-3 py-1.5 rounded-xl border border-white/10 flex items-center justify-between cursor-pointer select-none transition-all hover:brightness-110"
                      ondblclick="if(window.toggleBetConfirmation) window.toggleBetConfirmation(${index})"
                      title="Double-click to ${bet.confirmed ? 'unselect' : 'select'}"
                      style="border-left: 3px solid ${accent}; ${borderStyle}; ${bgStyle}; backdrop-filter: blur(20px); box-shadow: 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.15);">
                     <div class="min-w-0">
-                        <div class="text-[13px] leading-tight font-black text-white tracking-wide uppercase">BET F${bet.targetFace}</div>
-                        <div class="text-[10px] leading-tight text-white/50 font-bold mt-0.5 truncate">${subtitle}</div>
+                        <div class="text-[14px] leading-tight font-black text-white tracking-wide uppercase">BET F${bet.targetFace}</div>
+                        <div class="text-[11px] leading-tight text-white/50 font-bold mt-0.5 truncate">${subtitle}</div>
                     </div>
                 </div>
             `);
@@ -52,7 +52,7 @@
                 emptyLabel = 'SIGNAL CLEAR • STANDBY';
             }
 
-            dash.innerHTML = `<div class="w-full text-center text-[9px] font-black text-white/10 select-none uppercase tracking-[0.3em] py-4 h-14 flex items-center justify-center">${emptyLabel}</div>`;
+            dash.innerHTML = `<div class="w-full text-center text-[10px] font-black text-white/10 select-none uppercase tracking-[0.3em] h-[68px] flex items-center justify-center">${emptyLabel}</div>`;
             return;
         }
 
