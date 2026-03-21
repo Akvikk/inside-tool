@@ -95,8 +95,7 @@
         if (!tbody) return;
 
         const tr = document.createElement('tr');
-        tr.className = "history-row relative hover:bg-white/[0.02] transition-colors";
-        tr.id = 'row-' + spin.id;
+        tr.className = "history-row relative hover:bg-white/[0.0
 
         const RED_NUMS = window.config && window.config.RED_NUMS ? window.config.RED_NUMS : [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
         let bgClass = spin.num === 0 ? 'bg-green' : (RED_NUMS.includes(spin.num) ? 'bg-red' : 'bg-black');
@@ -299,27 +298,22 @@
         const coreWidth = (1.9 * responsiveScale).toFixed(2);
         const mergeCoreWidth = (2.05 * responsiveScale).toFixed(2);
         const glowWidth = (4.1 * responsiveScale).toFixed(2);
-        const coreOpacity = Math.max(0.8, Math.min(0.95, 0.8 + responsiveScale * 0.12)).toFixed(2);
-        const glowOpacity = Math.max(0.18, Math.min(0.32, 0.16 + responsiveScale * 0.15)).toFixed(2);
-        const blurPx = Math.max(2, Math.round(5 * responsiveScale));
-
-        [glow1, glow2].forEach((p, idx) => {
+        const coreOpacity = Ma eu));
+, glow2].forEach((p, idx) => {
             p.setAttribute('d', idx === 0 ? d1 : d2);
             p.setAttribute('stroke', geom.color);
             p.setAttribute('stroke-width', glowWidth);
             p.setAttribute('stroke-opacity', glowOpacity);
-            p.style.filter = `drop-shadow(0 0 ${blurPx}px ${geom.color})`;
+            p.style.filter = `drop-shadow(0 0 ${blurPx}px ${geom.color}40)`;
         });
         glowMerge.setAttribute('d', dMerge);
-        glowMerge.setAttribute('stroke', geom.color);
-        glowMerge.setAttribute('stroke-width', glowWidth);
+        glowMerge.setAttribute('stroke', geom.color); ge
         glowMerge.setAttribute('stroke-opacity', (parseFloat(glowOpacity) * 0.94).toFixed(2));
-        glowMerge.style.filter = `drop-shadow(0 0 ${blurPx + 1}px ${geom.color})`;
+        glowMerge.style.filter = `drop-shadow(0 0 ${blurPx + 1}px ${geom.color}40)`;
 
         [core1, core2].forEach((p, idx) => {
             p.setAttribute('d', idx === 0 ? d1 : d2);
             p.setAttribute('stroke', geom.color);
-            p.setAttribute('stroke-width', coreWidth);
             p.setAttribute('stroke-opacity', coreOpacity);
         });
         coreMerge.setAttribute('d', dMerge);

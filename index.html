@@ -10,9 +10,9 @@
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
         :root {
-            --bg-dark: #000000;
-            --glass-bg: rgba(28, 28, 30, 0.45);
-            --glass-border: rgba(255, 255, 255, 0.08);
+            --bg-dark: #050505;
+            --glass-bg: rgba(20, 20, 22, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.06);
             --accent-blue: #0A84FF;
             --ios-green: #30D158;
             --ios-red: #FF453A;
@@ -39,11 +39,8 @@
         *::-webkit-scrollbar { display: none; }
 
         .mesh-bg {
-            background-color: #030303;
-            background-image: 
-                radial-gradient(at 0% 0%, rgba(10, 132, 255, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 0%, rgba(191, 90, 242, 0.15) 0px, transparent 50%),
-                radial-gradient(at 50% 100%, rgba(48, 209, 88, 0.1) 0px, transparent 50%);
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at 50% 50%, #121214 0%, transparent 80%);
         }
         
         @keyframes apple-scale-in {
@@ -67,8 +64,7 @@
 
     <!-- HAMBURGER MENU BACKDROP (FULL SCREEN BLUR) -->
     <div id="hamburgerBackdrop"
-        class="fixed inset-0 bg-[#030303]/40 backdrop-blur-[12px] hidden z-20 transition-all duration-300"
-        onclick="toggleHamburgerMenu()"></div>
+        class="fixed inset-0 bg-[#030303]/40 backdrop-blur-[12px] hidden z-20 transition-all duration-300"></div>
 
     <!-- 1. REFINED GLOBAL HEADER -->
     <div class="glass-header refined-glass px-4 flex justify-between items-center shrink-0 z-50 h-14 border-b border-white/5 shadow-2xl">
@@ -127,7 +123,7 @@
 
             <div class="h-4 w-[1px] bg-white/10 mx-1"></div>
 
-            <button onclick="toggleHamburgerMenu()" id="headerMenuBtn"
+            <button id="headerMenuBtn"
                 class="h-8 w-8 bg-white/5 hover:bg-white/10 text-white rounded-lg border border-white/10 flex items-center justify-center transition-all">
                 <i class="fas fa-bars"></i>
             </button>

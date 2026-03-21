@@ -85,11 +85,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (patternShell && patternPopover && !patternPopover.classList.contains('hidden') && !patternShell.contains(e.target)) {
             if (window.closePatternFilterPopover) window.closePatternFilterPopover();
         }
-        const burgerMenu = document.getElementById('hamburgerMenu');
-        const burgerBtn = document.getElementById('headerMenuBtn');
-        if (burgerMenu && !burgerMenu.classList.contains('hidden') && !burgerMenu.contains(e.target) && (!burgerBtn || !burgerBtn.contains(e.target))) {
-            if (window.toggleHamburgerMenu) window.toggleHamburgerMenu();
-        }
     });
 
     console.log("INSIDE TOOL: Bootstrapping modular architecture...");

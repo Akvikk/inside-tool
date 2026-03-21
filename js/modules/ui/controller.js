@@ -1,5 +1,4 @@
 (function () {
-    const state = window.state;
     // --- PUBLIC INTERFACE ---
     window.UiController = {
         init,
@@ -169,7 +168,8 @@
         const grid = document.getElementById('desktopGrid');
         if (!grid) return;
         grid.innerHTML = '';
-        if (state.currentInputLayout === 'racetrack') {
+        const layout = (window.state && window.state.currentInputLayout) ? window.state.currentInputLayout : 'grid';
+        if (layout === 'racetrack') {
             grid.innerHTML = `
                 <div class="flex items-center justify-center h-full w-full py-4 fade-in">
                     ${buildRacetrackSVG()}
