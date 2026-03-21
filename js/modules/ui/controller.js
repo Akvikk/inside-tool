@@ -405,13 +405,13 @@
             entries.push(`
                 <div class="flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 hover:bg-white/[0.05] active:scale-[0.98] cursor-pointer" 
                      onclick="event.stopPropagation(); togglePatternFilter('${key}')">
-                    <div class="flex flex-col">
-                        <span class="text-[11px] font-bold text-white/90 tracking-wide">${meta.label || key}${accuracyText}</span>
-                        ${meta.hint ? `<span class="text-[9px] text-white/30 font-medium mt-0.5">${meta.hint}</span>` : ''}
+                    <div class="flex flex-col flex-1 min-w-0 pr-4">
+                        <span class="text-[11px] font-bold text-white/90 tracking-wide truncate">${meta.label || key}${accuracyText}</span>
+                        ${meta.hint ? `<span class="text-[9px] text-white/30 font-medium mt-0.5 line-clamp-2 leading-tight">${meta.hint}</span>` : ''}
                     </div>
                     
-                    <!-- APPLE NATIVE SWITCH -->
-                    <div class="h-5 w-9 rounded-full relative transition-all duration-300 ${isEnabled ? 'bg-[#30D158]' : 'bg-white/10'}">
+                    <!-- APPLE NATIVE SWITCH (Stabilized) -->
+                    <div class="h-5 w-9 rounded-full relative transition-all duration-300 flex-shrink-0 ${isEnabled ? 'bg-[#30D158]' : 'bg-white/10'}">
                         <div class="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white transition-transform duration-300 shadow-md" 
                              style="transform: translateX(${isEnabled ? '16px' : '0'});"></div>
                     </div>
@@ -469,13 +469,6 @@
         if (badge) {
             badge.innerText = String(enabledCount);
             badge.classList.toggle('pattern-toggle-badge-off', enabledCount === 0);
-        }
-
-        if (popover) {
-            popover.classList.remove('opacity-100', 'scale-100');
-            popover.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
-            setTimeout(() => { if (popover.classList.contains('opacity-0')) popover.classList.add('hidden'); }, 300);
-            popover.classList.add('pattern-filter-popover', 'refined-glass', 'rounded-[24px]', 'shadow-2xl', 'transition-all', 'duration-300');
         }
 
         if (button) {
