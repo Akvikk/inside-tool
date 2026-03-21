@@ -35,12 +35,25 @@
         }
 
         /* HIDE SCROLLBARS GLOBALLY */
-        * { scrollbar-width: none; -ms-overflow-style: none; }
-        *::-webkit-scrollbar { display: none; }
-        
+        * {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        *::-webkit-scrollbar {
+            display: none;
+        }
+
         @keyframes apple-scale-in {
-            from { opacity: 0; transform: scale(0.96); }
-            to { opacity: 1; transform: scale(1); }
+            from {
+                opacity: 0;
+                transform: scale(0.96);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
 
         .animate-apple-in {
@@ -62,7 +75,8 @@
         class="fixed inset-0 bg-[#030303]/40 backdrop-blur-[12px] hidden z-20 transition-all duration-300"></div>
 
     <!-- 1. REFINED GLOBAL HEADER -->
-    <div class="glass-header refined-glass px-4 flex justify-between items-center shrink-0 z-50 h-14 border-b border-white/5 shadow-2xl">
+    <div
+        class="glass-header refined-glass px-4 flex justify-between items-center shrink-0 z-50 h-14 border-b border-white/5 shadow-2xl">
         <!-- LEFT: INPUTS -->
         <div class="flex items-center gap-2">
             <div class="relative">
@@ -88,15 +102,20 @@
 
 
             <div id="patternFilterShell" class="relative">
-                <button id="patternsToggleBtn" onclick="togglePatternFilterPopover()"
+                <button id="patternsToggleBtn"
                     class="h-8 px-3 bg-white/5 hover:bg-white/10 text-[#BF5AF2] font-bold rounded-lg border border-[#BF5AF2]/10 flex items-center gap-2 text-[10px] transition-all">
                     <i class="fas fa-filter"></i>
                     <span class="hidden md:inline">PATTERNS</span>
                 </button>
-                <div id="patternFilterPopover" class="pattern-filter-popover hidden refined-glass rounded-2xl shadow-2xl animate-apple-in absolute top-full left-0 mt-2 w-[280px] p-2 z-[70]">
+                <div id="patternFilterPopover"
+                    class="pattern-filter-popover hidden refined-glass rounded-2xl shadow-2xl animate-apple-in absolute top-full left-0 mt-2 w-[280px] p-2 z-[70]">
                     <div class="flex justify-between items-center px-3 py-2 border-b border-white/10 mb-2">
-                        <span class="text-[10px] font-black uppercase tracking-widest text-[#BF5AF2] drop-shadow-[0_0_8px_rgba(191,90,242,0.4)]">Active Filters</span>
-                        <button onclick="window.closePatternFilterPopover()" class="text-white/40 hover:text-white transition-colors h-6 w-6 flex items-center justify-center rounded-full bg-white/5 border border-white/5"><i class="fas fa-times text-[10px]"></i></button>
+                        <span
+                            class="text-[10px] font-black uppercase tracking-widest text-[#BF5AF2] drop-shadow-[0_0_8px_rgba(191,90,242,0.4)]">Active
+                            Filters</span>
+                        <button onclick="window.closePatternFilterPopover()"
+                            class="text-white/40 hover:text-white transition-colors h-6 w-6 flex items-center justify-center rounded-full bg-white/5 border border-white/5"><i
+                                class="fas fa-times text-[10px]"></i></button>
                     </div>
                     <div id="patternsList" class="max-h-[320px] overflow-y-auto custom-scroll pr-1 flex flex-col gap-1">
                         <!-- Popover content remains managed by JS -->
@@ -242,7 +261,8 @@
     <div class="flex-1 flex overflow-hidden">
         <div class="hidden md:block w-[240px] shrink-0 mesmer-grid p-3 overflow-y-auto custom-scroll" id="desktopGrid">
             <div class="grid grid-cols-3 gap-2 pb-16">
-                <button class="grid-btn grid-green col-span-3 font-bold text-sm" onclick="handleGridClick(0)">ZERO</button>
+                <button class="grid-btn grid-green col-span-3 font-bold text-sm"
+                    onclick="handleGridClick(0)">ZERO</button>
                 <button class="grid-btn grid-red" onclick="handleGridClick(1)">1</button>
                 <button class="grid-btn grid-black" onclick="handleGridClick(2)">2</button>
                 <button class="grid-btn grid-red" onclick="handleGridClick(3)">3</button>
@@ -312,28 +332,139 @@
 
     <!-- ANALYTICS HUD (FLOATING) -->
     <div id="analyticsHUD"
-        class="hidden fixed z-[40] flex-col glass-menu overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.8)] border border-white/10"
+        class="hidden fixed z-[40] flex-col bg-[#1C1C1E]/80 backdrop-blur-[40px] saturate-150 overflow-hidden shadow-2xl border border-white/[0.08] rounded-2xl transition-all duration-300 ease-out font-sans"
         style="width: 340px; top: 80px; right: 16px;">
-        <div id="hudHeader" class="cursor-move select-none">
-            <div class="hud-segment">
-                <button onclick="setHudAnalyticsStrategy('series')" id="hudStrategySeriesBtn" class="hud-segment-btn"
+        <style>
+            #analyticsHUD .hud-summary-card {
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+                padding: 10px 8px !important;
+                border-radius: 12px !important;
+                background: rgba(255, 255, 255, 0.03) !important;
+                border: 1px solid rgba(255, 255, 255, 0.06) !important;
+                box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.03) !important;
+            }
+
+            #analyticsHUD .hud-summary-top {
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                margin-bottom: 6px !important;
+            }
+
+            #analyticsHUD .hud-summary-label {
+                font-size: 11px !important;
+                font-weight: 500 !important;
+                font-family: ui-sans-serif, system-ui, sans-serif !important;
+            }
+
+            #analyticsHUD .hud-summary-value {
+                font-size: 14px !important;
+                font-weight: 600 !important;
+                color: rgba(255, 255, 255, 0.9) !important;
+                font-family: ui-sans-serif, system-ui, sans-serif !important;
+                margin: 0 !important;
+            }
+
+            #analyticsHUD .hud-summary-copy {
+                font-size: 10px !important;
+                opacity: 0.6 !important;
+                color: white !important;
+                display: flex !important;
+                gap: 4px !important;
+                align-items: center !important;
+                margin: 0 !important;
+            }
+
+            #analyticsHUD .hud-summary-percent {
+                text-shadow: none !important;
+                font-weight: 500 !important;
+                font-family: ui-sans-serif, system-ui, sans-serif !important;
+            }
+
+            #analyticsHUD .hud-row-percent {
+                text-shadow: none !important;
+                font-family: ui-sans-serif, system-ui, sans-serif !important;
+            }
+
+            #analyticsHUD .hud-row-bar-fill {
+                box-shadow: none !important;
+            }
+
+            #analyticsHUD .hud-segment {
+                background: rgba(255, 255, 255, 0.05) !important;
+                border: 1px solid rgba(255, 255, 255, 0.08) !important;
+                border-radius: 8px !important;
+                padding: 2px !important;
+            }
+
+            #analyticsHUD .hud-segment-btn {
+                color: rgba(255, 255, 255, 0.5) !important;
+                border-radius: 6px !important;
+                font-weight: 500 !important;
+                font-family: ui-sans-serif, system-ui, sans-serif !important;
+                letter-spacing: normal !important;
+            }
+
+            #analyticsHUD .hud-segment-btn.is-active {
+                background: rgba(255, 255, 255, 0.12) !important;
+                color: white !important;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+            }
+
+            #analyticsHUD .hud-toolbar-btn {
+                background: rgba(255, 255, 255, 0.05) !important;
+                border: 1px solid rgba(255, 255, 255, 0.08) !important;
+                border-radius: 8px !important;
+                font-weight: 500 !important;
+                text-transform: none !important;
+                font-family: ui-sans-serif, system-ui, sans-serif !important;
+                letter-spacing: normal !important;
+                color: rgba(255, 255, 255, 0.8) !important;
+            }
+
+            #analyticsHUD .hud-toolbar-btn:hover {
+                background: rgba(255, 255, 255, 0.1) !important;
+            }
+
+            #analyticsHUD .hud-table-head {
+                font-family: ui-sans-serif, system-ui, sans-serif !important;
+                text-transform: none !important;
+                letter-spacing: normal !important;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+            }
+        </style>
+        <div id="hudHeader"
+            class="cursor-move select-none p-3 border-b border-white/[0.08] flex items-center justify-between bg-white/[0.02] gap-2">
+            <div class="hud-segment flex">
+                <button onclick="setHudAnalyticsStrategy('series')" id="hudStrategySeriesBtn"
+                    class="hud-segment-btn px-3 py-1 text-xs transition-all duration-300 ease-out"
                     title="Show series strategy in HUD">Series</button>
-                <button onclick="setHudAnalyticsStrategy('combo')" id="hudStrategyComboBtn" class="hud-segment-btn"
+                <button onclick="setHudAnalyticsStrategy('combo')" id="hudStrategyComboBtn"
+                    class="hud-segment-btn px-3 py-1 text-xs transition-all duration-300 ease-out"
                     title="Show combo strategy in HUD">Combo</button>
             </div>
-            <button onclick="toggleHudColdMode()" id="hudColdBtn" class="hud-toolbar-btn" title="Toggle hot/cold mode">
-                <i class="fas fa-fire"></i>
-                <span id="hudColdBtnLabel">Hot</span>
-            </button>
-            <button onclick="toggleHudHistoryScope()" id="hudScopeBtn" class="hud-toolbar-btn"
-                title="Toggle recent/all scope">All</button>
+            <div class="flex gap-1.5 items-center ml-auto">
+                <button onclick="toggleHudColdMode()" id="hudColdBtn"
+                    class="hud-toolbar-btn px-2.5 py-1 text-xs transition-all duration-300 ease-out flex items-center gap-1.5"
+                    title="Toggle hot/cold mode">
+                    <i class="fas fa-fire text-[#FF9F0A]"></i>
+                    <span id="hudColdBtnLabel">Hot</span>
+                </button>
+                <button onclick="toggleHudHistoryScope()" id="hudScopeBtn"
+                    class="hud-toolbar-btn px-2.5 py-1 text-xs transition-all duration-300 ease-out"
+                    title="Toggle recent/all scope">All</button>
 
-            <button onclick="toggleAnalyticsHUD()" class="hud-close-btn" title="Close analytics HUD">
-                <i class="fas fa-times"></i>
-            </button>
+                <button onclick="toggleAnalyticsHUD()"
+                    class="w-7 h-7 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 border border-white/[0.08] text-white/50 hover:text-white transition-all duration-300 ease-out"
+                    title="Close analytics HUD">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
+            </div>
         </div>
-        <div id="hudBody" class="flex-1 flex flex-col overflow-hidden relative">
-            <div id="hudSummary" class="hud-summary-grid">
+        <div id="hudBody" class="flex-1 flex flex-col overflow-hidden relative p-3 gap-3">
+            <div id="hudSummary" class="hud-summary-grid grid grid-cols-5 gap-2">
                 <div class="hud-summary-card">
                     <div class="hud-summary-top">
                         <div class="hud-summary-label">F1</div>
@@ -370,20 +501,23 @@
                     <div class="hud-summary-copy">0% • g0</div>
                 </div>
             </div>
-            <div class="hud-table-shell">
-                <div class="hud-table-head">
+            <div
+                class="hud-table-shell flex flex-col bg-white/[0.02] border border-white/[0.08] rounded-xl overflow-hidden shadow-[inset_0_1px_2px_rgba(255,255,255,0.02)]">
+                <div
+                    class="hud-table-head grid grid-cols-[64px_1fr_42px] gap-2 px-3 py-2 bg-black/20 text-[10px] font-medium text-white/50">
                     <div id="hudColumnLabel">Sequence</div>
-                    <div id="hudMetricLabel">Activity</div>
-                    <div id="hudRateLabel">Rate</div>
+                    <div id="hudMetricLabel" class="text-center">Activity</div>
+                    <div id="hudRateLabel" class="text-right">Rate</div>
                 </div>
-                <div id="hudStats" class="hud-table-body custom-scroll overflow-y-auto">
-                    <div class="hud-empty-state">Awaiting telemetry...</div>
+                <div id="hudStats" class="hud-table-body custom-scroll overflow-y-auto p-2 min-h-[100px]">
+                    <div class="hud-empty-state text-xs text-white/40 text-center py-4 italic">Awaiting telemetry...
+                    </div>
                 </div>
             </div>
         </div>
         <div id="hudResizeHandle"
             class="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize flex items-center justify-center opacity-30 hover:opacity-100 transition-opacity">
-            <i class="fas fa-caret-right rotate-45 text-[8px] text-white"></i>
+            <i class="fas fa-caret-right rotate-45 text-[10px] text-white/50"></i>
         </div>
     </div>
 

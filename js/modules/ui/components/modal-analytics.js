@@ -33,83 +33,83 @@
                 </div>
             </div>
 
-            <div id="analyticsPanel" class="flex-1 overflow-y-auto p-8 custom-scroll relative">
+            <div id="analyticsPanel" class="flex-1 overflow-y-auto p-5 md:p-6 custom-scroll relative">
                 <!-- MESH BACKGROUND DECOR -->
                 <div class="absolute inset-0 mesh-bg opacity-30 pointer-events-none"></div>
                 
-                <div class="relative z-10 space-y-8">
+                <div class="relative z-10 space-y-5 md:space-y-6">
                     <!-- STRATEGY TAB -->
-                    <div id="strategyAnalyticsPanel" class="space-y-8 animate-apple-in">
+                    <div id="strategyAnalyticsPanel" class="space-y-5 md:space-y-6 animate-apple-in">
                         
                         <!-- Premium Face Monitor -->
-                        <div class="bg-white/[0.03] border border-white/[0.08] rounded-[24px] overflow-hidden shadow-2xl p-6 backdrop-blur-xl">
-                            <div class="text-[9px] font-black uppercase tracking-[0.3em] text-white/30 mb-5 flex items-center justify-between">
+                        <div class="bg-white/[0.03] border border-white/[0.08] rounded-[16px] md:rounded-[20px] overflow-hidden shadow-2xl p-4 md:p-5 backdrop-blur-xl">
+                            <div class="text-[9px] font-black uppercase tracking-[0.3em] text-white/30 mb-3 md:mb-4 flex items-center justify-between">
                                 <span>Real-Time Face Velocity (100)</span>
                                 <div class="h-1.5 w-1.5 rounded-full bg-[#30D158] animate-pulse shadow-[0_0_8px_#30D158]"></div>
                             </div>
-                            <div id="faceHeatmapGrid" class="grid grid-cols-5 gap-4">
+                            <div id="faceHeatmapGrid" class="grid grid-cols-5 gap-2 md:gap-3">
                                 <!-- Populated by JS: renderGapStats -->
                             </div>
                         </div>
                         
                         <!-- KPI GRID (Apple Card Style) -->
-                        <div class="grid grid-cols-4 gap-6">
-                            <div class="bg-white/[0.02] border border-white/[0.05] rounded-[24px] p-6 text-center shadow-xl group transition-all hover:bg-white/[0.04] hover:border-white/[0.1]">
+                        <div class="grid grid-cols-4 gap-3 md:gap-4">
+                            <div class="bg-white/[0.02] border border-white/[0.05] rounded-[16px] md:rounded-[20px] p-4 md:p-5 text-center shadow-xl group transition-all hover:bg-white/[0.04] hover:border-white/[0.1]">
                                 <div class="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] mb-2 group-hover:text-white/50 transition-colors">Success Ratio</div>
-                                <div id="kpiHitRate" class="text-4xl font-black tracking-tighter text-white drop-shadow-lg">0%</div>
+                                <div id="kpiHitRate" class="text-3xl md:text-4xl font-black tracking-tighter text-white drop-shadow-md">0%</div>
                             </div>
-                            <div class="bg-white/[0.02] border border-white/[0.05] rounded-[24px] p-6 text-center shadow-xl group transition-all hover:bg-white/[0.04] hover:border-white/[0.1]">
+                            <div class="bg-white/[0.02] border border-white/[0.05] rounded-[16px] md:rounded-[20px] p-4 md:p-5 text-center shadow-xl group transition-all hover:bg-white/[0.04] hover:border-white/[0.1]">
                                 <div class="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] mb-2 group-hover:text-white/50 transition-colors">Yield Gain</div>
-                                <div id="kpiNet" class="text-4xl font-black tracking-tighter text-white drop-shadow-lg">0</div>
+                                <div id="kpiNet" class="text-3xl md:text-4xl font-black tracking-tighter text-white drop-shadow-md">0</div>
                             </div>
-                            <div class="bg-white/[0.02] border border-white/[0.05] rounded-[24px] p-6 text-center shadow-xl group transition-all hover:bg-white/[0.04] hover:border-white/[0.1]">
+                            <div class="bg-white/[0.02] border border-white/[0.05] rounded-[16px] md:rounded-[20px] p-4 md:p-5 text-center shadow-xl group transition-all hover:bg-white/[0.04] hover:border-white/[0.1]">
                                 <div class="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] mb-2 group-hover:text-white/50 transition-colors">Total Signals</div>
-                                <div id="kpiSignals" class="text-4xl font-black tracking-tighter text-white drop-shadow-lg">0</div>
+                                <div id="kpiSignals" class="text-3xl md:text-4xl font-black tracking-tighter text-white drop-shadow-md">0</div>
                             </div>
-                            <div class="bg-white/[0.02] border border-white/[0.05] rounded-[24px] p-6 text-center shadow-xl group transition-all hover:bg-white/[0.04] hover:border-white/[0.1]">
+                            <div class="bg-white/[0.02] border border-white/[0.05] rounded-[16px] md:rounded-[20px] p-4 md:p-5 text-center shadow-xl group transition-all hover:bg-white/[0.04] hover:border-white/[0.1]">
                                 <div class="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] mb-2 group-hover:text-white/50 transition-colors">Current Form</div>
-                                <div id="kpiForm" class="text-4xl font-black tracking-tighter text-white drop-shadow-lg">-</div>
+                                <div id="kpiForm" class="text-3xl md:text-4xl font-black tracking-tighter text-white drop-shadow-md">-</div>
                             </div>
                         </div>
                         
                         <!-- ADVANCED SPLINE CHART -->
-                        <div class="bg-black/40 border border-white/[0.1] rounded-[28px] h-[280px] overflow-hidden relative shadow-[inset_0_2px_20px_rgba(0,0,0,0.5)]" id="graphContainer">
+                        <div class="bg-black/40 border border-white/[0.1] rounded-[20px] md:rounded-[24px] h-[240px] md:h-[280px] overflow-hidden relative shadow-[inset_0_2px_20px_rgba(0,0,0,0.5)]" id="graphContainer">
                             <div class="flex items-center justify-center h-full text-[10px] text-white/20 font-black uppercase tracking-[0.3em] animate-pulse">Initializing Data Stream...</div>
                         </div>
                         
                         <!-- PERFORMANCE LEDGER -->
-                        <div class="bg-white/[0.02] border border-white/[0.05] rounded-[24px] overflow-hidden shadow-2xl backdrop-blur-md">
-                            <div class="bg-white/[0.04] text-white/30 text-[9px] font-black uppercase tracking-[0.3em] p-4 border-b border-white/[0.05] flex justify-between items-center">
+                        <div class="bg-white/[0.02] border border-white/[0.05] rounded-[16px] md:rounded-[20px] overflow-hidden shadow-2xl backdrop-blur-md">
+                            <div class="bg-white/[0.04] text-white/30 text-[9px] font-black uppercase tracking-[0.3em] p-3 md:p-4 border-b border-white/[0.05] flex justify-between items-center">
                                 <span>Pattern Performance Analytics</span>
                                 <i class="fas fa-microchip"></i>
                             </div>
                             <table class="w-full text-left text-xs">
                                 <thead class="bg-black/20 text-white/30 uppercase text-[9px] font-black tracking-[0.2em] border-b border-white/[0.05]">
-                                    <tr><th class="p-4">Structure</th><th class="p-4 text-right">Confirmed</th><th class="p-4 text-right">Defeats</th><th class="p-4 text-right">Accuracy</th></tr>
+                                    <tr><th class="p-3 md:p-4">Structure</th><th class="p-3 md:p-4 text-right">Confirmed</th><th class="p-3 md:p-4 text-right">Defeats</th><th class="p-3 md:p-4 text-right">Accuracy</th></tr>
                                 </thead>
                                 <tbody id="heatmapBody" class="divide-y divide-white/[0.03]">
-                                    <tr><td colspan="4" class="p-12 text-center text-white/20 italic tracking-widest text-[10px]">AWAITING PATTERN RECOGNITION...</td></tr>
+                                    <tr><td colspan="4" class="p-6 md:p-8 text-center text-white/20 italic tracking-widest text-[10px]">AWAITING PATTERN RECOGNITION...</td></tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
 
                     <!-- INTELLIGENCE TAB -->
-                    <div id="intelligencePanel" class="hidden animate-apple-in space-y-6">
-                        <div class="flex justify-between items-center mb-6">
-                            <div class="text-[10px] font-black uppercase tracking-[0.3em] text-[#bf5af2] flex items-center bg-[#bf5af2]/10 px-4 py-2 rounded-full border border-[#bf5af2]/20 shadow-[0_0_15px_rgba(191,90,242,0.1)]">
-                                <i class="fas fa-brain mr-3"></i> Neural Interface Status
+                    <div id="intelligencePanel" class="hidden animate-apple-in space-y-4 md:space-y-6">
+                        <div class="flex justify-between items-center mb-4 md:mb-6">
+                            <div class="text-[10px] font-black uppercase tracking-[0.3em] text-[#bf5af2] flex items-center bg-[#bf5af2]/10 px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-[#bf5af2]/20 shadow-[0_0_15px_rgba(191,90,242,0.1)]">
+                                <i class="fas fa-brain mr-2 md:mr-3"></i> Neural Interface Status
                             </div>
-                            <div class="flex items-center gap-4">
+                            <div class="flex items-center gap-3 md:gap-4">
                                 <span class="text-[9px] font-black uppercase tracking-[0.2em] text-white/20">Protocol:</span>
                                 <div class="flex bg-black/40 rounded-full p-1 border border-white/10 backdrop-blur-md">
-                                    <button onclick="window.changeIntelMode && window.changeIntelMode('brief')" class="px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all hover:text-white/80 ${window.state && window.state.currentIntelligenceMode === 'brief' ? 'bg-white/10 text-white shadow-lg' : 'text-white/30 hover:bg-white/5'}">Brief</button>
-                                    <button onclick="window.changeIntelMode && window.changeIntelMode('diagnostic')" class="px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all hover:text-white/80 ${window.state && window.state.currentIntelligenceMode === 'diagnostic' ? 'bg-white/10 text-white shadow-lg' : 'text-white/30 hover:bg-white/5'}">Diagnostic</button>
+                                    <button onclick="window.changeIntelMode && window.changeIntelMode('brief')" class="px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all hover:text-white/80 ${window.state && window.state.currentIntelligenceMode === 'brief' ? 'bg-white/10 text-white shadow-lg' : 'text-white/30 hover:bg-white/5'}">Brief</button>
+                                    <button onclick="window.changeIntelMode && window.changeIntelMode('diagnostic')" class="px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all hover:text-white/80 ${window.state && window.state.currentIntelligenceMode === 'diagnostic' ? 'bg-white/10 text-white shadow-lg' : 'text-white/30 hover:bg-white/5'}">Diagnostic</button>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="grid grid-cols-3 gap-6 items-center mb-8 p-6 bg-white/[0.02] border border-white/[0.08] rounded-[24px] shadow-inner backdrop-blur-xl">
+                        <div class="grid grid-cols-3 gap-4 md:gap-6 items-center mb-5 md:mb-8 p-4 md:p-6 bg-white/[0.02] border border-white/[0.08] rounded-[16px] md:rounded-[20px] shadow-inner backdrop-blur-xl">
                             <div class="flex flex-col gap-1">
                                 <div class="text-[8px] font-black uppercase tracking-[0.3em] text-white/20">Operational State</div>
                                 <div id="intelStateChip" class="w-fit font-black text-[11px] tracking-[0.2em] uppercase text-gray-400">IDLE</div>
@@ -120,11 +120,11 @@
                             </div>
                             <div class="text-right flex flex-col gap-1">
                                 <div class="text-[8px] font-black uppercase tracking-[0.3em] text-white/20">Re-Eval Spin</div>
-                                <div id="intelNextCheckpoint" class="text-2xl font-black tracking-tighter text-gray-500 drop-shadow-lg">14</div>
+                                <div id="intelNextCheckpoint" class="text-2xl font-black tracking-tighter text-gray-500 drop-shadow-md">14</div>
                             </div>
                         </div>
 
-                        <div id="intelligenceContent" class="space-y-6"></div>
+                        <div id="intelligenceContent" class="space-y-4 md:space-y-6"></div>
                     </div>
                 </div>
             </div>
