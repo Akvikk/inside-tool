@@ -328,10 +328,27 @@
             const isEnabled = config[key] !== false;
             const accent = meta.accent || 'var(--apple-p3-blue)';
 
+            // Fetch accuracy stats
+            let accuracyText = '';
+            if (window.EngineCore && window.EngineCore.stats && window.EngineCore.stats.patternStats) {
+                const labelMatch = meta.label || key;
+                const pStats = window.EngineCore.stats.patternStats[labelMatch] || window.EngineCore.stats.patternStats[key];
+                if (pStats) {
+                    const total = pStats.wins + pStats.losses;
+                    if (total > 0) {
+                        const pct = Math.round((pStats.wins / total) * 100);
+                        let colorClass = 'text-white/40';
+                        if (pct >= 50) colorClass = 'text-[#30D158]';
+                        else if (pct > 0 && pct < 50) colorClass = 'text-[#FF453A]';
+                        accuracyText = ` <span class="${colorClass} font-bold ml-1">(${pct}%)</span>`;
+                    }
+                }
+            }
+
             entries.push(`
                 <div class="flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 hover:bg-white/[0.03] active:scale-[0.98] cursor-pointer" onclick="togglePatternFilter('${key}')">
                     <div class="flex flex-col">
-                        <span class="text-[10px] font-bold text-white tracking-tight">${meta.label || key}</span>
+                        <span class="text-[10px] font-bold text-white tracking-tight flex items-center">${meta.label || key}${accuracyText}</span>
                         <span class="text-[8px] text-white/30 uppercase tracking-widest mt-0.5">${meta.category || 'Protocol'}</span>
                     </div>
                     
