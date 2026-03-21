@@ -4,11 +4,12 @@
 
 window.syncPredictionEngine = async function () {
     if (!window.PredictionEngine || typeof window.PredictionEngine.evaluatePredictionEngine !== 'function') return null;
+    const strategy = window.state.currentGameplayStrategy === 'combo' ? 'momentum-gap' : 'legacy-face';
     const snapshot = await window.PredictionEngine.evaluatePredictionEngine(window.state.history, {
-        currentPredictionStrategy: window.state.currentGameplayStrategy === 'combo' ? 'momentum-gap' : 'legacy-face'
+        currentPredictionStrategy: strategy
     });
     window.state.engineSnapshot = snapshot || null;
-    return window.state.engineSnapshot;
+    return snapshot;
 };
 
 window.scanAllStrategies = async function (options = {}) {

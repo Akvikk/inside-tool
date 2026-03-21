@@ -387,7 +387,7 @@ const PredictionEngine = {
         // 1. RUN LEGACY FACE PREDICTOR (Markov & Fatigue Inversion)
         if (true) {
             let lTarget = null, lAction = 'WAIT', lConf = 0, lKey = 'no-signal', lLabel = 'No Signal', lSigLabel = 'No Signal', lDetail = detail, lTrigger = null;
-            
+
             if (validSpinCount >= 2 && hasFace(previousMask, 4) && hasFace(lastMask, 5)) {
                 lTarget = 4; lAction = 'BET'; lConf = 92; lKey = 'markov-4-5'; lLabel = 'Markov Trigger'; lSigLabel = 'F4 -> F5'; lTrigger = 5;
                 lDetail = 'Latest two spins formed F4 -> F5, so the engine snaps back to Face 4.';
@@ -448,9 +448,21 @@ const PredictionEngine = {
         }
 
         // 3. SELECTION LOGIC: Which results become the primary prediction "active" snapshot?
-        // Default to Legacy (Markov/Fatigue) if it triggered a BET, otherwise fallback to Momentum
-        const useLegacy = options.currentPredictionStrategy === 'legacy-face' || engineOutputs.legacy.action.startsWith('BET');
-        const primary = (useLegacy && engineOutputs.legacy.action !== 'WAIT') ? engineOutputs.legacy : engineOutputs.momentum;
+        const activeStrategy = options.currentPredictionStrategy || 'momentum-gap';
+        let primary = engineOutputs.momentum; // Default to momentum (Combo)
+
+        if (activeStrategy === 'legacy-face') {
+            // In Sequence mode, prioritize Legacy (Markov/Fatigue)
+            primary = engineOutputs.legacy;
+        } else {
+            // In Combo mode, only allow Legacy to override if it's a critical Markov trigger AND Combo is silent
+            const isStrongMarkov = engineOutputs.legacy.ruleKey && engineOutputs.legacy.ruleKey.startsWith('markov');
+            if (isStrongMarkov && engineOutputs.momentum.action === 'WAIT') {
+                primary = engineOutputs.legacy;
+            } else {
+                primary = engineOutputs.momentum;
+            }
+        }
 
         targetFace = primary.targetFace;
         action = primary.action;
