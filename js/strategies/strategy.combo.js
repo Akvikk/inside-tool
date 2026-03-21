@@ -67,7 +67,11 @@ window.StrategyRegistry.combo = {
             : displayLabel;
 
         if (!targetFace || action === 'SIT_OUT' || action === 'WAIT') {
-            return { notifications, nextBets };
+            // Even if we aren't betting, we might want to return the signal info for the UI
+            return {
+                notifications,
+                nextBets: []
+            };
         }
 
         if (comboKey && patternConfig[comboKey] === false) {

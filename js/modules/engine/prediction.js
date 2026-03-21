@@ -375,138 +375,88 @@ const PredictionEngine = {
         let markovSequenceLabel = null;
         let fatigueComboLabel = null;
 
-        if (options.currentPredictionStrategy === 'legacy-face') {
-            // --- LEGACY FACE PREDICTOR ---
+        const engineOutputs = {
+            legacy: { action: 'WAIT', targetFace: null, ruleKey: 'no-signal' },
+            momentum: { action: 'WAIT', targetFace: null, ruleKey: 'no-signal' }
+        };
+
+        // 1. RUN LEGACY FACE PREDICTOR (Markov & Fatigue Inversion)
+        if (true) {
+            let lTarget = null, lAction = 'WAIT', lConf = 0, lKey = 'no-signal', lLabel = 'No Signal', lSigLabel = 'No Signal', lDetail = detail, lTrigger = null;
+            
             if (validSpinCount >= 2 && hasFace(previousMask, 4) && hasFace(lastMask, 5)) {
-                targetFace = 4;
-                action = 'BET';
-                confidence = 92;
-                ruleKey = 'markov-4-5';
-                ruleLabel = 'Markov Trigger';
-                signalLabel = 'F4 -> F5';
-                detail = 'Latest two spins formed F4 -> F5, so the engine snaps back to Face 4.';
-                triggerFace = 5;
-                markovSequenceLabel = 'F4 -> F5';
+                lTarget = 4; lAction = 'BET'; lConf = 92; lKey = 'markov-4-5'; lLabel = 'Markov Trigger'; lSigLabel = 'F4 -> F5'; lTrigger = 5;
+                lDetail = 'Latest two spins formed F4 -> F5, so the engine snaps back to Face 4.';
             } else if (validSpinCount >= 2 && hasFace(previousMask, 2) && hasFace(lastMask, 2)) {
-                targetFace = 5;
-                action = 'BET';
-                confidence = 88;
-                ruleKey = 'markov-2-2';
-                ruleLabel = 'Markov Trigger';
-                signalLabel = 'F2 -> F2';
-                detail = 'Latest two spins held on Face 2, so the engine rotates to Face 5.';
-                triggerFace = 2;
-                markovSequenceLabel = 'F2 -> F2';
+                lTarget = 5; lAction = 'BET'; lConf = 88; lKey = 'markov-2-2'; lLabel = 'Markov Trigger'; lSigLabel = 'F2 -> F2'; lTrigger = 2;
+                lDetail = 'Latest two spins held on Face 2, so the engine rotates to Face 5.';
             } else if (faceGaps[5] >= 10) {
-                targetFace = 5;
-                action = 'BET_PROGRESSION_3';
-                confidence = clamp(74 + ((faceGaps[5] - 10) * 2), 74, 90);
-                ruleKey = 'elasticity-snapback';
-                ruleLabel = 'Elasticity Snapback';
-                signalLabel = 'Face 5 Gap';
-                detail = `Face 5 has slept ${faceGaps[5]} spins, so progression step 3 points back to Face 5.`;
-                triggerFace = 5;
+                lTarget = 5; lAction = 'BET_PROGRESSION_3'; lConf = clamp(74 + ((faceGaps[5] - 10) * 2), 74, 90); lKey = 'elasticity-snapback'; lLabel = 'Elasticity Snapback'; lSigLabel = 'Face 5 Gap'; lTrigger = 5;
+                lDetail = `Face 5 has slept ${faceGaps[5]} spins, so progression step 3 points back to Face 5.`;
             } else {
-                for (let comboIndex = 0; comboIndex < exhaustedCombos.length; comboIndex++) {
-                    const combo = exhaustedCombos[comboIndex];
+                for (const combo of exhaustedCombos) {
                     const latestHasA = hasFace(lastMask, combo.a);
                     const latestHasB = hasFace(lastMask, combo.b);
-
                     if (latestHasA === latestHasB) continue;
-
-                    targetFace = latestHasA ? combo.a : combo.b;
-                    fadedFace = latestHasA ? combo.b : combo.a;
-                    action = 'BET_AGAINST';
-                    confidence = clamp(62 + ((combo.hits - 3) * 6), 62, 82);
-                    ruleKey = 'fatigue-inversion';
-                    ruleLabel = 'Fatigue Inversion';
-                    signalLabel = combo.label;
-                    detail = `${combo.label} hit ${combo.hits} times in the last ${stats14.windowSize} spins. Latest spin leaned Face ${targetFace}, so the engine fades Face ${fadedFace}.`;
-                    triggerFace = targetFace;
-                    focusCombo = combo;
-                    fatigueComboLabel = combo.label;
+                    lTarget = latestHasA ? combo.a : combo.b;
+                    lAction = 'BET_AGAINST'; lConf = clamp(62 + ((combo.hits - 3) * 6), 62, 82); lKey = 'fatigue-inversion'; lLabel = 'Fatigue Inversion'; lSigLabel = combo.label; lTrigger = lTarget;
+                    lDetail = `${combo.label} hit ${combo.hits} times in the last ${stats14.windowSize} spins. Latest spin leaned Face ${lTarget}, so the engine fades Face ${latestHasA ? combo.b : combo.a}.`;
                     break;
                 }
             }
-        } else {
-            // --- MOMENTUM & GAP FILTER STARTEGY ---
+            engineOutputs.legacy = { targetFace: lTarget, action: lAction, confidence: lConf, ruleKey: lKey, ruleLabel: lLabel, signalLabel: lSigLabel, detail: lDetail, triggerFace: lTrigger };
+        }
 
-            // 1. Find the highest momentum combo (must have >= 2 hits in 14 spins to be alive)
-            const aliveCombos = stats14.comboStats.filter(c => c.hits >= 2).sort((a, b) => b.hits - a.hits);
+        // 2. RUN MOMENTUM & GAP FILTER STRATEGY
+        // 2. RUN MOMENTUM & GAP FILTER STRATEGY
+        {
+            let mTarget = null, mAction = 'WAIT', mConf = 0, mKey = 'no-signal', mLabel = 'No Signal', mSigLabel = 'No Signal', mDetail = detail, mFocus = dominantCombo;
 
             if (aliveCombos.length > 0) {
-                const targetCombo = aliveCombos[0]; // The combo with the most momentum
-                const faceA = targetCombo.a;
-                const faceB = targetCombo.b;
+                const targetCombo = aliveCombos[0];
+                const faceA = targetCombo.a, faceB = targetCombo.b;
+                const gapA = faceGaps[faceA] || 0, gapB = faceGaps[faceB] || 0;
+                const isASweetSpot = gapA >= 2 && gapA <= 9, isBSweetSpot = gapB >= 2 && gapB <= 9;
+                const isADeepSleep = gapA >= 10, isBDeepSleep = gapB >= 10;
 
-                const gapA = faceGaps[faceA] || 0;
-                const gapB = faceGaps[faceB] || 0;
-
-                const isASweetSpot = gapA >= 2 && gapA <= 9;
-                const isBSweetSpot = gapB >= 2 && gapB <= 9;
-                const isADeepSleep = gapA >= 10;
-                const isBDeepSleep = gapB >= 10;
-
-                // Evaluate the faces
                 if (isADeepSleep && isBDeepSleep) {
-                    // Both faces are dead. The combo is failing.
-                    action = 'SIT_OUT';
-                    confidence = 0;
-                    ruleKey = 'momentum-gap-fail';
-                    ruleLabel = 'Momentum & Gap (Failing)';
-                    signalLabel = 'SIT OUT';
-                    detail = `Combo ${targetCombo.label} has ${targetCombo.hits} hits, but both Face ${faceA} (Gap ${gapA}) and Face ${faceB} (Gap ${gapB}) are in a Deep Sleep. Combo is actively failing.`;
-                    focusCombo = targetCombo;
+                    mAction = 'SIT_OUT'; mConf = 0; mKey = 'momentum-gap-fail'; mLabel = 'Momentum & Gap (Failing)'; mSigLabel = 'SIT OUT';
+                    mDetail = `Combo ${targetCombo.label} has ${targetCombo.hits} hits, but both Face ${faceA} (Gap ${gapA}) and Face ${faceB} (Gap ${gapB}) are in a Deep Sleep. Combo is actively failing.`;
                 } else if (isASweetSpot && isBDeepSleep) {
-                    targetFace = faceA;
-                    action = 'BET_MOMENTUM_FACE';
-                    confidence = 88;
-                    ruleKey = 'momentum-gap-target';
-                    ruleLabel = 'Momentum & Gap Filter';
-                    signalLabel = `F${faceA} (on ${targetCombo.label})`;
-                    detail = `Combo ${targetCombo.label} has ${targetCombo.hits} hits. Face ${faceB} is in deep sleep (Gap ${gapB}), so Face ${faceA} (Gap ${gapA}) is the isolated target.`;
-                    focusCombo = targetCombo;
+                    mTarget = faceA; mAction = 'BET_MOMENTUM_FACE'; mConf = 88; mKey = 'momentum-gap-target'; mLabel = 'Momentum & Gap Filter'; mSigLabel = `F${faceA} (on ${targetCombo.label})`;
+                    mDetail = `Combo ${targetCombo.label} has ${targetCombo.hits} hits. Face ${faceB} is in deep sleep (Gap ${gapB}), so Face ${faceA} (Gap ${gapA}) is the isolated target.`;
                 } else if (isBSweetSpot && isADeepSleep) {
-                    targetFace = faceB;
-                    action = 'BET_MOMENTUM_FACE';
-                    confidence = 88;
-                    ruleKey = 'momentum-gap-target';
-                    ruleLabel = 'Momentum & Gap Filter';
-                    signalLabel = `F${faceB} (on ${targetCombo.label})`;
-                    detail = `Combo ${targetCombo.label} has ${targetCombo.hits} hits. Face ${faceA} is in deep sleep (Gap ${gapA}), so Face ${faceB} (Gap ${gapB}) is the isolated target.`;
-                    focusCombo = targetCombo;
+                    mTarget = faceB; mAction = 'BET_MOMENTUM_FACE'; mConf = 88; mKey = 'momentum-gap-target'; mLabel = 'Momentum & Gap Filter'; mSigLabel = `F${faceB} (on ${targetCombo.label})`;
+                    mDetail = `Combo ${targetCombo.label} has ${targetCombo.hits} hits. Face ${faceA} is in deep sleep (Gap ${gapA}), so Face ${faceB} (Gap ${gapB}) is the isolated target.`;
                 } else if (isASweetSpot && isBSweetSpot) {
-                    // Both are good. Pick the one that has slept slightly longer (more "due")
-                    targetFace = gapA >= gapB ? faceA : faceB;
-                    action = 'BET_MOMENTUM_FACE';
-                    confidence = 82;
-                    ruleKey = 'momentum-gap-target-dual';
-                    ruleLabel = 'Momentum & Gap Filter';
-                    signalLabel = `F${targetFace} (on ${targetCombo.label})`;
-                    detail = `Combo ${targetCombo.label} has ${targetCombo.hits} hits. Both faces are in the sweet spot. Face ${targetFace} has the higher gap (${gapA >= gapB ? gapA : gapB}), making it the optimal mathematical entry.`;
-                    focusCombo = targetCombo;
+                    mTarget = gapA >= gapB ? faceA : faceB; mAction = 'BET_MOMENTUM_FACE'; mConf = 82; mKey = 'momentum-gap-target-dual'; mLabel = 'Momentum & Gap Filter'; mSigLabel = `F${mTarget} (on ${targetCombo.label})`;
+                    mDetail = `Combo ${targetCombo.label} has ${targetCombo.hits} hits. Both faces are in the sweet spot. Face ${mTarget} has the higher gap (${Math.max(gapA, gapB)}), making it the optimal mathematical entry.`;
                 } else {
-                    // Messy state (e.g. gaps are 0 or 1, meaning they literally just hit and are repeating)
-                    // We don't bet on immediate repeaters unless forced.
-                    action = 'WAIT';
-                    confidence = 0;
-                    ruleKey = 'momentum-gap-wait';
-                    ruleLabel = 'Momentum & Gap Filter';
-                    signalLabel = 'WAIT';
-                    detail = `Combo ${targetCombo.label} has ${targetCombo.hits} hits, but faces are neither in sweet spots nor deep sleep. Waiting for clearer gap alignment.`;
-                    focusCombo = targetCombo;
+                    mAction = 'WAIT'; mConf = 0; mKey = 'momentum-gap-wait'; mLabel = 'Momentum & Gap Filter'; mSigLabel = 'WAIT';
+                    mDetail = `Combo ${targetCombo.label} has ${targetCombo.hits} hits, but faces are neither in sweet spots nor deep sleep. Waiting for clearer gap alignment.`;
                 }
-
+                mFocus = targetCombo;
             } else {
-                // No combos are alive
-                action = 'SIT_OUT';
-                confidence = 0;
-                ruleKey = 'momentum-gap-dead';
-                ruleLabel = 'Momentum & Gap (Dead Table)';
-                signalLabel = 'SIT OUT';
-                detail = 'No Perimeter Combos have enough momentum (2+ hits in 14 spins). The table is chaotic or hitting pure dozen/column variants.';
+                mAction = 'SIT_OUT'; mConf = 0; mKey = 'momentum-gap-dead'; mLabel = 'Momentum & Gap (Dead Table)'; mSigLabel = 'SIT OUT';
+                mDetail = 'No Perimeter Combos have enough momentum (2+ hits in 14 spins). The table is chaotic or hitting pure dozen/column variants.';
             }
+            engineOutputs.momentum = { targetFace: mTarget, action: mAction, confidence: mConf, ruleKey: mKey, ruleLabel: mLabel, signalLabel: mSigLabel, detail: mDetail, focusCombo: mFocus };
         }
+
+        // 3. SELECTION LOGIC: Which results become the primary prediction "active" snapshot?
+        // Default to Legacy (Markov/Fatigue) if it triggered a BET, otherwise fallback to Momentum
+        const useLegacy = options.currentPredictionStrategy === 'legacy-face' || engineOutputs.legacy.action.startsWith('BET');
+        const primary = (useLegacy && engineOutputs.legacy.action !== 'WAIT') ? engineOutputs.legacy : engineOutputs.momentum;
+
+        targetFace = primary.targetFace;
+        action = primary.action;
+        confidence = primary.confidence;
+        ruleKey = primary.ruleKey;
+        ruleLabel = primary.ruleLabel;
+        signalLabel = primary.signalLabel;
+        detail = primary.detail;
+        triggerFace = primary.triggerFace || null;
+        focusCombo = primary.focusCombo || dominantCombo;
 
         const confirmationCombo = focusCombo && stats5 && stats5.counts
 

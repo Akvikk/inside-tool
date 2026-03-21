@@ -209,28 +209,7 @@
                 const matchedFaces = Object.prototype.hasOwnProperty.call(fonMap, val) ? fonMap[val].slice() : [];
                 const matchedFaceMask = Object.prototype.hasOwnProperty.call(fonMaskMap, val) ? fonMaskMap[val] : 0;
 
-                // Update Gaps manually
-                for (let f = 1; f <= 5; f++) stateRef.faceGaps[f] = (stateRef.faceGaps[f] || 0) + 1;
-                matchedFaces.forEach(f => stateRef.faceGaps[f] = 0);
-
-                let resolvedBets = [];
-                if (stateRef.activeBets && stateRef.activeBets.length > 0) {
-                    stateRef.activeBets.forEach(bet => {
-                        if (bet.status === 'SIT_OUT' || !bet.targetFace) return;
-                        const targetMask = faceMasks[bet.targetFace] || 0;
-                        const isWin = (matchedFaceMask & targetMask) !== 0;
-                        resolvedBets.push({
-                            patternName: bet.patternName || 'Unknown',
-                            filterKey: bet.filterKey || bet.patternName,
-                            strategy: bet.strategy || '',
-                            targetFace: bet.targetFace,
-                            isWin: isWin,
-                            label: `BET F${bet.targetFace}`,
-                            confirmed: bet.confirmed === true
-                        });
-                    });
-                }
-
+                // 1. Resolve Turn (for the bets made after the PREVIOUS spin)
                 if (window.EngineCore && typeof window.EngineCore.resolveTurn === 'function') {
                     try {
                         window.EngineCore.resolveTurn(val, matchedFaceMask, stateRef.activeBets, stateRef.currentGameplayStrategy, null, {
@@ -241,41 +220,53 @@
                     } catch (e) { console.error(e); }
                 }
 
+                // 2. Clear Active Bets (they were just resolved)
+                const previousResolvedBets = stateRef.activeBets.map(bet => {
+                    const targetMask = faceMasks[bet.targetFace] || 0;
+                    return {
+                        patternName: bet.patternName || 'Unknown',
+                        filterKey: bet.filterKey || bet.patternName,
+                        strategy: bet.strategy || '',
+                        targetFace: bet.targetFace,
+                        isWin: (matchedFaceMask & targetMask) !== 0,
+                        confirmed: bet.confirmed === true
+                    };
+                });
                 stateRef.activeBets = [];
+
+                // 3. Update Gaps
+                for (let f = 1; f <= 5; f++) stateRef.faceGaps[f] = (stateRef.faceGaps[f] || 0) + 1;
+                matchedFaces.forEach(f => stateRef.faceGaps[f] = 0);
 
                 const spinObj = {
                     num: val,
                     faces: matchedFaces,
                     index: stateRef.history.length,
-                    resolvedBets: resolvedBets,
+                    resolvedBets: previousResolvedBets,
                     newSignals: [],
                     id: ++stateRef.globalSpinIdCounter || 1
                 };
                 stateRef.history.push(spinObj);
 
-                // Re-calculate state patterns periodically to ensure predictions flow correctly for history rows
-                if (i % 10 === 9 || i === spins.length - 1) {
-                    if (window.scanAllStrategies) {
-                        const scanResult = await window.scanAllStrategies({ skipStoreSync: true, silent: true });
-                        stateRef.activeBets = scanResult.nextBets || [];
-                        window.currentAlerts = Array.isArray(scanResult.notifications) ? scanResult.notifications : [];
-
-                        if (stateRef.strategySyncCache && typeof stateRef.strategySyncCache === 'object') {
-                            stateRef.strategySyncCache[stateRef.currentGameplayStrategy || 'series'] = scanResult;
-                        }
-
-                        spinObj.newSignals = stateRef.activeBets.map(b => ({
-                            patternName: b.patternName,
-                            filterKey: b.filterKey || b.patternName,
-                            targetFace: b.targetFace,
-                            comboLabel: b.comboLabel || null,
-                            confidence: Number.isFinite(b.confidence) ? b.confidence : null,
-                            reason: b.reason || b.subtitle || '',
-                            mode: b.mode || null,
-                            status: b.status || 'GO',
-                            signalSource: b.signalSource || 'math'
-                        }));
+                // 4. Generate New Predictions (for the NEXT spin)
+                if (window.scanAllStrategies) {
+                    const scanResult = await window.scanAllStrategies({ skipStoreSync: true, silent: true });
+                    stateRef.activeBets = scanResult.nextBets || [];
+                    
+                    if (stateRef.strategySyncCache && typeof stateRef.strategySyncCache === 'object') {
+                        stateRef.strategySyncCache[stateRef.currentGameplayStrategy || 'series'] = scanResult;
                     }
+
+                    spinObj.newSignals = stateRef.activeBets.map(b => ({
+                        patternName: b.patternName,
+                        filterKey: b.filterKey || b.patternName,
+                        targetFace: b.targetFace,
+                        comboLabel: b.comboLabel || null,
+                        confidence: Number.isFinite(b.confidence) ? b.confidence : null,
+                        reason: b.reason || b.subtitle || '',
+                        status: b.status || 'GO',
+                        signalSource: b.signalSource || 'math'
+                    }));
                 }
             }
         }
