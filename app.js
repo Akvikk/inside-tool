@@ -79,14 +79,6 @@ window.syncStrategyUi = function () {
 };
 
 window.addEventListener('DOMContentLoaded', async () => {
-    document.addEventListener('click', (e) => {
-        const patternShell = document.getElementById('patternFilterShell');
-        const patternPopover = document.getElementById('patternFilterPopover');
-        if (patternShell && patternPopover && !patternPopover.classList.contains('hidden') && !patternShell.contains(e.target)) {
-            if (window.closePatternFilterPopover) window.closePatternFilterPopover();
-        }
-    });
-
     console.log("INSIDE TOOL: Bootstrapping modular architecture...");
 
     if (window.InputProcessor && window.InputProcessor.init) window.InputProcessor.init();

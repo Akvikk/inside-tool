@@ -2,14 +2,9 @@
     // --- PUBLIC INTERFACE ---
     window.UiController = {
         init,
-        openHindsightModal,
         initDesktopGrid,
         showToast
     };
-
-    // Make it globally accessible for the onclick attribute
-    window.openHindsightModal = openHindsightModal;
-
 
 
     function init() {
@@ -27,34 +22,51 @@
         // Header Buttons Data Bindings
         const betsBtn = document.getElementById('headerBetsBtn');
         if (betsBtn) {
-            betsBtn.onclick = function () {
+            betsBtn.addEventListener('click', function () {
                 window.toggleModal('betsModal');
                 if (window.renderUserAnalytics) window.renderUserAnalytics();
-            };
+            });
         }
 
         const statsBtn = document.getElementById('headerStatsBtn');
         if (statsBtn) {
-            statsBtn.onclick = function () {
+            statsBtn.addEventListener('click', function () {
                 window.toggleModal('analyticsModal');
                 if (window.renderAnalytics) window.renderAnalytics();
-            };
+            });
         }
 
         const patternBtn = document.getElementById('patternsToggleBtn');
         if (patternBtn) {
-            patternBtn.onclick = function (e) {
+            patternBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
                 window.togglePatternFilterPopover();
-            };
+            });
         }
 
         const menuBtn = document.getElementById('headerMenuBtn');
         if (menuBtn) {
-            menuBtn.onclick = function (e) {
+            menuBtn.addEventListener('click', function (e) {
                 e.stopPropagation();
                 window.toggleHamburgerMenu();
-            };
+            });
         }
+
+        // Global document click to close popovers and menus
+        document.addEventListener('click', function (e) {
+            const patternShell = document.getElementById('patternFilterShell');
+            const patternPopover = document.getElementById('patternFilterPopover');
+            if (patternShell && patternPopover && !patternPopover.classList.contains('hidden') && !patternShell.contains(e.target)) {
+                if (window.closePatternFilterPopover) window.closePatternFilterPopover();
+            }
+
+            const hamburgerMenu = document.getElementById('hamburgerMenu');
+            if (hamburgerMenu && !hamburgerMenu.classList.contains('hidden')) {
+                if (!hamburgerMenu.contains(e.target) && (!menuBtn || !menuBtn.contains(e.target))) {
+                    window.toggleHamburgerMenu();
+                }
+            }
+        });
     }
 
     function handleGridClick(n) {
@@ -167,7 +179,6 @@
     function initDesktopGrid() {
         const grid = document.getElementById('desktopGrid');
         if (!grid) return;
-        grid.innerHTML = '';
         const layout = (window.state && window.state.currentInputLayout) ? window.state.currentInputLayout : 'grid';
         if (layout === 'racetrack') {
             grid.innerHTML = `
@@ -175,18 +186,18 @@
                     ${buildRacetrackSVG()}
                 </div>
             `;
-            grid.className = "hidden md:block w-[240px] shrink-0 overflow-y-auto custom-scroll refined-glass h-full";
+            grid.classList.remove('p-3');
         } else {
             const RED_NUMS = window.config && window.config.RED_NUMS ? window.config.RED_NUMS : [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
-            let gridHtml = '<div class="grid grid-cols-3 gap-2 w-full">';
-            gridHtml += '<button class="grid-btn grid-green col-span-3 font-bold text-sm" onclick="handleGridClick(0)">ZERO</button>';
+            let gridHtml = '<div class="grid grid-cols-3 gap-2 w-full" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem;">';
+            gridHtml += '<button class="grid-btn grid-green col-span-3 font-bold text-white text-sm" style="grid-column: span 3 / span 3;" onclick="handleGridClick(0)">ZERO</button>';
             for (let i = 1; i <= 36; i++) {
                 const isRed = RED_NUMS.includes(i);
                 const colorClass = isRed ? 'grid-red' : 'grid-black';
-                gridHtml += `<button class="grid-btn ${colorClass} font-bold text-sm" onclick="handleGridClick(${i})">${i}</button>`;
+                gridHtml += `<button class="grid-btn ${colorClass} font-bold text-white text-sm" onclick="handleGridClick(${i})">${i}</button>`;
             }
             gridHtml += '</div>';
-            grid.className = "hidden md:block w-[240px] shrink-0 p-3 overflow-y-auto custom-scroll refined-glass h-full";
+            grid.classList.add('p-3');
             grid.innerHTML = gridHtml;
         }
     }
@@ -396,22 +407,6 @@
         }
     };
 
-    // Close popover when clicking outside
-    document.addEventListener('click', (e) => {
-        const patternShell = document.getElementById('patternFilterShell');
-        const patternPopover = document.getElementById('patternFilterPopover');
-        if (patternShell && patternPopover && !patternPopover.classList.contains('hidden') && !patternShell.contains(e.target)) {
-            window.closePatternFilterPopover();
-        }
-
-        const hamburgerMenu = document.getElementById('hamburgerMenu');
-        const menuBtn = document.getElementById('headerMenuBtn');
-        if (hamburgerMenu && !hamburgerMenu.classList.contains('hidden')) {
-            if (!hamburgerMenu.contains(e.target) && (!menuBtn || !menuBtn.contains(e.target))) {
-                window.toggleHamburgerMenu();
-            }
-        }
-    });
 
     window.resetSession = function () {
         if (window.toggleHamburgerMenu) window.toggleHamburgerMenu();
