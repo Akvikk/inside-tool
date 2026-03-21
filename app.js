@@ -94,16 +94,26 @@ window.syncUIWithStrategyMode = function () {
 
 window.setGameplayStrategy = async function (strategyKey) {
     if (!window.state) return;
+    if (window.state.currentGameplayStrategy === strategyKey) return;
+
+    const oldSpins = window.state.history ? window.state.history.map(s => s.num) : [];
     window.state.currentGameplayStrategy = strategyKey;
 
     if (window.syncUIWithStrategyMode) window.syncUIWithStrategyMode();
 
-    // Re-run processing and update UI components
-    if (window.scanAllStrategies) {
-        await window.scanAllStrategies({ silent: true });
+    // If we have history, rewind and replay the entire session under the new Strategy lens.
+    // This elegantly scrubs old signals and recalculates all metrics natively.
+    if (oldSpins.length > 0 && window.rebuildSessionFromSpins) {
+        await window.rebuildSessionFromSpins(oldSpins);
+    } else {
+        // Re-run processing and update UI components if no history bounds it
+        if (window.scanAllStrategies) {
+            await window.scanAllStrategies({ silent: true });
+        }
+        if (window.renderDashboardSafe) window.renderDashboardSafe(window.state.activeBets || []);
+        if (window.reRenderHistory) window.reRenderHistory();
     }
-    if (window.renderDashboardSafe) window.renderDashboardSafe(window.state.activeBets || []);
-    if (window.reRenderHistory) window.reRenderHistory();
+    
     if (window.renderPatternFilterList) window.renderPatternFilterList();
     if (window.syncPatternFilterButton) window.syncPatternFilterButton();
     if (window.saveSessionData) window.saveSessionData();
