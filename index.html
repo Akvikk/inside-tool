@@ -76,17 +76,17 @@
             <div class="relative">
                 <input type="text" id="spinInput" inputmode="numeric" autocomplete="off" maxlength="2"
                     onkeydown="if(event.key==='Enter'){event.preventDefault();addSpin();}"
-                    class="ios-input w-16 h-8 text-lg font-bold text-center placeholder-white/20 bg-white/5 border border-white/10 rounded-lg focus:border-[#0A84FF] transition-all"
+                    class="ios-input w-16 h-8 text-lg font-bold text-center placeholder-white/20 bg-white/5 border border-white/10 rounded-xl focus:border-[#0A84FF] transition-all duration-300"
                     placeholder="#">
             </div>
 
             <button id="addSpinBtn" onclick="addSpin()"
-                class="h-8 px-4 bg-[#0A84FF] hover:bg-[#007AFF] text-white font-bold rounded-lg shadow-sm text-[10px] tracking-widest flex items-center justify-center transition-all">
+                class="h-8 px-4 bg-[#0A84FF] hover:bg-[#007AFF] text-white font-black rounded-xl shadow-sm text-[11px] tracking-widest flex items-center justify-center transition-all duration-300 active:scale-[0.98]">
                 ADD
             </button>
 
             <button onclick="undoSpin()"
-                class="h-8 w-8 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white rounded-lg border border-white/10 flex items-center justify-center transition-all">
+                class="h-8 w-8 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white rounded-xl border border-white/10 flex items-center justify-center transition-all duration-300 active:scale-[0.98]">
                 <i class="fas fa-undo text-[10px]"></i>
             </button>
         </div>
@@ -95,19 +95,20 @@
         <div class="flex items-center gap-1.5 order-3">
             <div id="patternFilterShell" class="relative">
                 <button id="patternsToggleBtn"
-                    class="h-8 px-3 bg-white/5 hover:bg-white/10 text-[#BF5AF2] font-bold rounded-lg border border-[#BF5AF2]/10 flex items-center gap-2 text-[10px] transition-all">
+                    class="h-8 px-3 bg-white/5 hover:bg-white/10 text-[#BF5AF2] font-bold rounded-xl border border-[#BF5AF2]/10 flex items-center gap-2 text-[11px] tracking-wide transition-all duration-300 active:scale-[0.98]">
                     <i class="fas fa-filter"></i>
                     <span class="hidden md:inline">PATTERNS</span>
                 </button>
                 <div id="patternFilterPopover"
                     class="pattern-filter-popover hidden refined-glass rounded-2xl shadow-2xl animate-apple-in absolute top-full left-0 mt-2 w-[280px] p-2 z-[70]">
-                    <div class="flex justify-between items-center px-3 py-2 border-b border-white/10 mb-2">
-                        <span
-                            class="text-[10px] font-black uppercase tracking-widest text-[#BF5AF2] drop-shadow-[0_0_8px_rgba(191,90,242,0.4)]">Active
-                            Filters</span>
+                    <div class="flex justify-between items-center p-3 border-b border-white/[0.05] mb-2">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-white/50">
+                            Active Filters
+                        </span>
                         <button onclick="window.closePatternFilterPopover()"
-                            class="text-white/40 hover:text-white transition-colors h-6 w-6 flex items-center justify-center rounded-full bg-white/5 border border-white/5"><i
-                                class="fas fa-times text-[10px]"></i></button>
+                            class="text-white/40 hover:text-[#FF453A] hover:bg-[#FF453A]/10 transition-all duration-300 h-7 w-7 flex items-center justify-center rounded-full bg-white/5 border border-white/[0.05] active:scale-[0.98]">
+                            <i class="fas fa-times text-[11px]"></i>
+                        </button>
                     </div>
                     <div id="patternsList" class="max-h-[320px] overflow-y-auto custom-scroll pr-1 flex flex-col gap-1">
                         <!-- Popover content remains managed by JS -->
@@ -116,19 +117,19 @@
             </div>
 
             <button onclick="toggleModal('betsModal'); renderUserAnalytics();"
-                class="h-8 px-3 bg-white/5 hover:bg-white/10 text-[#0A84FF] font-bold rounded-lg border border-[#0A84FF]/10 flex items-center gap-2 text-[10px] transition-all">
+                class="h-8 px-3 bg-white/5 hover:bg-white/10 text-[#0A84FF] font-bold rounded-xl border border-[#0A84FF]/10 flex items-center gap-2 text-[11px] tracking-wide transition-all duration-300 active:scale-[0.98]">
                 <i class="fas fa-list-check"></i>
                 <span class="hidden lg:inline">BETS</span>
             </button>
 
             <button onclick="toggleModal('analyticsModal'); renderAnalytics();"
-                class="h-8 px-3 bg-white/5 hover:bg-white/10 text-[#FFD60A] font-bold rounded-lg border border-[#FFD60A]/10 flex items-center gap-2 text-[10px] transition-all">
+                class="h-8 px-3 bg-white/5 hover:bg-white/10 text-[#FFD60A] font-bold rounded-xl border border-[#FFD60A]/10 flex items-center gap-2 text-[11px] tracking-wide transition-all duration-300 active:scale-[0.98]">
                 <i class="fas fa-chart-line"></i>
                 <span class="hidden lg:inline">STATS</span>
             </button>
 
             <button onclick="toggleAnalyticsHUD()" id="hudToggleBtn"
-                class="h-8 px-3 bg-white/5 hover:bg-white/10 text-[#30D158] font-bold rounded-lg border border-[#30D158]/10 flex items-center gap-2 text-[10px] transition-all">
+                class="h-8 px-3 bg-white/5 hover:bg-white/10 text-[#30D158] font-bold rounded-xl border border-[#30D158]/10 flex items-center gap-2 text-[11px] tracking-wide transition-all duration-300 active:scale-[0.98]">
                 <i class="fas fa-chart-pie"></i>
                 <span class="hidden lg:inline">HUD</span>
             </button>
@@ -136,7 +137,7 @@
             <div class="h-4 w-[1px] bg-white/10 mx-1"></div>
 
             <button id="headerMenuBtn"
-                class="h-8 w-8 bg-white/5 hover:bg-white/10 text-white rounded-lg border border-white/10 flex items-center justify-center transition-all">
+                class="h-8 w-8 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/10 flex items-center justify-center transition-all duration-300 active:scale-[0.98]">
                 <i class="fas fa-bars"></i>
             </button>
         </div>
@@ -455,28 +456,28 @@
             }
         </style>
         <div id="hudHeader"
-            class="cursor-move select-none p-3 border-b border-white/[0.08] flex items-center justify-between bg-white/[0.02] gap-2">
+            class="cursor-move select-none p-3 border-b border-white/[0.05] flex items-center justify-between bg-[#1C1C1E]/40 gap-2">
             <div class="hud-segment flex">
                 <button onclick="setHudAnalyticsStrategy('series')" id="hudStrategySeriesBtn"
-                    class="hud-segment-btn px-3 py-1 text-xs transition-all duration-300 ease-out"
+                    class="hud-segment-btn px-3 py-1 text-[11px] font-bold tracking-wide transition-all duration-300 ease-out active:scale-[0.98]"
                     title="Show series strategy in HUD">Series</button>
                 <button onclick="setHudAnalyticsStrategy('combo')" id="hudStrategyComboBtn"
-                    class="hud-segment-btn px-3 py-1 text-xs transition-all duration-300 ease-out"
+                    class="hud-segment-btn px-3 py-1 text-[11px] font-bold tracking-wide transition-all duration-300 ease-out active:scale-[0.98]"
                     title="Show combo strategy in HUD">Combo</button>
             </div>
             <div class="flex gap-1.5 items-center ml-auto">
                 <button onclick="toggleHudColdMode()" id="hudColdBtn"
-                    class="hud-toolbar-btn px-2.5 py-1 text-xs transition-all duration-300 ease-out flex items-center gap-1.5"
+                    class="hud-toolbar-btn px-3 py-1.5 text-[11px] font-bold tracking-wide transition-all duration-300 ease-out flex items-center gap-1.5 active:scale-[0.98]"
                     title="Toggle hot/cold mode">
                     <i class="fas fa-fire text-[#FF9F0A]"></i>
                     <span id="hudColdBtnLabel">Hot</span>
                 </button>
                 <button onclick="toggleHudHistoryScope()" id="hudScopeBtn"
-                    class="hud-toolbar-btn px-2.5 py-1 text-xs transition-all duration-300 ease-out"
+                    class="hud-toolbar-btn px-3 py-1.5 text-[11px] font-bold tracking-wide transition-all duration-300 ease-out active:scale-[0.98]"
                     title="Toggle recent/all scope">All</button>
 
                 <button onclick="toggleAnalyticsHUD()"
-                    class="w-7 h-7 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 border border-white/[0.08] text-white/50 hover:text-white transition-all duration-300 ease-out"
+                    class="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-[#FF453A]/10 border border-white/[0.05] hover:border-[#FF453A]/30 text-white/40 hover:text-[#FF453A] transition-all duration-300 ease-out active:scale-[0.98]"
                     title="Close analytics HUD">
                     <i class="fas fa-times text-xs"></i>
                 </button>
