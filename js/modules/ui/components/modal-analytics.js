@@ -4,7 +4,7 @@
     const modalHtml = `
     <div id="analyticsModal" class="modal hidden fixed inset-0 z-[60] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40 backdrop-blur-xl transition-opacity duration-500" onclick="toggleModal('analyticsModal')"></div>
-        <div class="relative w-full max-w-5xl bg-[#1C1C1E]/80 backdrop-blur-[40px] saturate-150 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-apple-in border border-white/[0.08]">
+        <div class="relative w-full max-w-5xl bg-[#1C1C1E]/80 backdrop-blur-[40px] saturate-150 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] border border-white/[0.08]">
             
             <!-- FUTURISTIC GLASS HEADER -->
             <div class="px-6 py-4 border-b border-white/[0.08] flex flex-wrap gap-6 justify-between items-center bg-white/[0.02] shrink-0">
@@ -37,7 +37,7 @@
                 
                 <div class="relative z-10 space-y-5">
                     <!-- STRATEGY TAB -->
-                    <div id="strategyAnalyticsPanel" class="space-y-5 animate-apple-in">
+                    <div id="strategyAnalyticsPanel" class="space-y-5">
                         
                         <!-- Premium Face Monitor -->
                         <div class="bg-white/[0.02] border border-white/[0.08] rounded-2xl overflow-hidden shadow-sm p-4 backdrop-blur-xl">
@@ -93,7 +93,7 @@
                     </div>
 
                     <!-- INTELLIGENCE TAB -->
-                    <div id="intelligencePanel" class="hidden animate-apple-in space-y-5">
+                    <div id="intelligencePanel" class="hidden space-y-5">
                         <div class="flex justify-between items-center">
                             <div class="text-xs font-medium text-[#AF52DE] flex items-center bg-[#AF52DE]/10 px-3 py-1.5 rounded-lg border border-[#AF52DE]/20">
                                 <i class="fas fa-brain mr-2"></i> Neural Interface Status

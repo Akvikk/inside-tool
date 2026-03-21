@@ -4,7 +4,7 @@
     const modalHtml = `
     <div id="confirmModal" class="modal hidden fixed inset-0 z-[80] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40 backdrop-blur-xl transition-opacity duration-500" onclick="toggleModal('confirmModal')"></div>
-        <div class="relative w-full max-w-sm bg-[#1C1C1E]/80 backdrop-blur-[40px] saturate-150 border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-apple-in">
+        <div class="relative w-full max-w-sm bg-[#1C1C1E]/80 backdrop-blur-[40px] saturate-150 border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden flex flex-col">
             <div class="p-6 text-center">
                 <div class="w-12 h-12 rounded-full bg-[#FF453A]/10 text-[#FF453A] flex items-center justify-center mx-auto mb-4">
                     <i class="fas fa-exclamation-triangle text-xl"></i>

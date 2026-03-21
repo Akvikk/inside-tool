@@ -22,14 +22,22 @@
                 }
 
                 const isHidden = el.classList.contains('hidden') || el.classList.contains('opacity-0');
+                const innerPanel = el.querySelector('.relative.w-full');
+
+                if (innerPanel && !innerPanel.classList.contains('transition-all')) {
+                    innerPanel.classList.add('transition-all', 'duration-300', 'transform', 'scale-95');
+                }
+
                 if (isHidden) {
                     el.classList.remove('hidden');
                     void el.offsetWidth; // Force Reflow
                     el.classList.remove('opacity-0', 'pointer-events-none');
                     el.classList.add('opacity-100');
+                    if (innerPanel) { innerPanel.classList.remove('scale-95'); innerPanel.classList.add('scale-100'); }
                 } else {
                     el.classList.remove('opacity-100');
                     el.classList.add('opacity-0', 'pointer-events-none');
+                    if (innerPanel) { innerPanel.classList.remove('scale-100'); innerPanel.classList.add('scale-95'); }
                     setTimeout(() => { if (el.classList.contains('opacity-0')) el.classList.add('hidden'); }, 300);
                 }
             };
@@ -222,13 +230,18 @@
         const container = document.getElementById('toastContainer');
         if (!container) return;
         const toast = document.createElement('div');
-        toast.className = `toast-item animate-apple-in ${type}`;
+        toast.className = `toast-item ${type} transition-all duration-300 transform opacity-0 translate-y-4 scale-95`;
         toast.innerText = msg;
         container.appendChild(toast);
+
+        void toast.offsetWidth;
+        toast.classList.remove('opacity-0', 'translate-y-4', 'scale-95');
+        toast.classList.add('opacity-100', 'translate-y-0', 'scale-100');
+
         setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateY(-20px)';
-            setTimeout(() => toast.remove(), 500);
+            toast.classList.remove('opacity-100', 'translate-y-0', 'scale-100');
+            toast.classList.add('opacity-0', '-translate-y-4', 'scale-95');
+            setTimeout(() => toast.remove(), 300);
         }, 3000);
     }
 

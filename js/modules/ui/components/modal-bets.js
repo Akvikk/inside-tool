@@ -4,7 +4,7 @@
     const modalHtml = `
     <div id="betsModal" class="modal hidden fixed inset-0 z-[60] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/40 backdrop-blur-xl transition-opacity duration-500" onclick="toggleModal('betsModal')"></div>
-        <div class="relative w-full max-w-2xl bg-[#1C1C1E]/80 backdrop-blur-[40px] saturate-150 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[82vh] animate-apple-in border border-white/[0.08]">
+        <div class="relative w-full max-w-2xl bg-[#1C1C1E]/80 backdrop-blur-[40px] saturate-150 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[82vh] border border-white/[0.08]">
             
             <div class="px-6 py-4 border-b border-white/[0.08] flex justify-between items-center bg-white/[0.02] shrink-0">
                 <h3 class="text-sm font-medium tracking-normal text-white/90 flex items-center">
