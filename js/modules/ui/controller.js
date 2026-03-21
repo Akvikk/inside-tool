@@ -337,9 +337,14 @@
                     const total = pStats.wins + pStats.losses;
                     if (total > 0) {
                         const pct = Math.round((pStats.wins / total) * 100);
-                        let colorClass = 'text-white/40';
-                        if (pct >= 50) colorClass = 'text-[#30D158]';
-                        else if (pct > 0 && pct < 50) colorClass = 'text-[#FF453A]';
+                        let colorClass;
+                        if (pct === 0) {
+                            colorClass = 'text-white/40';
+                        } else if (pct >= 50) {
+                            colorClass = 'text-[#30D158]';
+                        } else {
+                            colorClass = 'text-[#FF453A]';
+                        }
                         accuracyText = ` <span class="${colorClass} font-bold ml-1">(${pct}%)</span>`;
                     }
                 }
