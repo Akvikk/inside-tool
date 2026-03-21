@@ -196,16 +196,6 @@
     };
 
     window.rebuildSessionFromSpins = async function (spins, options = {}) {
-        if (!window.state) window.state = {};
-        window.state.history = [];
-        window.state.activeBets = [];
-        window.state.faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-        window.state.globalSpinIdCounter = 0;
-        if (!window.state.userStats) window.state.userStats = { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
-        if (!window.state.engineStats) window.state.engineStats = { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {}, signalLog: [] };
-        window.state.engineSnapshot = null;
-        window.state.currentNeuralSignal = null;
-        window.state.strategySyncCache = { series: null, combo: null, inside: null };
         let spinner = document.getElementById('importSpinnerOverlay');
         if (!spinner) {
             spinner = document.createElement('div');
@@ -225,12 +215,8 @@
         spinner.classList.remove('hidden');
         spinner.style.opacity = '1';
 
-        window.currentAlerts = [];
-        if (window.EngineCore) window.EngineCore.reset();
         await new Promise(r => setTimeout(r, 50));
 
-        const tbody = document.getElementById('historyBody');
-        if (tbody) tbody.innerHTML = '';
         try {
             if (!window.state) window.state = {};
             window.state.history = [];
@@ -243,32 +229,12 @@
             window.state.currentNeuralSignal = null;
             window.state.strategySyncCache = { series: null, combo: null, inside: null };
 
-        if (spins && spins.length > 0) {
-            const stateRef = window.state;
-            const fonMap = window.FON_MAP || {};
-            const fonMaskMap = window.FON_MASK_MAP || {};
-            const faceMasks = window.FACE_MASKS || {};
-            const faces = window.FACES || {};
             window.currentAlerts = [];
             if (window.EngineCore) window.EngineCore.reset();
 
-            for (let i = 0; i < spins.length; i++) {
-                const val = spins[i];
-                const matchedFaces = Object.prototype.hasOwnProperty.call(fonMap, val) ? fonMap[val].slice() : [];
-                const matchedFaceMask = Object.prototype.hasOwnProperty.call(fonMaskMap, val) ? fonMaskMap[val] : 0;
             const tbody = document.getElementById('historyBody');
             if (tbody) tbody.innerHTML = '';
 
-                // 1. Resolve Turn (for the bets made after the PREVIOUS spin)
-                if (window.EngineCore && typeof window.EngineCore.resolveTurn === 'function') {
-                    try {
-                        window.EngineCore.resolveTurn(val, matchedFaceMask, stateRef.activeBets, stateRef.currentGameplayStrategy, null, {
-                            historyLength: stateRef.history.length,
-                            faceMasks: faceMasks,
-                            faces: faces
-                        });
-                    } catch (e) { console.error(e); }
-                }
             if (spins && spins.length > 0) {
                 const stateRef = window.state;
                 const fonMap = window.FON_MAP || {};
@@ -276,16 +242,6 @@
                 const faceMasks = window.FACE_MASKS || {};
                 const faces = window.FACES || {};
 
-                // 2. Clear Active Bets (they were just resolved)
-                const previousResolvedBets = (stateRef.activeBets || []).map(bet => {
-                    const targetMask = faceMasks[bet.targetFace] || 0;
-                    return {
-                        patternName: bet.patternName || 'Unknown',
-                        filterKey: bet.filterKey || bet.patternName,
-                        strategy: bet.strategy || '',
-                        targetFace: bet.targetFace,
-                        isWin: (matchedFaceMask & targetMask) !== 0,
-                        confirmed: bet.confirmed === true
                 for (let i = 0; i < spins.length; i++) {
                     const val = spins[i];
                     const matchedFaces = Object.prototype.hasOwnProperty.call(fonMap, val) ? fonMap[val].slice() : [];
@@ -328,38 +284,17 @@
                         newSignals: [],
                         id: ++stateRef.globalSpinIdCounter || 1
                     };
-                });
-                stateRef.activeBets = [];
                     stateRef.history.push(spinObj);
 
-                // 3. Update Gaps
-                for (let f = 1; f <= 5; f++) stateRef.faceGaps[f] = (stateRef.faceGaps[f] || 0) + 1;
-                matchedFaces.forEach(f => stateRef.faceGaps[f] = 0);
                     // 4. Generate New Predictions (for the NEXT spin)
                     if (window.scanAllStrategies) {
                         const scanResult = await window.scanAllStrategies({ skipStoreSync: true, silent: true });
                         stateRef.activeBets = scanResult.nextBets || [];
 
-                const spinObj = {
-                    num: val,
-                    faces: matchedFaces,
-                    index: stateRef.history.length,
-                    resolvedBets: previousResolvedBets,
-                    newSignals: [],
-                    id: ++stateRef.globalSpinIdCounter || 1
-                };
-                stateRef.history.push(spinObj);
                         if (stateRef.strategySyncCache && typeof stateRef.strategySyncCache === 'object') {
                             stateRef.strategySyncCache[stateRef.currentGameplayStrategy || 'series'] = scanResult;
                         }
 
-                // 4. Generate New Predictions (for the NEXT spin)
-                if (window.scanAllStrategies) {
-                    const scanResult = await window.scanAllStrategies({ skipStoreSync: true, silent: true });
-                    stateRef.activeBets = scanResult.nextBets || [];
-
-                    if (stateRef.strategySyncCache && typeof stateRef.strategySyncCache === 'object') {
-                        stateRef.strategySyncCache[stateRef.currentGameplayStrategy || 'series'] = scanResult;
                         spinObj.newSignals = stateRef.activeBets.map(b => ({
                             patternName: b.patternName,
                             filterKey: b.filterKey || b.patternName,
@@ -371,17 +306,6 @@
                             signalSource: b.signalSource || 'math'
                         }));
                     }
-
-                    spinObj.newSignals = stateRef.activeBets.map(b => ({
-                        patternName: b.patternName,
-                        filterKey: b.filterKey || b.patternName,
-                        targetFace: b.targetFace,
-                        comboLabel: b.comboLabel || null,
-                        confidence: Number.isFinite(b.confidence) ? b.confidence : null,
-                        reason: b.reason || b.subtitle || '',
-                        status: b.status || 'GO',
-                        signalSource: b.signalSource || 'math'
-                    }));
                 }
             }
 
@@ -398,14 +322,6 @@
                 setTimeout(() => spinner.classList.add('hidden'), 300);
             }
         }
-
-        if (window.reRenderHistory) window.reRenderHistory(options);
-        if (window.renderGapStats) window.renderGapStats();
-        const alerts = window.scanAllStrategies ? await window.scanAllStrategies() : [];
-        if (window.renderDashboardSafe) window.renderDashboardSafe(alerts);
-        if (window.HudManager) window.HudManager.update();
-        if (window.saveSessionData) window.saveSessionData();
-        if (window.syncAppStore) window.syncAppStore();
     };
 
     window.layoutComboBridge = function (spinId) {
