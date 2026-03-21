@@ -69,13 +69,41 @@ window.resetData = function () {
     if (confirmModal && !confirmModal.classList.contains('hidden')) confirmModal.classList.add('hidden');
 };
 
-window.syncStrategyUi = function () {
-    const strategyKey = window.state.currentGameplayStrategy || 'series';
-    const strategy = window.StrategyRegistry ? window.StrategyRegistry[strategyKey] : null;
+window.syncUIWithStrategyMode = function () {
+    const strategyKey = window.state && window.state.currentGameplayStrategy ? window.state.currentGameplayStrategy : 'series';
     const comboHeader = document.getElementById('historyComboHeader');
-    if (comboHeader) comboHeader.innerText = strategy && strategy.tableHeader ? strategy.tableHeader : 'COMBO';
+
+    if (comboHeader) {
+        if (strategyKey === 'series') {
+            comboHeader.innerHTML = "SEQUENCE";
+        } else if (strategyKey === 'combo') {
+            comboHeader.innerHTML = "COMBO";
+        } else if (strategyKey === 'inside') {
+            comboHeader.innerHTML = "PATTERN";
+        } else {
+            comboHeader.innerHTML = "COMBO";
+        }
+    }
+
     const strategySelect = document.getElementById('hamburgerStrategySelect');
     if (strategySelect) strategySelect.value = strategyKey;
+};
+
+window.setGameplayStrategy = async function (strategyKey) {
+    if (!window.state) return;
+    window.state.currentGameplayStrategy = strategyKey;
+
+    if (window.syncUIWithStrategyMode) window.syncUIWithStrategyMode();
+
+    // Re-run processing and update UI components
+    if (window.scanAllStrategies) {
+        await window.scanAllStrategies({ silent: true });
+    }
+    if (window.renderDashboardSafe) window.renderDashboardSafe(window.state.activeBets || []);
+    if (window.reRenderHistory) window.reRenderHistory();
+    if (window.renderPatternFilterList) window.renderPatternFilterList();
+    if (window.syncPatternFilterButton) window.syncPatternFilterButton();
+    if (window.saveSessionData) window.saveSessionData();
 };
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -88,7 +116,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     const restoredSession = window.loadSessionData ? window.loadSessionData() : false;
     if (window.ensureActivePatternConfig) window.ensureActivePatternConfig();
-    if (window.syncStrategyUi) window.syncStrategyUi();
+    if (window.syncUIWithStrategyMode) window.syncUIWithStrategyMode();
     if (window.renderPatternFilterUi) window.renderPatternFilterUi();
 
     if (restoredSession && window.state.history.length > 0) {

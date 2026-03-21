@@ -6,7 +6,14 @@
         if (entry && entry.targetFace !== undefined && entry.targetFace !== null && entry.targetFace !== '?') {
             parts.push(`F${entry.targetFace}`);
         }
-        const label = entry && (entry.comboLabel || entry.patternName);
+
+        const stratKey = window.state?.currentGameplayStrategy || 'series';
+        let label = '';
+        if (stratKey === 'series') label = entry?.sequenceName || entry?.patternName || entry?.comboLabel;
+        else if (stratKey === 'combo') label = entry?.comboLabel || entry?.patternName;
+        else if (stratKey === 'inside') label = entry?.patternName || entry?.comboLabel;
+        else label = entry?.comboLabel || entry?.patternName;
+
         if (label) parts.push(label);
         if (entry && Number.isFinite(entry.confidence) && entry.confidence > 0) {
             parts.push(`${entry.confidence}%`);
@@ -57,35 +64,63 @@
 
     window.renderComboCell = function (spin) {
         const registry = window.StrategyRegistry || {};
-        const stratKey = window.state.currentGameplayStrategy || 'series';
+        const stratKey = window.state?.currentGameplayStrategy || 'series';
         const strategy = registry[stratKey];
-        if (!strategy || typeof strategy.detectBridge !== 'function') return '<span class="text-gray-600">-</span>';
-        if (spin.index <= 0) return '<span class="text-gray-600 font-mono text-[10px]">-</span>';
 
-        const currMask = window.FON_MASK_MAP ? window.FON_MASK_MAP[spin.num] : 0;
-        const prevSpin = window.state.history ? window.state.history[spin.index - 1] : null;
-        if (!prevSpin) return '<span class="text-gray-600 font-mono text-[10px]">-</span>';
+        // Strategy might have a bridge connecting previous and current spins visually
+        if (strategy && typeof strategy.detectBridge === 'function') {
+            if (spin.index > 0) {
+                const currMask = window.FON_MASK_MAP ? window.FON_MASK_MAP[spin.num] : 0;
+                const prevSpin = window.state?.history ? window.state.history[spin.index - 1] : null;
+                if (prevSpin) {
+                    const prevMask = window.FON_MASK_MAP ? window.FON_MASK_MAP[prevSpin.num] : 0;
+                    const bridge = strategy.detectBridge(prevMask, currMask, window.FACE_MASKS);
+                    if (bridge) {
+                        return `
+                            <div class="absolute inset-x-0 top-0 -translate-y-1/2 h-0 pointer-events-none select-none z-[1] flex items-center justify-center">
+                                <div class="combo-link-layer absolute overflow-visible"
+                                     data-prev-spin-id="${prevSpin.id}"
+                                     data-prev-face="${bridge.matchedPrevFace}"
+                                     data-curr-face="${bridge.matchedCurrFace}"
+                                     data-color="${bridge.color}"></div>
+                                <div class="relative z-[2] inline-flex items-center justify-center">
+                                    <span class="combo-badge relative px-3 py-1 rounded-md text-[10px] font-black font-mono tracking-widest border shadow-2xl transition-all duration-300"
+                                          style="color:${bridge.color}; border-color:${bridge.color}55; background-color:#0b0b0d; box-shadow: 0 0 8px ${bridge.color}40, inset 0 0 4px ${bridge.color}15;">
+                                        ${bridge.label}
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+            }
+        }
 
-        const prevMask = window.FON_MASK_MAP ? window.FON_MASK_MAP[prevSpin.num] : 0;
-        const bridge = strategy.detectBridge(prevMask, currMask, window.FACE_MASKS);
+        // Fallback for strategies that output standard signals/bets rather than drawing bridges
+        if (spin.newSignals && spin.newSignals.length > 0) {
+            const signal = spin.newSignals[0];
+            let label = '-';
 
-        if (!bridge || !prevSpin) return '<span class="text-gray-600 font-mono text-[10px]">-</span>';
+            if (stratKey === 'series') label = signal.sequenceName || signal.patternName || 'SEQ';
+            else if (stratKey === 'combo') label = signal.comboLabel || signal.patternName || 'COMBO';
+            else if (stratKey === 'inside') label = signal.patternName || 'PATTERN';
+            else label = signal.patternName || '-';
 
-        return `
-            <div class="absolute inset-x-0 top-0 -translate-y-1/2 h-0 pointer-events-none select-none z-[1] flex items-center justify-center">
-                <div class="combo-link-layer absolute overflow-visible"
-                     data-prev-spin-id="${prevSpin.id}"
-                     data-prev-face="${bridge.matchedPrevFace}"
-                     data-curr-face="${bridge.matchedCurrFace}"
-                     data-color="${bridge.color}"></div>
-                <div class="relative z-[2] inline-flex items-center justify-center">
-                    <span class="combo-badge relative px-3 py-1 rounded-md text-[10px] font-black font-mono tracking-widest border shadow-2xl transition-all duration-300"
-                          style="color:${bridge.color}; border-color:${bridge.color}55; background-color:#0b0b0d; box-shadow: 0 0 8px ${bridge.color}40, inset 0 0 4px ${bridge.color}15;">
-                        ${bridge.label}
-                    </span>
-                </div>
-            </div>
-        `;
+            const color = signal.accentColor || '#BF5AF2';
+
+            if (label !== '-') {
+                return `
+                    <div class="relative z-[2] inline-flex items-center justify-center py-1">
+                        <span class="combo-badge relative px-3 py-1 rounded-md text-[10px] font-black font-mono tracking-widest border shadow-2xl transition-all duration-300"
+                              style="color:${color}; border-color:${color}55; background-color:#0b0b0d; box-shadow: 0 0 8px ${color}40, inset 0 0 4px ${color}15;">
+                            ${label}
+                        </span>
+                    </div>
+                `;
+            }
+        }
+
+        return '<span class="text-gray-600 font-mono text-[10px]">-</span>';
     };
 
     window.renderRow = function (spin, targetContainer) {

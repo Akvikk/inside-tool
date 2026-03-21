@@ -30,12 +30,17 @@
 
 body {
     background-color: #0d0d12;
+    background-color: #09090b;
     background-image: 
         radial-gradient(ellipse at 15% 50%, rgba(68, 38, 168, 0.45) 0%, transparent 50%), 
         radial-gradient(ellipse at 85% 30%, rgba(181, 48, 142, 0.35) 0%, transparent 55%),
         radial-gradient(circle at 50% 110%, rgba(20, 145, 180, 0.3) 0%, transparent 60%),
-        radial-gradient(circle at 10% 0%, rgba(10, 132, 255, 0.25) 0%, transparent 40%);
+        radial-gradient(circle at 10% 0%, rgba(10, 132, 255, 0.25) 0%, transparent 40%),
+        radial-gradient(at 0% 0%, rgba(10, 132, 255, 0.15) 0px, transparent 60%),
+        radial-gradient(at 100% 100%, rgba(175, 82, 222, 0.12) 0px, transparent 60%);
     background-attachment: fixed;
+    background-size: 200% 200%;
+    animation: ambientShift 30s ease-in-out infinite;
     color: var(--text-primary);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -43,6 +48,14 @@ body {
     overflow: hidden;
     position: relative;
     letter-spacing: normal;
+}
+
+@keyframes ambientShift {
+    0% { background-position: 0% 0%; }
+    25% { background-position: 100% 0%; }
+    50% { background-position: 100% 100%; }
+    75% { background-position: 0% 100%; }
+    100% { background-position: 0% 0%; }
 }
 
 /* Global Header Constraints */
