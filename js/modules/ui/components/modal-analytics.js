@@ -85,7 +85,7 @@
                             </div>
                             <table class="w-full text-left text-xs">
                                 <thead class="bg-black/20 text-white/30 uppercase text-[9px] font-black tracking-[0.2em] border-b border-white/[0.05]">
-                                    <tr><th class="p-3 md:p-4">Structure</th><th class="p-3 md:p-4 text-right">Confirmed</th><th class="p-3 md:p-4 text-right">Defeats</th><th class="p-3 md:p-4 text-right">Accuracy</th></tr>
+                                    <tr><th id="analyticsStructureHeader" class="p-3 md:p-4">Structure</th><th class="p-3 md:p-4 text-right">Confirmed</th><th class="p-3 md:p-4 text-right">Defeats</th><th class="p-3 md:p-4 text-right">Accuracy</th></tr>
                                 </thead>
                                 <tbody id="heatmapBody" class="divide-y divide-white/[0.03]">
                                     <tr><td colspan="4" class="p-6 md:p-8 text-center text-white/20 italic tracking-widest text-[10px]">AWAITING PATTERN RECOGNITION...</td></tr>

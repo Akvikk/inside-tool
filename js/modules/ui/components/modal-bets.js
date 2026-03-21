@@ -84,7 +84,13 @@
         const body = document.getElementById('userBetsBody');
         if (body) {
             if (!stats.betLog || stats.betLog.length === 0) {
-                body.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-white/30 italic text-xs">Awaiting protocol activity...</td></tr>';
+                const activeStrategy = window.state ? window.state.currentGameplayStrategy : 'series';
+                let emptyText = 'Awaiting protocol activity...';
+                if (activeStrategy === 'combo') emptyText = 'Awaiting combo signatures...';
+                else if (activeStrategy === 'inside') emptyText = 'Awaiting pattern recognition...';
+                else if (activeStrategy === 'series') emptyText = 'Awaiting sequence data...';
+
+                body.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-white/30 italic text-xs">${emptyText}</td></tr>`;
             } else {
                 body.innerHTML = stats.betLog.slice().reverse().map((bet, idx) => `
                     <tr class="hover:bg-white/[0.03] transition-colors">

@@ -78,11 +78,35 @@
     window.formatEnginePrediction = function (snapshot) { if (!snapshot) return 'No engine state available.'; if (snapshot.currentPrediction) { const action = snapshot.currentPrediction.action || 'BET'; const confidence = Number.isFinite(snapshot.currentPrediction.confidence) && snapshot.currentPrediction.confidence > 0 ? ` ${snapshot.currentPrediction.confidence}%` : ''; return `${action} F${snapshot.currentPrediction.targetFace} via ${snapshot.currentPrediction.comboLabel}${confidence}.`; } return snapshot.watchlistMessage || snapshot.leadMessage || 'No actionable signal.'; };
     window.renderIntelligencePanel = function () { const content = document.getElementById('intelligenceContent'), stateChip = document.getElementById('intelStateChip'), checkpointSummary = document.getElementById('intelCheckpointSummary'), nextCheckpoint = document.getElementById('intelNextCheckpoint'); if (!content) return; const ENGINE_PRIMARY_WINDOW = window.config ? window.config.ENGINE_PRIMARY_WINDOW : 14, snapshot = window.state.engineSnapshot || {}, rankedCombos = window.sortEngineReadCombos(snapshot.comboCoverage || []), leadCombo = snapshot.dominantCombo, runnerUp = snapshot.runnerUpCombo; if (stateChip) { stateChip.innerText = snapshot.engineState || 'IDLE'; stateChip.className = `font-black text-[9px] tracking-widest uppercase ${window.getEngineStateTone(snapshot.engineState)}`; } if (checkpointSummary) { checkpointSummary.innerText = snapshot.checkpointStatus || 'Waiting for valid sample'; checkpointSummary.className = `font-bold text-[10px] tracking-widest uppercase ${window.getPredictionToneClass(snapshot)}`; } if (nextCheckpoint) { nextCheckpoint.innerText = snapshot.nextCheckpointSpin || ENGINE_PRIMARY_WINDOW; nextCheckpoint.className = `text-lg font-black tracking-tighter ${window.getMetricToneClass('checkpoint', snapshot.spinsUntilNextCheckpoint)}`; } const comboRows = rankedCombos.map((combo, index) => `<tr class="hover:bg-white/5 transition-colors"><td class="p-3 font-bold tracking-widest text-[10px]" style="color:${combo.color}">${index + 1}. ${combo.label}</td><td class="p-3 font-mono ${window.getMetricToneClass('hits', combo.hits)}">${combo.hits}</td><td class="p-3 font-mono ${window.getMetricToneClass('hotPercent', combo.hotPercent)}">${combo.hotPercent}%</td><td class="p-3 font-mono ${window.getMetricToneClass('coldPercent', combo.coldPercent)}">${combo.coldPercent}%</td><td class="p-3 font-mono ${window.getMetricToneClass('lastSeen', combo.lastSeenDistance ?? '-')}">${combo.lastSeenDistance ?? '-'}</td></tr>`).join(''); content.innerHTML = `<div class="grid grid-cols-2 gap-3 mt-2"><div class="col-span-2 bg-gradient-to-b from-white/10 to-white/5 border border-white/10 rounded-xl p-4 text-center shadow-lg"><div class="text-white/40 text-[9px] font-black uppercase tracking-widest mb-1.5">Lead Insight</div><div class="text-lg mb-1 ${window.getPredictionToneClass(snapshot)}">${snapshot.leadMessage || 'Awaiting Valid Sample'}</div><div class="text-[11px] font-medium text-white/70">${window.formatEnginePrediction(snapshot)}</div></div><div class="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col justify-between shadow-sm"><div><div class="text-white/40 text-[9px] font-black uppercase tracking-widest mb-1.5">Primary Read</div><div class="text-lg font-bold tracking-wide" style="color:${leadCombo ? leadCombo.color : '#f0f0f0'}">${leadCombo ? leadCombo.label : 'No combo'}</div></div><div class="text-[10px] text-white/60 mt-2">${leadCombo ? `<span class="${window.getMetricToneClass('hits', leadCombo.hits)}">${leadCombo.hits} hits</span> in rolling 14` : 'Waiting for a valid sample.'}</div></div><div class="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col justify-between shadow-sm"><div><div class="text-white/40 text-[9px] font-black uppercase tracking-widest mb-1.5">Runner-Up Margin</div><div class="text-lg font-bold tracking-wide ${window.getMetricToneClass('margin', snapshot.topMargin)}">${leadCombo ? `${(snapshot.topMargin || 0) >= 0 ? '+' : ''}${snapshot.topMargin || 0}` : '-'}</div></div><div class="text-[10px] text-white/60 mt-2">${runnerUp ? `Runner-up is ${runnerUp.label} (${runnerUp.hits} hits)` : 'No runner-up yet.'}</div></div></div><div class="col-span-2 bg-white/5 border border-white/10 rounded-xl overflow-hidden mt-4 shadow-sm"><div class="bg-black/30 text-white/40 text-[9px] font-black uppercase tracking-widest p-3 border-b border-white/5">14-Spin Combo Ranking</div><table class="w-full text-left text-xs"><thead class="bg-black/10 text-white/30 uppercase text-[9px] tracking-wider border-b border-white/5"><tr><th class="p-3">Combo</th><th class="p-3">Hits</th><th class="p-3">Hot</th><th class="p-3">Cold</th><th class="p-3">Last Seen</th></tr></thead><tbody class="divide-y divide-white/5">${comboRows || '<tr><td colspan="5" class="p-6 text-center text-white/30 italic">Awaiting data...</td></tr>'}</tbody></table></div>`; };
     window.renderStrategyAnalytics = function () {
-        let displayStrategy = 'series'; if (window.state) { if (window.state.analyticsDisplayStrategy === 'combo') displayStrategy = 'combo'; else if (window.state.analyticsDisplayStrategy === 'inside') displayStrategy = 'inside'; } const coreStats = (window.EngineCore && typeof window.EngineCore.getAnalyticsData === 'function') ? window.EngineCore.getAnalyticsData(displayStrategy) : { wins: 0, losses: 0, net: 0, streak: 0, history: [0], patterns: {} }; const totalSignals = coreStats.wins + coreStats.losses; const hitRate = totalSignals === 0 ? 0 : Math.round((coreStats.wins / totalSignals) * 100); const hrEl = document.getElementById('kpiHitRate'); if (hrEl) { hrEl.innerText = hitRate + "%"; hrEl.className = `text-2xl font-semibold tracking-tight ${totalSignals === 0 ? 'text-white' : (hitRate >= 50 ? 'text-[#22c55e]' : 'text-[#d33838]')}`; } const netEl = document.getElementById('kpiNet'); if (netEl) { netEl.innerText = (coreStats.net > 0 ? '+' : '') + coreStats.net; netEl.className = `text-2xl font-semibold tracking-tight ${coreStats.net > 0 ? 'text-[#22c55e]' : (coreStats.net < 0 ? 'text-[#d33838]' : 'text-white')}`; } const sigEl = document.getElementById('kpiSignals');
+        let displayStrategy = 'series';
+        if (window.state) {
+            if (window.state.analyticsDisplayStrategy === 'combo') displayStrategy = 'combo';
+            else if (window.state.analyticsDisplayStrategy === 'inside') displayStrategy = 'inside';
+        }
+
+        const structHeader = document.getElementById('analyticsStructureHeader');
+        if (structHeader) {
+            if (displayStrategy === 'combo') structHeader.innerText = 'Combo';
+            else if (displayStrategy === 'inside') structHeader.innerText = 'Pattern';
+            else structHeader.innerText = 'Sequence';
+        }
+
+        const coreStats = (window.EngineCore && typeof window.EngineCore.getAnalyticsData === 'function') ? window.EngineCore.getAnalyticsData(displayStrategy) : { wins: 0, losses: 0, net: 0, streak: 0, history: [0], patterns: {} };
+        const totalSignals = coreStats.wins + coreStats.losses;
+        const hitRate = totalSignals === 0 ? 0 : Math.round((coreStats.wins / totalSignals) * 100);
+        const hrEl = document.getElementById('kpiHitRate');
+        if (hrEl) { hrEl.innerText = hitRate + "%"; hrEl.className = `text-3xl md:text-4xl font-black tracking-tighter drop-shadow-md ${totalSignals === 0 ? 'text-white' : (hitRate >= 50 ? 'text-[#30D158]' : 'text-[#FF453A]')}`; }
+        const netEl = document.getElementById('kpiNet');
+        if (netEl) { netEl.innerText = (coreStats.net > 0 ? '+' : '') + coreStats.net; netEl.className = `text-3xl md:text-4xl font-black tracking-tighter drop-shadow-md ${coreStats.net > 0 ? 'text-[#30D158]' : (coreStats.net < 0 ? 'text-[#FF453A]' : 'text-white')}`; }
+        const sigEl = document.getElementById('kpiSignals');
         if (sigEl) sigEl.innerText = totalSignals;
 
         if (window.drawAdvancedGraph) {
             window.drawAdvancedGraph(coreStats.history, coreStats.wins, coreStats.losses, 'graphContainer');
+        }
+
+        if (window.updatePatternHeatmap) {
+            window.updatePatternHeatmap(coreStats.patterns, displayStrategy);
         }
     };
 
@@ -198,7 +222,7 @@
         });
 
         chartDiv.addEventListener('mouseleave', () => {
- [hoverLine, hoverHLine, hoverDot, tooltip].forEach(el => el.classList.add('hidden'));
+            [hoverLine, hoverHLine, hoverDot, tooltip].forEach(el => el.classList.add('hidden'));
         });
     };
 })();
