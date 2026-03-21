@@ -1,0 +1,63 @@
+/* --- BUTTONS --- */
+.ios-btn {
+    transition: all 0.2s var(--ease-strike);
+    position: relative;
+    border-radius: 14px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    border: 1px solid var(--glass-border);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+    backdrop-filter: blur(10px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.ios-btn:active {
+    transform: scale(0.95);
+    opacity: 0.8;
+}
+
+.ios-btn:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    text-shadow: none;
+}
+
+/* Header action buttons: solid premium button shape with accent tint */
+.top-nav-btn {
+    --accent-rgb: 255, 255, 255;
+    border-radius: 14px;
+    border: 1px solid var(--glass-border);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+    backdrop-filter: blur(20px);
+    color: rgb(var(--accent-rgb));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    text-shadow: none;
+}
+
+.top-nav-btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(var(--accent-rgb), 0.48);
+    background:
+        linear-gradient(180deg, rgba(var(--accent-rgb), 0.2), rgba(var(--accent-rgb), 0.08) 58%, rgba(8, 8, 12, 0.74)),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 45%);
+    box-shadow:
+        0 14px 28px rgba(0, 0, 0, 0.5),
+        0 0 22px rgba(var(--accent-rgb), 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+.top-nav-btn:active {
+    transform: scale(0.96);
+}
+
+.top-nav-btn.is-active {
+    border-color: rgba(var(--accent-rgb), 0.56);
+    background:
+        linear-gradient(180deg, rgba(var(--accent-rgb), 0.24), rgba(var(--accent-rgb), 0.11) 60%, rgba(8, 8, 12, 0.78)),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.14), transparent 45%);
+    box-shadow:
+        0 14px 30px rgba(0, 0, 0, 0.56),
+        0 0 24px rgba(var(--accent-rgb), 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}

@@ -1,0 +1,64 @@
+/* --- DYNAMIC DASHBOARD CARDS (Predictions) --- */
+.card-lock {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px dashed rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+/* Active Cards are sharp, dark blocks with intense red lines */
+.card-active {
+    background: rgba(28, 28, 30, 0.75);
+    backdrop-filter: blur(40px) saturate(180%);
+    border: 0.5px solid rgba(255, 255, 255, 0.1);
+    border-left: 3px solid var(--theme-red);
+    /* Thinner but still present */
+    border-radius: 14px;
+    /* More squircle */
+    box-shadow: none;
+    cursor: pointer;
+    transition: all 0.2s var(--ease-strike);
+}
+
+.card-active:hover {
+    transform: translateY(-2px);
+    border-left-color: #ff334b;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.9), -5px 0 15px var(--theme-red-glow);
+    background: rgba(20, 20, 24, 0.95);
+}
+
+/* Remove 'Fire', 'Ice', 'Power' styling - homogenize to the crimson tactical look */
+.card-fire,
+.card-ice,
+.card-power,
+.card-confirmed {
+    border-left-color: var(--theme-red) !important;
+    animation: none !important;
+    /* No playful pulsing, just serious business */
+    background: rgba(15, 15, 18, 0.9) !important;
+}
+
+/* The 'Pinch of Green' for checkboxes */
+.bet-checkbox {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--theme-green);
+    /* The pinch */
+    cursor: pointer;
+}
+
+/* Status Badges */
+.status-pill {
+    font-size: 0.6rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.02);
+}
+

@@ -1,0 +1,42 @@
+/* --- TOGGLE SWITCH (AI HINDSIGHT) --- */
+#aiHindsightToggle.active {
+    background: rgba(191, 90, 242, 0.3);
+}
+
+#aiHindsightToggle.active .absolute {
+    transform: translateX(20px);
+    background: #bf5af2;
+    box-shadow: 0 0 8px rgba(191, 90, 242, 0.6);
+}
+
+.animate-glow-green {
+    animation: glow-green 2s infinite alternate;
+}
+
+@keyframes glow-green {
+    from {
+        box-shadow: 0 0 2px rgba(48, 209, 88, 0.15);
+    }
+
+    to {
+        box-shadow: 0 0 8px rgba(48, 209, 88, 0.35);
+    }
+}
+
+.highlight-pair {
+    box-shadow: 0 0 6px rgba(212, 175, 55, 0.4);
+    border-color: #d4af37 !important;
+    animation: pulse-gold 2.5s infinite alternate;
+}
+
+@keyframes pulse-gold {
+    from {
+        opacity: 0.8;
+        transform: scale(1);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+}

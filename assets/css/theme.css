@@ -1,0 +1,131 @@
+/* --- PREMIUM COCKPIT AESTHETIC OVERRIDES --- */
+
+/* Typography & Neon Glows */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.uppercase {
+    letter-spacing: 0.06em !important;
+}
+
+#kpiHitRate,
+#kpiNet,
+#kpiSignals,
+#kpiForm,
+#userNet,
+#userHitRate,
+#userTotal {
+    text-shadow: none;
+    font-weight: 500 !important;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    /* Softer radius */
+    padding: 4px 12px;
+}
+
+/* Tab Navigation - Pill Style Override */
+#tabBtnStrategy,
+#tabBtnIntelligence,
+#tabBtnAdvancements {
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 6px !important;
+    padding: 8px 20px !important;
+    background: rgba(20, 20, 20, 0.8) !important;
+    color: var(--text-secondary) !important;
+    transition: all 0.2s cubic-bezier(0.19, 1, 0.22, 1) !important;
+    margin: 0 4px;
+    font-size: 0.75rem !important;
+    letter-spacing: 0.05em !important;
+}
+
+#tabBtnStrategy:hover,
+#tabBtnIntelligence:hover,
+#tabBtnAdvancements:hover {
+    background: rgba(40, 40, 40, 0.8) !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+}
+
+/* Active State overriding Tailwind */
+#tabBtnStrategy.text-\[\#30D158\],
+#tabBtnIntelligence.text-\[\#30D158\],
+#tabBtnAdvancements.text-\[\#30D158\] {
+    background: var(--theme-red) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 15px rgba(230, 46, 45, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.3) !important;
+    border-color: #ff4d4d !important;
+}
+
+/* Secondary Toggle Pills */
+#analyticsTogglePillBg {
+    background: var(--theme-red) !important;
+    border: 1px solid #ff4d4d !important;
+    box-shadow: 0 4px 12px rgba(230, 46, 45, 0.4) !important;
+    border-radius: 4px !important;
+}
+
+div:has(> #analyticsTogglePillBg),
+div:has(> button[onclick^="changeIntelMode"]) {
+    border-radius: 6px !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+#analyticsBtnSeries,
+#analyticsBtnCombo,
+button[onclick^="changeIntelMode"] {
+    border-radius: 4px !important;
+    transition: all 0.2s var(--ease-strike) !important;
+}
+
+#analyticsBtnSeries.text-\[\#30D158\],
+#analyticsBtnCombo.text-\[\#30D158\],
+button[onclick^="changeIntelMode"].text-white {
+    color: #ffffff !important;
+    text-shadow: none !important;
+}
+
+/* Micro-interactions & Tactile Feedback */
+.ios-btn,
+button,
+.grid-btn,
+.tab-btn,
+.pattern-filter-card {
+    transition: transform 0.15s var(--ease-strike), background-color 0.2s, box-shadow 0.2s, border-color 0.2s !important;
+}
+
+.ios-btn:active,
+button:active,
+.grid-btn:active,
+.tab-btn:active {
+    transform: scale(0.96) translateY(0) !important;
+}
+
+/* SIDEBAR GRID */
+.mesmer-grid {
+    background: rgba(20, 20, 22, 0.65);
+    backdrop-filter: blur(40px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
+    border-right: 0.5px solid rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+    position: relative;
+}
+
+.mesmer-grid::before {
+    display: none !important;
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    opacity: 0.05;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.mesmer-grid>div {
+    position: relative;
+    z-index: 1;
+}

@@ -1,0 +1,52 @@
+/* --- SIGNAL CARD PULSE ANIMATION --- */
+@keyframes signalCardPulse {
+
+    0%,
+    100% {
+        border-color: var(--border-base);
+        box-shadow: var(--shadow-base);
+    }
+
+    50% {
+        border-color: var(--border-pulse);
+        box-shadow: var(--shadow-pulse);
+    }
+}
+
+.signal-card {
+    animation: signalCardPulse 2.5s infinite ease-in-out;
+}
+
+/* Graph Tooltip & Hover Effects */
+#graphTooltip {
+    transform: translate(-50%, -120%);
+    transition: opacity 0.2s;
+    white-space: nowrap;
+}
+
+.graph-hover-point {
+    fill: var(--theme-gold);
+    stroke: var(--bg-deep);
+    stroke-width: 2px;
+    r: 5;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+@media (max-width: 768px) {
+    .history-table {
+        table-layout: auto !important;
+    }
+
+    .history-table th:nth-child(1),
+    .history-table td:nth-child(1),
+    .history-table th:nth-child(4),
+    .history-table td:nth-child(4) {
+        display: none !important;
+    }
+
+    .history-table th:nth-child(5),
+    .history-table td:nth-child(5) {
+        width: 100% !important;
+    }
+}
