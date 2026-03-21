@@ -214,66 +214,70 @@
         stateRef.history.push(spinObj);
         // 3. SCAN FOR NEW PATTERNS
         let scanResult = { nextBets: [], resultsByStrategy: {} };
-        try {
-            if (window.scanAllStrategies) {
-                scanResult = await window.scanAllStrategies({
-                    skipStoreSync: options.skipStoreSync === true || options.silent === true
-                });
+        if (!options.fastReplay) {
+            try {
+                if (window.scanAllStrategies) {
+                    scanResult = await window.scanAllStrategies({
+                        skipStoreSync: options.skipStoreSync === true || options.silent === true
+                    });
+                }
+            } catch (error) {
+                console.error('Strategy scan failed for this spin:', error);
             }
-        } catch (error) {
-            console.error('Strategy scan failed for this spin:', error);
-        }
 
-        // Bridge: Capture the engine's produced bets for dashboard display and next turn resolution
-        stateRef.activeBets = scanResult.nextBets || [];
-        window.currentAlerts = Array.isArray(scanResult.notifications) ? scanResult.notifications : [];
-        if (stateRef.strategySyncCache && typeof stateRef.strategySyncCache === 'object') {
-            const strategyKey = stateRef.currentGameplayStrategy || 'series';
-            stateRef.strategySyncCache[strategyKey] = scanResult;
-        }
+            // Bridge: Capture the engine's produced bets for dashboard display and next turn resolution
+            stateRef.activeBets = scanResult.nextBets || [];
+            window.currentAlerts = Array.isArray(scanResult.notifications) ? scanResult.notifications : [];
+            if (stateRef.strategySyncCache && typeof stateRef.strategySyncCache === 'object') {
+                const strategyKey = stateRef.currentGameplayStrategy || 'series';
+                stateRef.strategySyncCache[strategyKey] = scanResult;
+            }
 
-        // CRITICAL: Attach active MATH signals permanently to history row BEFORE we modify activeBets for AI
-        spinObj.newSignals = stateRef.activeBets.map(b => ({
-            patternName: b.patternName,
-            filterKey: b.filterKey || b.patternName,
-            targetFace: b.targetFace,
-            comboLabel: b.comboLabel || null,
-            confidence: Number.isFinite(b.confidence) ? b.confidence : null,
-            reason: b.reason || b.subtitle || '',
-            mode: b.mode || null,
-            status: b.status || 'GO',
-            signalSource: b.signalSource || 'math'
-        }));
+            // CRITICAL: Attach active MATH signals permanently to history row BEFORE we modify activeBets for AI
+            spinObj.newSignals = stateRef.activeBets.map(b => ({
+                patternName: b.patternName,
+                filterKey: b.filterKey || b.patternName,
+                targetFace: b.targetFace,
+                comboLabel: b.comboLabel || null,
+                confidence: Number.isFinite(b.confidence) ? b.confidence : null,
+                reason: b.reason || b.subtitle || '',
+                mode: b.mode || null,
+                status: b.status || 'GO',
+                signalSource: b.signalSource || 'math'
+            }));
+        }
 
 
 
         // 4. SYNC TO APP STORE (TRIGGER UI RENDER)
-        if (options.skipStoreSync !== true && window.AppStore && typeof window.AppStore.dispatch === 'function') {
-            const safeSpin = window.EngineContract && typeof window.EngineContract.sanitizeSpinObject === 'function'
-                ? window.EngineContract.sanitizeSpinObject(spinObj, currentSpinIndex)
-                : spinObj;
-            window.AppStore.dispatch('history/append', safeSpin);
-        } else if (options.skipStoreSync !== true) {
-            // MASSIVE FAILSAFE: Direct UI update if AppStore is completely missing
-            if (!window.state.engineStats) window.state.engineStats = { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {}, signalLog: [] };
-            const eStats = window.state.engineStats;
-            resolvedBets.forEach(bet => {
-                const count = faces[bet.targetFace] ? faces[bet.targetFace].nums.length : 0;
-                const unitChange = bet.isWin ? (35 - count) : -count;
-                const pName = bet.patternName || 'Unknown';
-                if (bet.isWin) { eStats.totalWins++; eStats.currentStreak = eStats.currentStreak >= 0 ? eStats.currentStreak + 1 : 1; }
-                else { eStats.totalLosses++; eStats.currentStreak = eStats.currentStreak <= 0 ? eStats.currentStreak - 1 : -1; }
-                eStats.netUnits += unitChange;
-                eStats.bankrollHistory.push(eStats.netUnits);
-                if (!eStats.patternStats[pName]) eStats.patternStats[pName] = { wins: 0, losses: 0 };
-                if (bet.isWin) eStats.patternStats[pName].wins++; else eStats.patternStats[pName].losses++;
-                eStats.signalLog.push({ result: bet.isWin ? 'WIN' : 'LOSS', units: unitChange, patternName: pName, spinIndex: spinObj.index, spinNum: spinObj.num });
-                if (bet.confirmed && window.updateUserStats) window.updateUserStats(bet.isWin, bet, spinObj.index, unitChange);
-            });
+        if (!options.fastReplay) {
+            if (options.skipStoreSync !== true && window.AppStore && typeof window.AppStore.dispatch === 'function') {
+                const safeSpin = window.EngineContract && typeof window.EngineContract.sanitizeSpinObject === 'function'
+                    ? window.EngineContract.sanitizeSpinObject(spinObj, currentSpinIndex)
+                    : spinObj;
+                window.AppStore.dispatch('history/append', safeSpin);
+            } else if (options.skipStoreSync !== true) {
+                // MASSIVE FAILSAFE: Direct UI update if AppStore is completely missing
+                if (!window.state.engineStats) window.state.engineStats = { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {}, signalLog: [] };
+                const eStats = window.state.engineStats;
+                resolvedBets.forEach(bet => {
+                    const count = faces[bet.targetFace] ? faces[bet.targetFace].nums.length : 0;
+                    const unitChange = bet.isWin ? (35 - count) : -count;
+                    const pName = bet.patternName || 'Unknown';
+                    if (bet.isWin) { eStats.totalWins++; eStats.currentStreak = eStats.currentStreak >= 0 ? eStats.currentStreak + 1 : 1; }
+                    else { eStats.totalLosses++; eStats.currentStreak = eStats.currentStreak <= 0 ? eStats.currentStreak - 1 : -1; }
+                    eStats.netUnits += unitChange;
+                    eStats.bankrollHistory.push(eStats.netUnits);
+                    if (!eStats.patternStats[pName]) eStats.patternStats[pName] = { wins: 0, losses: 0 };
+                    if (bet.isWin) eStats.patternStats[pName].wins++; else eStats.patternStats[pName].losses++;
+                    eStats.signalLog.push({ result: bet.isWin ? 'WIN' : 'LOSS', units: unitChange, patternName: pName, spinIndex: spinObj.index, spinNum: spinObj.num });
+                    if (bet.confirmed && window.updateUserStats) window.updateUserStats(bet.isWin, bet, spinObj.index, unitChange);
+                });
 
-            if (window.renderRow) window.renderRow(spinObj);
-            if (window.renderGapStats) window.renderGapStats();
-            if (window.renderDashboardSafe) window.renderDashboardSafe(stateRef.activeBets || []);
+                if (window.renderRow) window.renderRow(spinObj);
+                if (window.renderGapStats) window.renderGapStats();
+                if (window.renderDashboardSafe) window.renderDashboardSafe(stateRef.activeBets || []);
+            }
         }
 
         if (!options.preserveInput) {

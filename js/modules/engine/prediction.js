@@ -375,7 +375,7 @@ const PredictionEngine = {
         let markovSequenceLabel = null;
         let fatigueComboLabel = null;
 
-        if (typeof currentPredictionStrategy !== 'undefined' && currentPredictionStrategy === 'legacy-face') {
+        if (options.currentPredictionStrategy === 'legacy-face') {
             // --- LEGACY FACE PREDICTOR ---
             if (validSpinCount >= 2 && hasFace(previousMask, 4) && hasFace(lastMask, 5)) {
                 targetFace = 4;

@@ -76,7 +76,7 @@ window.StrategyRegistry.series = {
      * @param {*}      _snapshot    - unused in series mode (for API compat)
      * @param {Object} patternConfig - the global patternConfig
      */
-    run(historyData, _snapshot, patternConfig, options = {}) {
+    run(historyData, snapshot, patternConfig, options = {}) {
         if (historyData.length < 2) return { notifications: [], nextBets: [] };
 
         const notifications = [];
@@ -92,7 +92,7 @@ window.StrategyRegistry.series = {
 
         // 2. Run Sequence Engine
         const latest = historyData[historyData.length - 1];
-        const prev   = historyData[historyData.length - 2];
+        const prev = historyData[historyData.length - 2];
 
         if (latest.faces && prev.faces) {
             SEQUENCES.forEach(seq => {
@@ -120,6 +120,29 @@ window.StrategyRegistry.series = {
                         });
                     }
                 }
+            });
+        }
+
+        // 3. Incorporate snapshot prediction (Markov triggers)
+        if (snapshot && snapshot.action && snapshot.action.startsWith('BET')) {
+            const displayLabel = snapshot.signalLabel || snapshot.ruleLabel || 'Prediction';
+            notifications.push({
+                type: 'ACTIVE',
+                fA: snapshot.triggerFace || snapshot.targetFace,
+                fB: snapshot.targetFace,
+                count: 1,
+                strategy: 'Prediction',
+                patternName: displayLabel,
+                filterKey: displayLabel
+            });
+            nextBets.push({
+                targetFace: snapshot.targetFace,
+                strategy: 'Prediction',
+                patternName: displayLabel,
+                comboLabel: displayLabel,
+                filterKey: displayLabel,
+                confidence: snapshot.confidence || 0,
+                confirmed: false
             });
         }
 

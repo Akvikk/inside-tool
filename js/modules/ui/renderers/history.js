@@ -197,9 +197,86 @@
         const tbody = document.getElementById('historyBody');
         if (tbody) tbody.innerHTML = '';
 
-        if (window.InputProcessor && window.InputProcessor.processSpinValue) {
-            for (const spinNum of spins) {
-                await window.InputProcessor.processSpinValue(spinNum, { silent: true, skipStoreSync: true });
+        if (spins && spins.length > 0) {
+            const stateRef = window.state;
+            const fonMap = window.FON_MAP || {};
+            const fonMaskMap = window.FON_MASK_MAP || {};
+            const faceMasks = window.FACE_MASKS || {};
+            const faces = window.FACES || {};
+
+            for (let i = 0; i < spins.length; i++) {
+                const val = spins[i];
+                const matchedFaces = Object.prototype.hasOwnProperty.call(fonMap, val) ? fonMap[val].slice() : [];
+                const matchedFaceMask = Object.prototype.hasOwnProperty.call(fonMaskMap, val) ? fonMaskMap[val] : 0;
+
+                // Update Gaps manually
+                for (let f = 1; f <= 5; f++) stateRef.faceGaps[f] = (stateRef.faceGaps[f] || 0) + 1;
+                matchedFaces.forEach(f => stateRef.faceGaps[f] = 0);
+
+                let resolvedBets = [];
+                if (stateRef.activeBets && stateRef.activeBets.length > 0) {
+                    stateRef.activeBets.forEach(bet => {
+                        if (bet.status === 'SIT_OUT' || !bet.targetFace) return;
+                        const targetMask = faceMasks[bet.targetFace] || 0;
+                        const isWin = (matchedFaceMask & targetMask) !== 0;
+                        resolvedBets.push({
+                            patternName: bet.patternName || 'Unknown',
+                            filterKey: bet.filterKey || bet.patternName,
+                            strategy: bet.strategy || '',
+                            targetFace: bet.targetFace,
+                            isWin: isWin,
+                            label: `BET F${bet.targetFace}`,
+                            confirmed: bet.confirmed === true
+                        });
+                    });
+                }
+
+                if (window.EngineCore && typeof window.EngineCore.resolveTurn === 'function') {
+                    try {
+                        window.EngineCore.resolveTurn(val, matchedFaceMask, stateRef.activeBets, stateRef.currentGameplayStrategy, null, {
+                            historyLength: stateRef.history.length,
+                            faceMasks: faceMasks,
+                            faces: faces
+                        });
+                    } catch (e) { console.error(e); }
+                }
+
+                stateRef.activeBets = [];
+
+                const spinObj = {
+                    num: val,
+                    faces: matchedFaces,
+                    index: stateRef.history.length,
+                    resolvedBets: resolvedBets,
+                    newSignals: [],
+                    id: ++stateRef.globalSpinIdCounter || 1
+                };
+                stateRef.history.push(spinObj);
+
+                // Re-calculate state patterns periodically to ensure predictions flow correctly for history rows
+                if (i % 10 === 9 || i === spins.length - 1) {
+                    if (window.scanAllStrategies) {
+                        const scanResult = await window.scanAllStrategies({ skipStoreSync: true, silent: true });
+                        stateRef.activeBets = scanResult.nextBets || [];
+                        window.currentAlerts = Array.isArray(scanResult.notifications) ? scanResult.notifications : [];
+
+                        if (stateRef.strategySyncCache && typeof stateRef.strategySyncCache === 'object') {
+                            stateRef.strategySyncCache[stateRef.currentGameplayStrategy || 'series'] = scanResult;
+                        }
+
+                        spinObj.newSignals = stateRef.activeBets.map(b => ({
+                            patternName: b.patternName,
+                            filterKey: b.filterKey || b.patternName,
+                            targetFace: b.targetFace,
+                            comboLabel: b.comboLabel || null,
+                            confidence: Number.isFinite(b.confidence) ? b.confidence : null,
+                            reason: b.reason || b.subtitle || '',
+                            mode: b.mode || null,
+                            status: b.status || 'GO',
+                            signalSource: b.signalSource || 'math'
+                        }));
+                    }
+                }
             }
         }
 
