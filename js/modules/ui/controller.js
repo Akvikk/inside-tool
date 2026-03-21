@@ -136,9 +136,9 @@
         texts += `<text x="${cx}" y="415" transform="rotate(90, ${cx}, 415)" class="rt-label">ZERO</text>`;
 
         let createGroup = (num, pathD, tx, ty) => {
-            return `<g class="rt-seg" onclick="handleGridClick(${num})">
-                <path d="${pathD}" />
-                <text x="${tx}" y="${ty}" class="rt-num ${getColorClass(num)}">${num}</text>
+            return `<g class="rt-seg cursor-pointer transition-all duration-300 hover:brightness-125 active:scale-[0.92] origin-center" style="transform-box: fill-box;" onclick="handleGridClick(${num})">
+                <path d="${pathD}" class="transition-colors duration-300" />
+                <text x="${tx}" y="${ty}" class="rt-num ${getColorClass(num)} font-black">${num}</text>
             </g>`;
         };
 
@@ -190,11 +190,11 @@
         } else {
             const RED_NUMS = window.config && window.config.RED_NUMS ? window.config.RED_NUMS : [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
             let gridHtml = '<div class="grid grid-cols-3 gap-2 w-full" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem;">';
-            gridHtml += '<button class="grid-btn grid-green col-span-3 font-bold text-white text-sm" style="grid-column: span 3 / span 3;" onclick="handleGridClick(0)">ZERO</button>';
+            gridHtml += '<button class="grid-btn grid-green col-span-3 font-black text-[12px] tracking-widest text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]" style="grid-column: span 3 / span 3;" onclick="handleGridClick(0)">ZERO</button>';
             for (let i = 1; i <= 36; i++) {
                 const isRed = RED_NUMS.includes(i);
                 const colorClass = isRed ? 'grid-red' : 'grid-black';
-                gridHtml += `<button class="grid-btn ${colorClass} font-bold text-white text-sm" onclick="handleGridClick(${i})">${i}</button>`;
+                gridHtml += `<button class="grid-btn ${colorClass} font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]" onclick="handleGridClick(${i})">${i}</button>`;
             }
             gridHtml += '</div>';
             grid.classList.add('p-3');
