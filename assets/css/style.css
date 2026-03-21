@@ -2,6 +2,7 @@
  * INSIDE TOOL - Modular CSS Entry Point
  * All styles have been modularized for maintainability.
  */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700;800&display=swap');
 
 @import url('base.css');
 @import url('layout.css');
