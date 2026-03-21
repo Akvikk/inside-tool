@@ -11,7 +11,7 @@
         tabs.forEach(tab => {
             const btn = tab.button;
             const panel = document.getElementById(tab.panelId);
-            if (btn) btn.className = tab.key === activeTab ? "pb-2 text-sm font-medium tracking-normal text-white border-b-2 border-white transition-all duration-300 ease-out" : "pb-2 text-sm font-medium tracking-normal text-white/50 border-b-2 border-transparent hover:text-white/80 transition-all duration-300 ease-out";
+            if (btn) btn.className = tab.key === activeTab ? "pb-2 text-[11px] font-black uppercase tracking-widest text-[#FFD60A] border-b-2 border-[#FFD60A] transition-all duration-300" : "pb-2 text-[11px] font-black uppercase tracking-widest text-white/40 border-b-2 border-transparent hover:text-white/80 transition-all duration-300 active:scale-[0.98]";
             if (panel) { if (tab.key === activeTab) panel.classList.remove('hidden'); else panel.classList.add('hidden'); }
         });
     };
@@ -22,10 +22,10 @@
         container.innerHTML = '';
         for (let f = 1; f <= 5; f++) {
             const gap = window.state.faceGaps ? window.state.faceGaps[f] || 0 : 0;
-            let colorClass = 'text-[#32D74B]';
-            if (gap > 10) colorClass = 'text-[#FF9F0A]';
+            let colorClass = 'text-[#30D158]';
+            if (gap > 10) colorClass = 'text-[#FFD60A]';
             if (gap > 15) colorClass = 'text-[#FF453A]';
-            container.innerHTML += `<div class="text-center p-2 rounded-xl bg-white/5 border border-white/[0.08] shadow-sm backdrop-blur-sm transition-all duration-300 ease-out hover:bg-white/10"><span class="block text-white/50 text-[10px] font-medium mb-0.5 tracking-normal">F${f}</span><span class="${colorClass} font-semibold text-xl">${gap}</span></div>`;
+            container.innerHTML += `<div class="text-center p-2.5 rounded-[16px] bg-[#1C1C1E]/40 border border-white/[0.05] shadow-sm backdrop-blur-sm transition-all duration-300 hover:bg-white/[0.06]"><span class="block text-white/40 text-[10px] font-black uppercase tracking-widest mb-1">F${f}</span><span class="${colorClass} font-black text-xl">${gap}</span></div>`;
         }
     };
 
@@ -44,7 +44,7 @@
 
     window.renderAdvancementAnalytics = function () {
         const advPanel = document.getElementById('advancementLogContainer');
-        if (advPanel) advPanel.innerHTML = '<div class="text-white/40 text-center py-6 text-xs italic tracking-wide">Advancements tracking active. Awaiting threshold breaches.</div>';
+        if (advPanel) advPanel.innerHTML = '<div class="text-white/30 text-center py-8 text-[11px] font-black uppercase tracking-widest">Advancements tracking active. Awaiting threshold breaches.</div>';
     };
 
     window.renderAnalytics = function () {
@@ -95,9 +95,9 @@
         const totalSignals = coreStats.wins + coreStats.losses;
         const hitRate = totalSignals === 0 ? 0 : Math.round((coreStats.wins / totalSignals) * 100);
         const hrEl = document.getElementById('kpiHitRate');
-        if (hrEl) { hrEl.innerText = hitRate + "%"; hrEl.className = `text-2xl md:text-3xl font-semibold tracking-tight ${totalSignals === 0 ? 'text-white/90' : (hitRate >= 50 ? 'text-[#32D74B]' : 'text-[#FF453A]')}`; }
+        if (hrEl) { hrEl.innerText = hitRate + "%"; hrEl.className = `text-2xl md:text-3xl font-black tracking-wide ${totalSignals === 0 ? 'text-white/90' : (hitRate >= 50 ? 'text-[#30D158]' : 'text-[#FF453A]')}`; }
         const netEl = document.getElementById('kpiNet');
-        if (netEl) { netEl.innerText = (coreStats.net > 0 ? '+' : '') + coreStats.net; netEl.className = `text-2xl md:text-3xl font-semibold tracking-tight ${coreStats.net > 0 ? 'text-[#32D74B]' : (coreStats.net < 0 ? 'text-[#FF453A]' : 'text-white/90')}`; }
+        if (netEl) { netEl.innerText = (coreStats.net > 0 ? '+' : '') + coreStats.net; netEl.className = `text-2xl md:text-3xl font-black tracking-wide ${coreStats.net > 0 ? 'text-[#30D158]' : (coreStats.net < 0 ? 'text-[#FF453A]' : 'text-white/90')}`; }
         const sigEl = document.getElementById('kpiSignals');
         if (sigEl) sigEl.innerText = totalSignals;
 
@@ -115,24 +115,24 @@
         if (!container) return;
 
         container.innerHTML = '';
-        container.className = "flex flex-col h-full w-full rounded-b-xl overflow-hidden";
+        container.className = "flex flex-col h-full w-full rounded-b-[16px] overflow-hidden";
 
         const chartDiv = document.createElement('div');
-        chartDiv.className = "relative h-[80%] w-full bg-black/20 group cursor-crosshair";
+        chartDiv.className = "relative h-[80%] w-full bg-[#1C1C1E]/40 group cursor-crosshair";
         container.appendChild(chartDiv);
 
         // HUD Overlay for Graph Stats
         const hudDiv = document.createElement('div');
-        hudDiv.className = "h-[20%] w-full flex justify-between items-center px-4 text-xs font-medium bg-white/5 border-t border-white/[0.08] backdrop-blur-sm";
+        hudDiv.className = "h-[20%] w-full flex justify-between items-center px-4 text-[10px] font-black uppercase tracking-widest bg-black/20 border-t border-white/[0.05] backdrop-blur-sm";
         hudDiv.innerHTML = `
-                <span class="text-[#32D74B] drop-shadow-sm tracking-wide">WINS: ${winCount}</span>
-                <span class="text-[#e5e7eb] drop-shadow-sm tracking-wide">SPINS: ${historyArray ? Math.max(0, historyArray.length - 1) : 0}</span>
+                <span class="text-[#30D158] drop-shadow-sm">WINS: ${winCount}</span>
+                <span class="text-white/70 drop-shadow-sm">SPINS: ${historyArray ? Math.max(0, historyArray.length - 1) : 0}</span>
                 <span class="text-[#FF453A] drop-shadow-sm tracking-wide">LOSSES: ${lossCount}</span>
             `;
         container.appendChild(hudDiv);
 
         if (!historyArray || historyArray.length < 2) {
-            chartDiv.innerHTML = `<div class="flex items-center justify-center h-full text-xs text-white/40 font-medium animate-pulse">Waiting for Data...</div>`;
+            chartDiv.innerHTML = `<div class="flex items-center justify-center h-full text-[11px] font-black uppercase tracking-widest text-white/30 animate-pulse">Waiting for Data...</div>`;
             return;
         }
 
@@ -174,9 +174,9 @@
         else { zeroOffset = 0; }
 
         const fillPathD = `${pathD} L ${points[points.length - 1].x} ${zeroY} L ${points[0].x} ${zeroY} Z`;
-        const svgContent = `<svg viewBox="0 0 ${vWidth} ${vHeight}" width="100%" height="100%" preserveAspectRatio="none" style="overflow: visible;"><defs><linearGradient id="profitGrad-${containerId}" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#32D74B" /><stop offset="${zeroOffset}%" stop-color="#32D74B" /><stop offset="${zeroOffset}%" stop-color="#FF453A" /><stop offset="100%" stop-color="#FF453A" /></linearGradient><linearGradient id="fillGrad-${containerId}" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#32D74B" stop-opacity="0.35"/><stop offset="${zeroOffset}%" stop-color="#32D74B" stop-opacity="0.0"/><stop offset="${zeroOffset}%" stop-color="#FF453A" stop-opacity="0.0"/><stop offset="100%" stop-color="#FF453A" stop-opacity="0.35"/></linearGradient></defs><line x1="${padding}" y1="${zeroY}" x2="${vWidth - padding}" y2="${zeroY}" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 6" opacity="0.3" vector-effect="non-scaling-stroke" /><path d="${fillPathD}" fill="url(#fillGrad-${containerId})" opacity="0.8" /><path d="${pathD}" fill="none" stroke="url(#profitGrad-${containerId})" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));" /></svg>`;
+        const svgContent = `<svg viewBox="0 0 ${vWidth} ${vHeight}" width="100%" height="100%" preserveAspectRatio="none" style="overflow: visible;"><defs><linearGradient id="profitGrad-${containerId}" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#30D158" /><stop offset="${zeroOffset}%" stop-color="#30D158" /><stop offset="${zeroOffset}%" stop-color="#FF453A" /><stop offset="100%" stop-color="#FF453A" /></linearGradient><linearGradient id="fillGrad-${containerId}" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#30D158" stop-opacity="0.35"/><stop offset="${zeroOffset}%" stop-color="#30D158" stop-opacity="0.0"/><stop offset="${zeroOffset}%" stop-color="#FF453A" stop-opacity="0.0"/><stop offset="100%" stop-color="#FF453A" stop-opacity="0.35"/></linearGradient></defs><line x1="${padding}" y1="${zeroY}" x2="${vWidth - padding}" y2="${zeroY}" stroke="#9ca3af" stroke-width="2" stroke-dasharray="6 6" opacity="0.3" vector-effect="non-scaling-stroke" /><path d="${fillPathD}" fill="url(#fillGrad-${containerId})" opacity="0.8" /><path d="${pathD}" fill="none" stroke="url(#profitGrad-${containerId})" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));" /></svg>`;
 
-        const uiOverlays = `<div class="graph-hover-line absolute hidden w-[1px] bg-white/20 pointer-events-none h-full top-0 z-10"></div><div class="graph-hover-hline absolute hidden h-[1px] bg-white/20 pointer-events-none w-full left-0 z-10"></div><div class="graph-hover-dot absolute hidden w-2.5 h-2.5 bg-white border-2 border-[#1C1C1E] rounded-full pointer-events-none transform -translate-x-1/2 -translate-y-1/2 shadow-[0_0_8px_rgba(255,255,255,0.6)] z-20"></div><div class="graph-tooltip absolute hidden bg-[#1C1C1E]/95 border border-white/[0.08] text-white/90 text-xs px-3 py-1.5 rounded-lg pointer-events-none z-30 backdrop-blur-md shadow-xl whitespace-nowrap font-medium tracking-normal"></div>`;
+        const uiOverlays = `<div class="graph-hover-line absolute hidden w-[1px] bg-white/20 pointer-events-none h-full top-0 z-10"></div><div class="graph-hover-hline absolute hidden h-[1px] bg-white/20 pointer-events-none w-full left-0 z-10"></div><div class="graph-hover-dot absolute hidden w-2.5 h-2.5 bg-white border-2 border-[#1C1C1E] rounded-full pointer-events-none transform -translate-x-1/2 -translate-y-1/2 shadow-[0_0_8px_rgba(255,255,255,0.6)] z-20"></div><div class="graph-tooltip absolute hidden bg-[#1C1C1E]/95 border border-white/[0.05] text-white/90 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg pointer-events-none z-30 backdrop-blur-md shadow-xl whitespace-nowrap"></div>`;
 
         chartDiv.innerHTML = svgContent + uiOverlays;
 
@@ -206,10 +206,10 @@
 
             hoverDot.style.left = pxX + 'px';
             hoverDot.style.top = pxY + 'px';
-            hoverDot.style.borderColor = val >= 0 ? '#32D74B' : '#FF453A';
+            hoverDot.style.borderColor = val >= 0 ? '#30D158' : '#FF453A';
             hoverDot.classList.remove('hidden');
 
-            tooltip.innerHTML = `<span class="text-white/50 mr-2">Spin ${i}</span><span class="font-semibold ${val >= 0 ? 'text-[#32D74B]' : 'text-[#FF453A]'}">${val > 0 ? '+' : ''}${val}</span>`;
+            tooltip.innerHTML = `<span class="text-white/50 mr-2">Spin ${i}</span><span class="${val >= 0 ? 'text-[#30D158]' : 'text-[#FF453A]'}">${val > 0 ? '+' : ''}${val}</span>`;
 
             let ttLeft = xPos + 15;
             let ttTop = yPos + 15;
