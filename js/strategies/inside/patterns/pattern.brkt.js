@@ -4,9 +4,9 @@
 
 (function () {
     const pattern = {
-        name: 'Bracket',
+        name: 'BRKT',
         key: 'brkt',
-        label: 'Bracket',
+        label: 'BRKT',
 
         /**
          * Run the pattern detection logic.

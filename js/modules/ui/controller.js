@@ -458,24 +458,26 @@
             `);
         }
 
+        // Update Header Sort Button
+        const headerTitle = document.getElementById('patternFilterHeaderTitle');
+        if (headerTitle) {
+            const sortModes = {
+                'chrono': '<i class="fas fa-clock mr-1.5"></i> Chrono',
+                'best': '<i class="fas fa-arrow-up mr-1.5"></i> Best',
+                'worst': '<i class="fas fa-arrow-down mr-1.5"></i> Worst'
+            };
+            const currentSortLabel = sortModes[window.state.patternSortMode] || sortModes['chrono'];
+            headerTitle.innerHTML = `
+                <button onclick="event.stopPropagation(); window.cyclePatternSort()" class="text-[9px] font-black tracking-widest uppercase text-[#BF5AF2] hover:text-white transition-all bg-[#BF5AF2]/10 px-2.5 py-1.5 rounded-lg border border-[#BF5AF2]/20 shadow-lg active:scale-[0.95] flex items-center">
+                    ${currentSortLabel}
+                </button>
+            `;
+        }
+
         if (entries.length === 0) {
             list.innerHTML = '<div class="text-[9px] font-bold uppercase tracking-widest text-white/10 text-center py-8 italic">No protocols found for this strategy.</div>';
         } else {
-            const sortModes = {
-                'chrono': '<i class="fas fa-clock mr-1"></i> Chrono',
-                'best': '<i class="fas fa-arrow-up mr-1"></i> Best',
-                'worst': '<i class="fas fa-arrow-down mr-1"></i> Worst'
-            };
-            const currentSortLabel = sortModes[window.state.patternSortMode] || sortModes['chrono'];
-            const sortHeader = `
-                <div class="flex items-center justify-between px-3.5 pb-2 mb-2 border-b border-white/5">
-                    <span class="text-[9px] font-bold tracking-widest uppercase text-white/40">Sort Mode</span>
-                    <button onclick="window.cyclePatternSort()" class="text-[10px] font-bold text-[#BF5AF2] hover:text-white transition-colors bg-[#BF5AF2]/10 px-2 py-1 rounded">
-                        ${currentSortLabel}
-                    </button>
-                </div>
-            `;
-            list.innerHTML = sortHeader + `<div class="divide-y divide-white/[0.03]">${entries.join('')}</div>`;
+            list.innerHTML = `<div class="divide-y divide-white/[0.03]">${entries.join('')}</div>`;
         }
     };
 

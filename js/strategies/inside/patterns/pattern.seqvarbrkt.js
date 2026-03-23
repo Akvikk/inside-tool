@@ -7,7 +7,7 @@
         name: 'Sequence and Variation Bracket',
         key: 'seqvarbrkt',
         label: 'SeqVarBrkt',
-        
+
         /**
          * Run the pattern detection logic.
          */

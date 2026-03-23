@@ -4,9 +4,9 @@
 
 (function () {
     const pattern = {
-        name: 'One Cut Repeating',
+        name: '1C RPT',
         key: '1c-rptng',
-        label: '1C-RPTng',
+        label: '1C RPT',
 
         /**
          * Run the pattern detection logic.

@@ -4,9 +4,9 @@
 
 (function () {
     const pattern = {
-        name: 'Repeating',
+        name: 'RPT',
         key: 'rptng',
-        label: 'RPTng',
+        label: 'RPT',
 
         /**
          * Run the pattern detection logic.
@@ -41,14 +41,14 @@
                 notifications.push({
                     type: 'ACTIVE',
                     strategy: 'inside',
-                    patternName: 'Repeating',
+                    patternName: this.name,
                     filterKey: 'rptng'
                 });
 
                 nextBets.push({
                     targetFace: latestFace,
                     strategy: 'inside',
-                    patternName: 'Repeating',
+                    patternName: this.name,
                     filterKey: 'rptng',
                     confirmed: false
                 });

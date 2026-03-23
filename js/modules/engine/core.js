@@ -180,17 +180,13 @@ window.EngineCore = {
 
         // Ensure new verbose names are mapped correctly for Analytics chart tracking
         const insideLabels = [
-            'Repeating',
-            'One Cut Repeating',
-            'Bracket',
+            'RPT',
+            '1C RPT',
+            'BRKT',
             '1-2-1',
             '1-2-3',
             '2-2',
-            'Sequence and Variation Bracket',
-            'RPTng',
-            '1C RPTng',
-            'brkt',
-            'SeqVarBrkt'
+            'SV BRKT'
         ];
 
         this.stats.signalLog.forEach(log => {
