@@ -26,7 +26,7 @@
                 ? `border: 1px solid ${accent}80; box-shadow: 0 8px 32px ${accent}20, inset 0 1px 1px rgba(255,255,255,0.2);`
                 : `border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 4px 16px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.05);`;
 
-            const iconHTML = bet.confirmed 
+            const iconHTML = bet.confirmed
                 ? `<div class="h-6 w-6 rounded-full flex items-center justify-center shadow-lg" style="background: linear-gradient(135deg, ${accent}, ${accent}90)"><i class="fas fa-check text-[10px] text-white"></i></div>`
                 : `<div class="h-6 w-6 rounded-full flex items-center justify-center border border-white/20 bg-white/5"><i class="fas fa-crosshairs text-[10px] text-white/40"></i></div>`;
 
@@ -71,7 +71,7 @@
         dash.innerHTML = cards.join('');
     };
 
-    window.toggleBetConfirmation = function(index) {
+    window.toggleBetConfirmation = function (index) {
         if (window.state && window.state.activeBets && window.state.activeBets[index]) {
             window.state.activeBets[index].confirmed = !window.state.activeBets[index].confirmed;
             window.renderDashboardSafe(window.state.activeBets);

@@ -48,6 +48,12 @@
 
 <body class="h-screen flex flex-col text-sm selection:bg-blue-500/30">
 
+    <!-- 2026 iOS PURE DARK MODE BACKGROUND -->
+    <div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none bg-[#000000]">
+        <!-- Ultra subtle volumetric gradient to give depth without color pollution -->
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.03)_0%,transparent_60%)]"></div>
+    </div>
+
     <!-- HAMBURGER MENU BACKDROP (FULL SCREEN BLUR) -->
     <div id="hamburgerBackdrop"
         class="fixed inset-0 bg-[#030303]/40 backdrop-blur-[12px] opacity-0 pointer-events-none z-20 transition-all duration-300">
@@ -381,8 +387,8 @@
             <div id="dashboard"
                 class="px-4 py-1.5 flex gap-2 overflow-x-auto h-[68px] shrink-0 items-center bg-[#1C1C1E]/30 backdrop-blur-[20px] border-b border-white/[0.04] transition-colors duration-300 z-40">
                 <div
-                    class="dashboard-empty w-full text-center text-[11px] font-black text-white/30 border border-dashed border-white/[0.05] rounded-[16px] p-2 select-none tracking-widest flex items-center justify-center h-[52px]">
-                    AWAITING ENGINE ACTIVITY...
+                    class="dashboard-empty w-full text-center text-[10px] font-semibold text-[#8E8E93] border border-white/[0.05] rounded-[18px] p-2 select-none tracking-widest flex items-center justify-center h-[52px]">
+                    AWAITING ENGINE ACTIVITY
                 </div>
             </div>
 

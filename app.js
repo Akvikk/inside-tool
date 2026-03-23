@@ -176,15 +176,14 @@ window.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        /* Global atmospheric backdrop to make the glass visible - Softened for eye strain */
+        /* iOS 2026 Core Aesthetics - Pure Blacks, Heavy Blurs, Ultra-Thin Borders */
         body {
-            background-color: #0A0A0C !important;
-            background-image: radial-gradient(circle at 50% 0%, #15151c 0%, #0A0A0C 100%) !important;
-            background-attachment: fixed !important;
-            color: #E5E5EA; /* Soften pure whites globally without breaking Tailwind */
+            background-color: #000000 !important;
+            color: #F2F2F7; /* Apple System Gray 6 */
+            -webkit-font-smoothing: antialiased;
         }
         
-        /* Core UI Panels, Modals, and Menus - Reduced Border Harshness */
+        /* High-fidelity Glass Panels (Apple Materials) */
         header, 
         #hamburgerMenu, 
         #patternFilterPopover,
@@ -192,11 +191,28 @@ window.addEventListener('DOMContentLoaded', async () => {
         .dashboard-empty,
         #analyticsHUD,
         #hudControls {
-            background: rgba(20, 20, 24, 0.40) !important;
-            backdrop-filter: blur(28px) saturate(160%) !important;
-            -webkit-backdrop-filter: blur(28px) saturate(160%) !important;
-            border: 1px solid rgba(255, 255, 255, 0.05) !important;
-            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.03) !important;
+            background: rgba(28, 28, 30, 0.65) !important; /* iOS Dark Material */
+            backdrop-filter: blur(60px) saturate(200%) !important;
+            -webkit-backdrop-filter: blur(60px) saturate(200%) !important;
+            border: 0.5px solid rgba(255, 255, 255, 0.15) !important;
+            box-shadow: none !important; /* Remove muddy drop shadows for clean lines */
+            border-radius: 20px !important; /* Squircle appearance */
+        }
+
+        /* Number Pad Grid Panel - Deeper material */
+        #inputGridContainer {
+            background: transparent !important;
+            border-right: 0.5px solid rgba(255, 255, 255, 0.1) !important;
+        }
+
+        /* Standardize Table UI to iOS list styles */
+        thead.bg-black\\/20 th {
+            background-color: transparent !important;
+            color: #8E8E93 !important; /* Apple System Gray */
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.05em;
+            border-bottom: 0.5px solid rgba(255, 255, 255, 0.1) !important;
         }
         
         /* Lists and secondary interaction areas */
