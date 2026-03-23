@@ -19,7 +19,7 @@ window.scanAllStrategies = async function (options = {}) {
 
         const rawResult = await window.EngineCore.scanAll(
             window.state.history, window.state.engineSnapshot || {},
-            window.state.currentGameplayStrategy || 'series', window.state.patternConfig || {}, options
+            window.state.currentGameplayStrategy || 'inside', window.state.patternConfig || {}, options
         );
 
         const syncView = window.EngineAdapter && typeof window.EngineAdapter.toSyncView === 'function' ? window.EngineAdapter.toSyncView(rawResult) : rawResult;
@@ -33,7 +33,7 @@ window.scanAllStrategies = async function (options = {}) {
         window.currentAlerts = result.notifications;
 
         if (window.state.strategySyncCache && typeof window.state.strategySyncCache === 'object') {
-            window.state.strategySyncCache[window.state.currentGameplayStrategy || 'series'] = result;
+            window.state.strategySyncCache[window.state.currentGameplayStrategy || 'inside'] = result;
         }
         return result;
     }
@@ -64,6 +64,7 @@ window.resetData = async function () {
             window.state.userStats = { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
             window.state.engineStats = { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {}, signalLog: [] };
             window.state.globalSpinIdCounter = 0;
+            window.state.currentGameplayStrategy = 'inside';
         }
         window.currentAlerts = [];
         if (window.EngineCore && window.EngineCore.reset) window.EngineCore.reset();
@@ -82,7 +83,7 @@ window.resetData = async function () {
 window.performReset = window.resetData;
 
 window.syncUIWithStrategyMode = function () {
-    const strategyKey = window.state && window.state.currentGameplayStrategy ? window.state.currentGameplayStrategy : 'series';
+    const strategyKey = window.state && window.state.currentGameplayStrategy ? window.state.currentGameplayStrategy : 'inside';
     const comboHeader = document.getElementById('historyComboHeader');
 
     if (comboHeader) {
