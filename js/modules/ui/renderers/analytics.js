@@ -225,4 +225,51 @@
             [hoverLine, hoverHLine, hoverDot, tooltip].forEach(el => el.classList.add('hidden'));
         });
     };
+
+    window.updatePatternHeatmap = function (patternData, strategyKey) {
+        const tbody = document.getElementById('heatmapBody');
+        if (!tbody) return;
+
+        const strategy = window.StrategyRegistry && window.StrategyRegistry[strategyKey];
+        if (!strategy || !strategy.PATTERN_FILTER_META) {
+            tbody.innerHTML = '<tr><td colspan="4" class="p-6 md:p-8 text-center text-white/40 italic text-xs">Strategy data unavailable...</td></tr>';
+            return;
+        }
+
+        const meta = strategy.PATTERN_FILTER_META;
+        const keys = strategy.PATTERN_ORDER || Object.keys(meta);
+        let hasData = false;
+        let html = '';
+
+        keys.forEach(key => {
+            const config = meta[key];
+            const label = config.label || key;
+            // The core.js aggregates using the pattern name/label
+            const stats = patternData[label] || { wins: 0, losses: 0 };
+            const total = stats.wins + stats.losses;
+            
+            if (total > 0) {
+                hasData = true;
+                const accuracy = Math.round((stats.wins / total) * 100);
+                let accColor = 'text-white/40';
+                if (accuracy >= 50) accColor = 'text-[#30D158]';
+                else if (total > 0) accColor = 'text-[#FF453A]';
+
+                html += `
+                    <tr class="hover:bg-white/[0.04] transition-colors duration-300 border-b border-white/[0.08] last:border-0">
+                        <td class="p-3 md:p-4 font-medium text-sm text-white/90">${label}</td>
+                        <td class="p-3 md:p-4 text-right text-sm text-[#30D158] font-medium">${stats.wins}</td>
+                        <td class="p-3 md:p-4 text-right text-sm text-[#FF453A] font-medium">${stats.losses}</td>
+                        <td class="p-3 md:p-4 text-right text-sm ${accColor} font-bold tracking-wide">${accuracy}%</td>
+                    </tr>
+                `;
+            }
+        });
+
+        if (!hasData) {
+            tbody.innerHTML = '<tr><td colspan="4" class="p-6 md:p-8 text-center text-white/40 italic text-xs">Awaiting pattern recognition...</td></tr>';
+        } else {
+            tbody.innerHTML = html;
+        }
+    };
 })();
