@@ -159,8 +159,8 @@
         tbody.appendChild(tr);
 
         if (!targetContainer) {
-            const sc = document.querySelector('#scrollContainer > div');
-            if (sc) { setTimeout(() => { sc.scrollTop = sc.scrollHeight; }, 50); }
+            const sc = document.querySelector('#scrollContainer > div') || document.getElementById('scrollContainer') || (document.getElementById('historyBody') ? document.getElementById('historyBody').closest('.overflow-y-auto, .overflow-auto') : null);
+            if (sc) { setTimeout(() => { sc.scrollTop = sc.scrollHeight + 150; }, 50); }
             if (window.layoutComboBridge) requestAnimationFrame(() => window.layoutComboBridge(spin.id));
         }
     };
@@ -181,9 +181,9 @@
         }
 
         if (options.scrollToEnd !== false) {
-            const sc = document.querySelector('#scrollContainer > div');
+            const sc = document.querySelector('#scrollContainer > div') || document.getElementById('scrollContainer') || (document.getElementById('historyBody') ? document.getElementById('historyBody').closest('.overflow-y-auto, .overflow-auto') : null);
             if (sc) {
-                setTimeout(() => { sc.scrollTop = sc.scrollHeight; }, 50);
+                setTimeout(() => { sc.scrollTop = sc.scrollHeight + 150; }, 50);
             }
         }
     };

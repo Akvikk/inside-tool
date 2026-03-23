@@ -352,11 +352,21 @@
         }
     };
 
+    window.cyclePatternSort = function () {
+        if (!window.state) return;
+        const modes = ['chrono', 'best', 'worst'];
+        let currentIdx = modes.indexOf(window.state.patternSortMode || 'chrono');
+        window.state.patternSortMode = modes[(currentIdx + 1) % modes.length];
+        window.renderPatternFilterList();
+    };
+
     window.renderPatternFilterList = function () {
         const list = document.getElementById('patternsList');
         if (!list || !window.state) return;
 
         const metaData = getPatternMetaData();
+
+        if (!window.state.patternSortMode) window.state.patternSortMode = 'chrono';
 
         // Active Badge Reset: disable pattern configs that don't belong to the active strategy
         if (!window.state.patternConfig) window.state.patternConfig = {};
@@ -374,21 +384,21 @@
 
         const config = window.state.patternConfig;
 
-        let entries = [];
-        for (const key of Object.keys(metaData)) {
+        let patternItems = Object.keys(metaData).map(key => {
             const meta = metaData[key];
             const isEnabled = config[key] !== false;
             const accent = meta.accent || 'var(--apple-p3-blue)';
 
             // Fetch accuracy stats
             let accuracyText = '';
+            let pct = -1;
             if (window.EngineCore && window.EngineCore.stats && window.EngineCore.stats.patternStats) {
                 const labelMatch = meta.label || key;
                 const pStats = window.EngineCore.stats.patternStats[labelMatch] || window.EngineCore.stats.patternStats[key];
                 if (pStats) {
                     const total = pStats.wins + pStats.losses;
                     if (total > 0) {
-                        const pct = Math.round((pStats.wins / total) * 100);
+                        pct = Math.round((pStats.wins / total) * 100);
                         let colorClass;
                         if (pct === 0) {
                             colorClass = 'text-white/40';
@@ -401,13 +411,42 @@
                     }
                 }
             }
+            return { key, meta, isEnabled, pct, accuracyText };
+        });
+
+        if (window.state.patternSortMode === 'best') {
+            patternItems.sort((a, b) => b.pct - a.pct);
+        } else if (window.state.patternSortMode === 'worst') {
+            patternItems.sort((a, b) => {
+                if (a.pct === -1) return 1; // Keep unplayed at the bottom
+                if (b.pct === -1) return -1;
+                return a.pct - b.pct;
+            });
+        } else {
+            // Default: Chronological ordering
+            const activeStrategyKey = (window.state && window.state.currentGameplayStrategy) ? window.state.currentGameplayStrategy : 'inside';
+            const strategy = window.StrategyRegistry ? window.StrategyRegistry[activeStrategyKey] : null;
+            if (strategy && strategy.PATTERN_ORDER) {
+                const order = strategy.PATTERN_ORDER;
+                patternItems.sort((a, b) => {
+                    const idxA = order.indexOf(a.key);
+                    const idxB = order.indexOf(b.key);
+                    if (idxA === -1) return 1;
+                    if (idxB === -1) return -1;
+                    return idxA - idxB;
+                });
+            }
+        }
+
+        let entries = [];
+        for (const item of patternItems) {
+            const { key, meta, isEnabled, accuracyText } = item;
 
             entries.push(`
                 <div class="flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 hover:bg-white/[0.05] active:scale-[0.98] cursor-pointer" 
                      onclick="event.stopPropagation(); togglePatternFilter('${key}')">
                     <div class="flex flex-col flex-1 min-w-0 pr-4">
                         <span class="text-[11px] font-bold text-white/90 tracking-wide truncate">${meta.label || key}${accuracyText}</span>
-                        ${meta.hint ? `<span class="text-[9px] text-white/30 font-medium mt-0.5 line-clamp-2 leading-tight">${meta.hint}</span>` : ''}
                     </div>
                     
                     <!-- APPLE NATIVE SWITCH (Stabilized) -->
@@ -422,7 +461,21 @@
         if (entries.length === 0) {
             list.innerHTML = '<div class="text-[9px] font-bold uppercase tracking-widest text-white/10 text-center py-8 italic">No protocols found for this strategy.</div>';
         } else {
-            list.innerHTML = `<div class="divide-y divide-white/[0.03]">${entries.join('')}</div>`;
+            const sortModes = {
+                'chrono': '<i class="fas fa-clock mr-1"></i> Chrono',
+                'best': '<i class="fas fa-arrow-up mr-1"></i> Best',
+                'worst': '<i class="fas fa-arrow-down mr-1"></i> Worst'
+            };
+            const currentSortLabel = sortModes[window.state.patternSortMode] || sortModes['chrono'];
+            const sortHeader = `
+                <div class="flex items-center justify-between px-3.5 pb-2 mb-2 border-b border-white/5">
+                    <span class="text-[9px] font-bold tracking-widest uppercase text-white/40">Sort Mode</span>
+                    <button onclick="window.cyclePatternSort()" class="text-[10px] font-bold text-[#BF5AF2] hover:text-white transition-colors bg-[#BF5AF2]/10 px-2 py-1 rounded">
+                        ${currentSortLabel}
+                    </button>
+                </div>
+            `;
+            list.innerHTML = sortHeader + `<div class="divide-y divide-white/[0.03]">${entries.join('')}</div>`;
         }
     };
 
