@@ -85,7 +85,7 @@
                                      data-color="${bridge.color}"></div>
                                 <div class="relative z-[2] inline-flex items-center justify-center">
                             <span class="combo-badge relative px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase border shadow-2xl transition-all duration-300"
-                                          style="color:${bridge.color}; border-color:${bridge.color}55; background-color:#0b0b0d; box-shadow: 0 0 8px ${bridge.color}40, inset 0 0 4px ${bridge.color}15;">
+                                          style="color:${bridge.color}; border-color:${bridge.color}55; background-color:rgba(11,11,13,0.4); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow: 0 0 8px ${bridge.color}40, inset 0 0 4px ${bridge.color}15;">
                                         ${bridge.label}
                                     </span>
                                 </div>
@@ -112,7 +112,7 @@
                 return `
                     <div class="relative z-[2] inline-flex items-center justify-center py-1">
                     <span class="combo-badge relative px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase border shadow-2xl transition-all duration-300"
-                              style="color:${color}; border-color:${color}55; background-color:#0b0b0d; box-shadow: 0 0 8px ${color}40, inset 0 0 4px ${color}15;">
+                              style="color:${color}; border-color:${color}55; background-color:rgba(11,11,13,0.4); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow: 0 0 8px ${color}40, inset 0 0 4px ${color}15;">
                             ${label}
                         </span>
                     </div>
@@ -193,7 +193,7 @@
         if (!spinner) {
             spinner = document.createElement('div');
             spinner.id = 'importSpinnerOverlay';
-            spinner.className = 'fixed inset-0 bg-[#0b0b0d]/90 z-[9999] flex items-center justify-center backdrop-blur-sm transition-opacity duration-300';
+            spinner.className = 'fixed inset-0 bg-[#0b0b0d]/40 z-[9999] flex items-center justify-center backdrop-blur-2xl transition-opacity duration-300';
             spinner.innerHTML = `
                 <div class="flex flex-col items-center">
                     <svg class="animate-spin h-10 w-10 text-[#BF5AF2] mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

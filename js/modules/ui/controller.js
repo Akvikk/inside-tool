@@ -411,8 +411,8 @@
                     </div>
                     
                     <!-- APPLE NATIVE SWITCH (Stabilized) -->
-                    <div class="h-5 w-9 rounded-full relative transition-all duration-300 flex-shrink-0 ${isEnabled ? 'bg-[#30D158]' : 'bg-white/10'}">
-                        <div class="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white transition-transform duration-300 shadow-md" 
+                    <div class="h-5 w-9 rounded-full relative transition-all duration-300 flex-shrink-0 ${isEnabled ? 'bg-[#30D158]/80 backdrop-blur-md' : 'bg-white/10 backdrop-blur-md'} border border-white/5">
+                        <div class="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white/90 backdrop-blur-sm transition-transform duration-300 shadow-md" 
                              style="transform: translateX(${isEnabled ? '16px' : '0'});"></div>
                     </div>
                 </div>

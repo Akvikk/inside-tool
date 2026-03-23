@@ -161,6 +161,44 @@ window.setGameplayStrategy = async function (strategyKey) {
 window.addEventListener('DOMContentLoaded', async () => {
     console.log("INSIDE TOOL: Bootstrapping modular architecture...");
 
+    // Inject Global iOS Glassmorphism
+    const glassStyle = document.createElement('style');
+    glassStyle.textContent = `
+        /* Global atmospheric backdrop to make the glass visible */
+        body {
+            background-color: #000 !important;
+            background-image: radial-gradient(circle at 50% 0%, #1f1f2e 0%, #000 80%) !important;
+            background-attachment: fixed !important;
+        }
+        
+        /* Core UI Panels, Modals, and Menus */
+        header, 
+        #hamburgerMenu, 
+        #patternFilterPopover,
+        [id$="Modal"] > div.relative,
+        #toastContainer > div,
+        #dashboard > div,
+        .dashboard-empty,
+        #analyticsHUD,
+        #hudControls {
+            background: rgba(18, 18, 22, 0.45) !important;
+            backdrop-filter: blur(24px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5) !important;
+        }
+        
+        /* Lists and secondary interaction areas */
+        #patternsList > div {
+            background: rgba(255, 255, 255, 0.03) !important;
+            border: 1px solid rgba(255, 255, 255, 0.02) !important;
+        }
+        #patternsList > div:hover {
+            background: rgba(255, 255, 255, 0.08) !important;
+        }
+    `;
+    document.head.appendChild(glassStyle);
+
     if (window.InputProcessor && window.InputProcessor.init) window.InputProcessor.init();
     if (window.UiController && window.UiController.init) window.UiController.init();
     if (window.HudManager && window.HudManager.init) window.HudManager.init();
