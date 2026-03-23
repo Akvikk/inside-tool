@@ -136,6 +136,7 @@ window.setGameplayStrategy = async function (strategyKey) {
 
     const oldSpins = window.state.history ? window.state.history.map(s => s.num) : [];
     window.state.currentGameplayStrategy = strategyKey;
+    if (window.setAnalyticsDisplayStrategy) window.setAnalyticsDisplayStrategy(strategyKey);
     if (window.ensureActivePatternConfig) window.ensureActivePatternConfig();
 
     if (window.syncUIWithStrategyMode) window.syncUIWithStrategyMode();

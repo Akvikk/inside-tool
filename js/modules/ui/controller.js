@@ -55,6 +55,9 @@
         const statsBtn = document.getElementById('headerStatsBtn');
         if (statsBtn) {
             statsBtn.addEventListener('click', function () {
+                if (window.setAnalyticsDisplayStrategy && window.state && window.state.currentGameplayStrategy) {
+                    window.setAnalyticsDisplayStrategy(window.state.currentGameplayStrategy);
+                }
                 window.toggleModal('analyticsModal');
                 if (window.renderAnalytics) window.renderAnalytics();
             });
