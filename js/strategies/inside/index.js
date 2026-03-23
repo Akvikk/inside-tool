@@ -8,20 +8,31 @@
         name: 'Inside Patterns',
         key: 'inside',
         tableHeader: 'PATTERN',
-        
+
         PATTERN_FILTER_META: {
-            'rptng': { label: 'RPTng', hint: 'Repeating Pattern', accent: '#30D158' },
-            '1c-rptng': { label: '1C RPTng', hint: 'One Cut Repeating Pattern', accent: '#30D158' },
-            'brkt': { label: 'brkt', hint: 'Bracket Pattern', accent: '#30D158' },
+            'rptng': { label: 'Repeating', hint: 'Repeating Pattern', accent: '#30D158' },
+            '1c-rptng': { label: 'One Cut Repeating', hint: 'One Cut Repeating Pattern', accent: '#30D158' },
+            'brkt': { label: 'Bracket', hint: 'Bracket Pattern', accent: '#30D158' },
             '121': { label: '1-2-1', hint: '1-2-1 Pattern', accent: '#30D158' },
             '123': { label: '1-2-3', hint: '1-2-3 Pattern', accent: '#30D158' },
             '22': { label: '2-2', hint: '2-2 Pattern', accent: '#30D158' },
             'seqvarbrkt': { label: 'SeqVarBrkt', hint: 'Sequence and Variation Bracket', accent: '#30D158' }
         },
 
+        // Explicit chronological order of patterns
+        PATTERN_ORDER: [
+            'rptng',
+            '1c-rptng',
+            'brkt',
+            '121',
+            '123',
+            '22',
+            'seqvarbrkt'
+        ],
+
         // Registry for all sub-patterns
         patterns: {},
-        
+
         /**
          * Registers a new sub-pattern.
          * @param {Object} pattern - The pattern implementation module.
@@ -43,16 +54,17 @@
             const nextBets = [];
             const resultsByPattern = {};
 
-            // Iterate through all registered patterns
-            for (const key of Object.keys(this.patterns)) {
+            // Iterate through all registered patterns strictly in chronological order
+            const orderedKeys = this.PATTERN_ORDER || Object.keys(this.patterns);
+            for (const key of orderedKeys) {
                 const pattern = this.patterns[key];
-                
-                // Allow disabling specific patterns via config
-                if (patternConfig && patternConfig[key] === false) continue;
+
+                // Skip if a defined pattern isn't loaded/registered yet or is disabled
+                if (!pattern || (patternConfig && patternConfig[key] === false)) continue;
 
                 try {
                     const result = pattern.run(historyData, snapshot, patternConfig, options);
-                    
+
                     if (result) {
                         if (Array.isArray(result.notifications)) {
                             notifications.push(...result.notifications);
@@ -79,8 +91,8 @@
          */
         buildPatternConfig(enabled = true) {
             const config = {};
-            // Follow metadata order if available
-            const keys = this.PATTERN_FILTER_META ? Object.keys(this.PATTERN_FILTER_META) : Object.keys(this.patterns);
+            // Enforce chronological ordering for the UI default configuration state
+            const keys = this.PATTERN_ORDER || Object.keys(this.patterns);
             for (const key of keys) {
                 config[key] = enabled;
             }

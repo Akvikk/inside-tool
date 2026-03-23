@@ -178,7 +178,20 @@ window.EngineCore = {
             history: [0], patterns: {}
         };
 
-        const insideLabels = ['RPTng', '1C RPTng', 'brkt', '1-2-1', '1-2-3', '2-2', 'SeqVarBrkt'];
+        // Ensure new verbose names are mapped correctly for Analytics chart tracking
+        const insideLabels = [
+            'Repeating',
+            'One Cut Repeating',
+            'Bracket',
+            '1-2-1',
+            '1-2-3',
+            '2-2',
+            'Sequence and Variation Bracket',
+            'RPTng',
+            '1C RPTng',
+            'brkt',
+            'SeqVarBrkt'
+        ];
 
         this.stats.signalLog.forEach(log => {
             let isMatch = false;
