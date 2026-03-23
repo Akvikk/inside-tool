@@ -17,23 +17,35 @@
             const subtitle = bet.subtitle || (bet.comboLabel ? `${bet.comboLabel} combo` : bet.patternName);
             const accent = bet.accentColor || '#FF3B30';
 
+            // New Premium Glassmorphism Card
             const bgStyle = bet.confirmed
-                ? `background: linear-gradient(135deg, ${accent}70, ${accent}20)`
-                : `background: linear-gradient(135deg, ${accent}30, ${accent}05)`;
+                ? `background: linear-gradient(135deg, ${accent}40, ${accent}10); backdrop-filter: blur(24px) saturate(150%); -webkit-backdrop-filter: blur(24px) saturate(150%);`
+                : `background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(24px) saturate(150%); -webkit-backdrop-filter: blur(24px) saturate(150%);`;
 
             const borderStyle = bet.confirmed
-                ? `border-color: ${accent}`
-                : `border-color: ${accent}40`;
+                ? `border: 1px solid ${accent}80; box-shadow: 0 8px 32px ${accent}20, inset 0 1px 1px rgba(255,255,255,0.2);`
+                : `border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 4px 16px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.05);`;
+
+            const iconHTML = bet.confirmed 
+                ? `<div class="h-6 w-6 rounded-full flex items-center justify-center shadow-lg" style="background: linear-gradient(135deg, ${accent}, ${accent}90)"><i class="fas fa-check text-[10px] text-white"></i></div>`
+                : `<div class="h-6 w-6 rounded-full flex items-center justify-center border border-white/20 bg-white/5"><i class="fas fa-crosshairs text-[10px] text-white/40"></i></div>`;
+
+            const titleColor = bet.confirmed ? 'text-white drop-shadow-md' : 'text-white/80';
+            const subColor = bet.confirmed ? 'text-white/80' : 'text-white/40';
 
             cards.push(`
-                <div class="min-w-[220px] h-[54px] px-3 py-1.5 rounded-xl border border-white/10 flex items-center justify-between cursor-pointer select-none transition-all hover:brightness-110"
+                <div class="min-w-[240px] h-[60px] px-3.5 py-2 rounded-[16px] flex items-center justify-between cursor-pointer select-none transition-all duration-300 hover:-translate-y-0.5"
                      ondblclick="if(window.toggleBetConfirmation) window.toggleBetConfirmation(${index})"
                      title="Double-click to ${bet.confirmed ? 'unselect' : 'select'}"
-                     style="border-left: 3px solid ${accent}; ${borderStyle}; ${bgStyle}; backdrop-filter: blur(20px); box-shadow: 0 4px 12px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.15);">
-                    <div class="min-w-0">
-                        <div class="text-[14px] leading-tight font-black text-white tracking-wide uppercase">BET F${bet.targetFace}</div>
-                        <div class="text-[11px] leading-tight text-white/50 font-bold mt-0.5 truncate">${subtitle}</div>
+                     style="${bgStyle} ${borderStyle}">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-1 h-8 rounded-full" style="background: ${accent}; box-shadow: 0 0 8px ${accent};"></div>
+                        <div class="flex flex-col min-w-0">
+                            <span class="text-[15px] leading-tight font-black tracking-widest uppercase ${titleColor}">F${bet.targetFace} TARGET</span>
+                            <span class="text-[9px] leading-tight font-bold tracking-widest uppercase ${subColor} mt-0.5 truncate max-w-[140px]">${subtitle}</span>
+                        </div>
                     </div>
+                    ${iconHTML}
                 </div>
             `);
         });

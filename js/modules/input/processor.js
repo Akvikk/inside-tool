@@ -193,7 +193,7 @@
         // Also call the engine's internal resolver so it can update its own internal state if needed
         if (window.EngineCore && typeof window.EngineCore.resolveTurn === 'function') {
             try {
-                window.EngineCore.resolveTurn(val, matchedFaceMask, stateRef.activeBets, stateRef.currentGameplayStrategy, null, {
+                window.EngineCore.resolveTurn(val, matchedFaceMask, stateRef.activeBets, stateRef.currentGameplayStrategy, window.updateUserStats, {
                     historyLength: currentSpinIndex,
                     faceMasks: faceMasks,
                     faces: faces
