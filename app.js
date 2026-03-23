@@ -176,28 +176,27 @@ window.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        /* Global atmospheric backdrop to make the glass visible */
+        /* Global atmospheric backdrop to make the glass visible - Softened for eye strain */
         body {
-            background-color: #000 !important;
-            background-image: radial-gradient(circle at 50% 0%, #1f1f2e 0%, #000 80%) !important;
+            background-color: #0A0A0C !important;
+            background-image: radial-gradient(circle at 50% 0%, #15151c 0%, #0A0A0C 100%) !important;
             background-attachment: fixed !important;
+            color: #E5E5EA; /* Soften pure whites globally without breaking Tailwind */
         }
         
-        /* Core UI Panels, Modals, and Menus */
+        /* Core UI Panels, Modals, and Menus - Reduced Border Harshness */
         header, 
         #hamburgerMenu, 
         #patternFilterPopover,
         [id$="Modal"] > div.relative,
-        #toastContainer > div,
-        #dashboard > div,
         .dashboard-empty,
         #analyticsHUD,
         #hudControls {
-            background: rgba(18, 18, 22, 0.45) !important;
-            backdrop-filter: blur(24px) saturate(180%) !important;
-            -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
-            border: 1px solid rgba(255, 255, 255, 0.08) !important;
-            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5) !important;
+            background: rgba(20, 20, 24, 0.40) !important;
+            backdrop-filter: blur(28px) saturate(160%) !important;
+            -webkit-backdrop-filter: blur(28px) saturate(160%) !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.03) !important;
         }
         
         /* Lists and secondary interaction areas */
@@ -211,7 +210,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         
         /* Smooth entry animation for structural and dynamic panels */
         header,
-        #dashboard > div,
         .dashboard-empty,
         #analyticsHUD,
         #hudControls,
