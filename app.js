@@ -164,6 +164,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Inject Global iOS Glassmorphism
     const glassStyle = document.createElement('style');
     glassStyle.textContent = `
+        @keyframes glassSlideFade {
+            0% {
+                opacity: 0;
+                transform: translateY(16px) scale(0.97);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
         /* Global atmospheric backdrop to make the glass visible */
         body {
             background-color: #000 !important;
@@ -195,6 +206,16 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
         #patternsList > div:hover {
             background: rgba(255, 255, 255, 0.08) !important;
+        }
+        
+        /* Smooth entry animation for structural and dynamic panels */
+        header,
+        #dashboard > div,
+        .dashboard-empty,
+        #analyticsHUD,
+        #hudControls,
+        #patternsList > div {
+            animation: glassSlideFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
     `;
     document.head.appendChild(glassStyle);
