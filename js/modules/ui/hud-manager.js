@@ -36,7 +36,8 @@
     }
 
     function getHudAnalyticsStrategy() {
-        return getSharedState().analyticsDisplayStrategy === 'combo' ? 'combo' : 'series';
+        const strategy = getSharedState().analyticsDisplayStrategy;
+        return (strategy === 'combo' || strategy === 'inside') ? strategy : 'series';
     }
 
     function setHudScope(nextScope) {
@@ -46,17 +47,12 @@
     }
 
     function syncHudStrategyButtons(activeStrategy) {
+        // Find existing buttons if they exist
         const seriesBtn = document.getElementById('hudStrategySeriesBtn');
         const comboBtn = document.getElementById('hudStrategyComboBtn');
-        const isSeries = activeStrategy !== 'combo';
-
-        if (seriesBtn) {
-            seriesBtn.className = `hud-segment-btn ${isSeries ? 'is-active' : ''}`.trim();
-        }
-
-        if (comboBtn) {
-            comboBtn.className = `hud-segment-btn ${isSeries ? '' : 'is-active'}`.trim();
-        }
+        // HUD UI might only have series/combo buttons, but data logic must allow inside.
+        if (seriesBtn) seriesBtn.className = `hud-segment-btn ${activeStrategy === 'series' ? 'is-active' : ''}`.trim();
+        if (comboBtn) comboBtn.className = `hud-segment-btn ${activeStrategy === 'combo' ? 'is-active' : ''}`.trim();
     }
 
     function syncHudColdButton(isColdMode) {

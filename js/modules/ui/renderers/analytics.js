@@ -6,12 +6,24 @@
         const select = document.getElementById('analyticsStrategySelect');
         if (select) select.value = displayMode;
 
+        // Highlight active strategy button (SERIES, COMBO, INSIDE)
+        ['series', 'combo', 'inside'].forEach(mode => {
+            const btn = document.querySelector(`button[onclick="setAnalyticsDisplayStrategy('${mode}')"]`);
+            if (btn) {
+                if (displayMode === mode) {
+                    btn.className = "px-6 py-2.5 text-[10px] font-black tracking-widest rounded-xl transition-all text-[#FFD60A] bg-white/10 shadow-sm";
+                } else {
+                    btn.className = "px-6 py-2.5 text-[10px] font-black tracking-widest rounded-xl transition-all text-white/20 hover:text-white/60";
+                }
+            }
+        });
+
         const tabs = window.getAnalyticsTabConfig ? window.getAnalyticsTabConfig() : [];
         const activeTab = window.ensureActiveAnalyticsTab ? window.ensureActiveAnalyticsTab(tabs) : '';
         tabs.forEach(tab => {
             const btn = tab.button;
             const panel = document.getElementById(tab.panelId);
-            if (btn) btn.className = tab.key === activeTab ? "pb-2 text-[11px] font-black uppercase tracking-widest text-[#FFD60A] border-b-2 border-[#FFD60A] transition-all duration-300" : "pb-2 text-[11px] font-black uppercase tracking-widest text-white/40 border-b-2 border-transparent hover:text-white/80 transition-all duration-300 active:scale-[0.98]";
+            if (btn) btn.className = tab.key === activeTab ? "pb-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#FFD60A] border-b-2 border-[#FFD60A] transition-all hover:text-[#FFD60A]" : "pb-2 text-[10px] font-black uppercase tracking-[0.2em] text-white/20 border-b-2 border-transparent transition-all hover:text-white/60";
             if (panel) { if (tab.key === activeTab) panel.classList.remove('hidden'); else panel.classList.add('hidden'); }
         });
     };
