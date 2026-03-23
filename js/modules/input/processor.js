@@ -237,6 +237,7 @@
 
             // Bridge: Capture the engine's produced bets for dashboard display and next turn resolution
             stateRef.activeBets = scanResult.nextBets || [];
+            window.activeBets = stateRef.activeBets;
             window.currentAlerts = Array.isArray(scanResult.notifications) ? scanResult.notifications : [];
             if (stateRef.strategySyncCache && typeof stateRef.strategySyncCache === 'object') {
                 const strategyKey = stateRef.currentGameplayStrategy || 'inside';
@@ -287,6 +288,7 @@
                 if (window.renderRow) window.renderRow(spinObj);
                 if (window.renderGapStats) window.renderGapStats();
                 if (window.renderDashboardSafe) window.renderDashboardSafe(stateRef.activeBets || []);
+                else if (window.renderDashboard) window.renderDashboard(window.currentAlerts || []);
             }
         }
 

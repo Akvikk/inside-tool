@@ -12,6 +12,23 @@ window.syncPredictionEngine = async function () {
     return snapshot;
 };
 
+window.ensureActivePatternConfig = function () {
+    if (!window.state) return;
+    if (!window.state.patternConfig) window.state.patternConfig = {};
+
+    const strategyKey = window.state.currentGameplayStrategy || 'inside';
+    const strategy = window.StrategyRegistry && window.StrategyRegistry[strategyKey];
+
+    if (strategy && typeof strategy.buildPatternConfig === 'function') {
+        const defaults = strategy.buildPatternConfig(true);
+        for (const key of Object.keys(defaults)) {
+            if (window.state.patternConfig[key] === undefined) {
+                window.state.patternConfig[key] = true;
+            }
+        }
+    }
+};
+
 window.scanAllStrategies = async function (options = {}) {
     if (window.EngineCore && typeof window.EngineCore.scanAll === 'function' && window.state) {
         if (window.ensureActivePatternConfig) window.ensureActivePatternConfig();
@@ -46,8 +63,15 @@ window.syncAppStore = function () {
             ? window.EngineAdapter.toStorePatch({ history: window.state.history, activeBets: window.state.activeBets, alerts: window.currentAlerts, snapshot: window.state.engineSnapshot })
             : { history: window.state.history, activeBets: window.state.activeBets, alerts: window.currentAlerts, snapshot: window.state.engineSnapshot };
         window.AppStore.dispatch('engine/sync', storePatch);
-    } else if (window.renderDashboardSafe) {
-        window.renderDashboardSafe(window.state.activeBets || []);
+    } else {
+        if (window.renderDashboardSafe) {
+            window.renderDashboardSafe(window.state.activeBets || []);
+        } else if (window.renderDashboard) {
+            if (window.state && window.state.activeBets) {
+                window.activeBets = window.state.activeBets;
+            }
+            window.renderDashboard(window.currentAlerts || []);
+        }
     }
 };
 
@@ -65,6 +89,7 @@ window.resetData = async function () {
             window.state.engineStats = { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {}, signalLog: [] };
             window.state.globalSpinIdCounter = 0;
             window.state.currentGameplayStrategy = 'inside';
+            if (window.ensureActivePatternConfig) window.ensureActivePatternConfig();
         }
         window.currentAlerts = [];
         if (window.EngineCore && window.EngineCore.reset) window.EngineCore.reset();
@@ -111,6 +136,7 @@ window.setGameplayStrategy = async function (strategyKey) {
 
     const oldSpins = window.state.history ? window.state.history.map(s => s.num) : [];
     window.state.currentGameplayStrategy = strategyKey;
+    if (window.ensureActivePatternConfig) window.ensureActivePatternConfig();
 
     if (window.syncUIWithStrategyMode) window.syncUIWithStrategyMode();
 
@@ -141,9 +167,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (window.EngineCore && window.EngineCore.initTracker) window.EngineCore.initTracker();
 
     const restoredSession = window.loadSessionData ? window.loadSessionData() : false;
+
+    if (window.state) {
+        // Force default mode to inside
+        if (!window.state.currentGameplayStrategy || window.state.currentGameplayStrategy === 'series') {
+            window.state.currentGameplayStrategy = 'inside';
+        }
+    }
+
     if (window.ensureActivePatternConfig) window.ensureActivePatternConfig();
     if (window.syncUIWithStrategyMode) window.syncUIWithStrategyMode();
-    if (window.renderPatternFilterUi) window.renderPatternFilterUi();
+
+    if (window.renderPatternFilterList) window.renderPatternFilterList();
+    else if (window.renderPatternFilterUi) window.renderPatternFilterUi();
 
     if (restoredSession && window.state.history.length > 0) {
         const spinNumbers = window.state.history.map(s => s.num);

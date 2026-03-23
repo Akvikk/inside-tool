@@ -40,14 +40,16 @@
             if (latestFace !== undefined && latestFace === prevFace) {
                 notifications.push({
                     type: 'ACTIVE',
-                    strategy: 'Inside',
-                    patternName: 'Repeating'
+                    strategy: 'inside',
+                    patternName: 'Repeating',
+                    filterKey: 'rptng'
                 });
 
                 nextBets.push({
                     targetFace: latestFace,
-                    strategy: 'Inside',
+                    strategy: 'inside',
                     patternName: 'Repeating',
+                    filterKey: 'rptng',
                     confirmed: false
                 });
             }
