@@ -481,28 +481,23 @@
 
             // pct is -1 if no data, 0-100 otherwise
             const barWidth = pct >= 0 ? pct : 0;
+            const bgGradient = isEnabled ? `background: linear-gradient(90deg, ${accent}15 ${barWidth}%, transparent ${barWidth}%);` : '';
 
             entries.push(`
-                <div class="flex items-center justify-between p-3.5 px-4 rounded-2xl transition-all duration-300 group/item cursor-pointer
-                    ${isEnabled ? 'bg-white/5 border border-white/10 shadow-lg' : 'bg-white/[0.02] border border-transparent hover:bg-white/5'}"
+                <div class="flex items-center justify-between p-3.5 px-4 rounded-2xl transition-all duration-300 group/item cursor-pointer border
+                    ${isEnabled ? 'border-white/10 shadow-lg' : 'bg-white/[0.02] border-transparent hover:bg-white/5'}"
+                    style="${bgGradient}"
                     onclick="event.stopPropagation(); togglePatternFilter('${key}')">
                     
                     <div class="flex flex-col flex-1 min-w-0 pr-4">
-                        <!-- Row 1: Name + Inline Percentage -->
-                        <span class="text-[10px] font-black tracking-[0.1em] ${isEnabled ? 'text-white' : 'text-white/60'} transition-colors duration-300 truncate uppercase mb-1.5">
+                        <span class="text-[10px] font-black tracking-[0.1em] ${isEnabled ? 'text-white' : 'text-white/60'} transition-colors duration-300 truncate uppercase">
                             ${meta.label || key}${accuracyText}
                         </span>
-                        
-                        <!-- Row 2: Slim Progress Bar -->
-                        <div class="h-[3px] w-full bg-white/5 rounded-full overflow-hidden">
-                            <div class="h-full rounded-full transition-all duration-700 ease-out ${isEnabled ? 'bg-[#BF5AF2] shadow-[0_0_6px_rgba(191,90,242,0.4)]' : 'bg-white/15'}" 
-                                 style="width: ${barWidth}%;"></div>
-                        </div>
                     </div>
                     
                     <!-- Apple Switch -->
                     <div class="h-5 w-9 rounded-full relative transition-all duration-500 flex-shrink-0 
-                        ${isEnabled ? 'bg-[#30D158] shadow-[0_0_12px_rgba(48,209,88,0.4)]' : 'bg-white/20'}"
+                        ${isEnabled ? 'bg-[#30D158] shadow-[0_0_12px_rgba(48,209,88,0.5)]' : 'bg-white/20'}"
                         style="border: 1px solid rgba(255,255,255,0.1);">
                         <div class="absolute top-[2px] transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] h-3.5 w-3.5 rounded-full bg-white shadow-sm" 
                              style="left: ${isEnabled ? '18px' : '3px'}; transform: scale(${isEnabled ? '1' : '0.95'});"></div>

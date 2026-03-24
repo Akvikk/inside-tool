@@ -179,6 +179,14 @@ window.setGameplayStrategy = async function (strategyKey) {
     if (window.saveSessionData) window.saveSessionData();
 };
 
+window.cycleGameplayStrategy = async function () {
+    if (!window.state) return;
+    const modes = ['series', 'combo', 'inside'];
+    const currentMode = window.state.currentGameplayStrategy || 'series';
+    const nextIdx = (modes.indexOf(currentMode) + 1) % modes.length;
+    await window.setGameplayStrategy(modes[nextIdx]);
+};
+
 window.addEventListener('DOMContentLoaded', async () => {
     console.log("INSIDE TOOL: Bootstrapping modular architecture...");
 
@@ -294,6 +302,38 @@ window.addEventListener('DOMContentLoaded', async () => {
         requestAnimationFrame(animateCursorBlob);
     };
     animateCursorBlob();
+
+    // --- UI Cleanup (Header & Modals) ---
+    const filterBtn = document.getElementById('patternsToggleBtn');
+    if (filterBtn) {
+        Array.from(filterBtn.childNodes).forEach(node => {
+            if (node.nodeType === Node.TEXT_NODE && node.textContent.trim().toLowerCase() === 'filters') {
+                node.textContent = '';
+            }
+            if (node.tagName === 'SPAN' && node.id !== 'patternsActiveCount' && node.innerText.toLowerCase().includes('filters')) {
+                node.style.display = 'none';
+            }
+        });
+        filterBtn.classList.remove('px-3', 'px-4');
+        filterBtn.classList.add('px-2');
+
+        if (!document.getElementById('strategySwitcherBtn')) {
+            const switcher = document.createElement('button');
+            switcher.id = 'strategySwitcherBtn';
+            switcher.className = filterBtn.className;
+            switcher.classList.remove('pattern-toggle-active');
+            switcher.innerHTML = '<i class="fas fa-repeat"></i>';
+            switcher.onclick = () => {
+                if (window.cycleGameplayStrategy) window.cycleGameplayStrategy();
+            };
+            filterBtn.parentNode.insertBefore(switcher, filterBtn.nextSibling);
+        }
+    }
+
+    const intelBtn = document.getElementById('tabBtnIntelligence');
+    if (intelBtn) intelBtn.style.display = 'none';
+    const advBtn = document.getElementById('tabBtnAdvancements');
+    if (advBtn) advBtn.style.display = 'none';
 
     if (window.InputProcessor && window.InputProcessor.init) window.InputProcessor.init();
     if (window.UiController && window.UiController.init) window.UiController.init();
