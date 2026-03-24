@@ -422,24 +422,57 @@
         const config = window.state.patternConfig;
 
         let patternItems = Object.keys(metaData).map(key => {
-            const meta = metaData[key];
+            const meta = metaData[key] || {};
             const isEnabled = config[key] !== false;
 
             // Fetch accuracy stats
-            let accuracyText = '';
-            let pct = -1;
-            if (window.EngineCore && window.EngineCore.stats && window.EngineCore.stats.patternStats) {
+            let wins = 0;
+            let losses = 0;
+            let hasData = false;
+
+            let pStats = null;
+            if (window.state && window.state.engineStats && window.state.engineStats.patternStats) {
+                pStats = window.state.engineStats.patternStats;
+            } else if (window.EngineCore && window.EngineCore.stats && window.EngineCore.stats.patternStats) {
+                pStats = window.EngineCore.stats.patternStats;
+            }
+
+            if (pStats) {
                 const labelMatch = meta.label || key;
-                const pStats = window.EngineCore.stats.patternStats[key] || window.EngineCore.stats.patternStats[labelMatch];
-                if (pStats) {
-                    const total = pStats.wins + pStats.losses;
-                    if (total > 0) {
-                        pct = Math.round((pStats.wins / total) * 100);
-                        accuracyText = ` <span class="opacity-40">(${pct}%)</span>`;
+
+                if (pStats[key]) {
+                    wins += pStats[key].wins;
+                    losses += pStats[key].losses;
+                    hasData = true;
+                } else if (pStats[labelMatch]) {
+                    wins += pStats[labelMatch].wins;
+                    losses += pStats[labelMatch].losses;
+                    hasData = true;
+                } else {
+                    for (const statKey of Object.keys(pStats)) {
+                        if (statKey.startsWith(key + ':') || statKey.startsWith(labelMatch + ':')) {
+                            wins += pStats[statKey].wins;
+                            losses += pStats[statKey].losses;
+                            hasData = true;
+                        }
                     }
                 }
             }
-            return { key, meta, isEnabled, pct, accuracyText };
+
+            let pct = -1;
+            let displayPct = 0;
+            if (hasData) {
+                const total = wins + losses;
+                if (total > 0) {
+                    pct = Math.round((wins / total) * 100);
+                    displayPct = pct;
+                } else {
+                    pct = 0;
+                }
+            }
+
+            const accuracyText = ` <span class="opacity-40">(${displayPct}%)</span>`;
+            return { key, meta, isEnabled, pct, accuracyText, displayPct, wins, losses, hasData };
         });
 
         if (window.state.patternSortMode === 'best') {
@@ -468,12 +501,14 @@
 
         let entries = [];
         for (const item of patternItems) {
-            const { key, meta, isEnabled, accuracyText, pct } = item;
+            const { key, meta, isEnabled, accuracyText, displayPct, wins, losses, hasData } = item;
             const accent = meta.accent || '#BF5AF2';
 
-            // pct is -1 if no data, 0-100 otherwise
-            const barWidth = pct >= 0 ? pct : 0;
-            const bgGradient = isEnabled ? `background: linear-gradient(90deg, ${accent}20 ${barWidth}%, transparent ${barWidth}%);` : '';
+            const barWidth = displayPct;
+            const alpha = isEnabled ? '40' : '15'; // Hex for ~25% and ~8% opacity
+            const bgGradient = `background: linear-gradient(90deg, ${accent}${alpha} ${barWidth}%, transparent ${barWidth}%);`;
+            const tooltipText = hasData ? `${wins} W | ${losses} L (Click to view log)` : 'No data yet';
+            const safeName = (meta.label || key).replace(/'/g, "\\'");
 
             entries.push(`
                 <div class="flex items-center justify-between p-3.5 px-4 rounded-2xl transition-all duration-300 group/item cursor-pointer border
@@ -482,9 +517,12 @@
                     onclick="event.stopPropagation(); togglePatternFilter('${key}')">
                     
                     <div class="flex flex-col flex-1 min-w-0 pr-4">
-                        <span class="font-black text-[10px] tracking-widest ${isEnabled ? 'text-white' : 'text-white/60'} transition-colors duration-300 truncate uppercase">
-                            ${meta.label || key}${accuracyText}
-                        </span>
+                        <div class="flex items-center gap-2">
+                            <span class="font-black text-[10px] tracking-widest ${isEnabled ? 'text-white' : 'text-white/60'} transition-colors duration-300 truncate uppercase">
+                                ${meta.label || key}${accuracyText}
+                            </span>
+                            <i class="fas fa-info-circle text-[10px] text-white/20 hover:text-white/80 transition-colors cursor-pointer" title="${tooltipText}" onclick="event.stopPropagation(); if(typeof openPatternLog === 'function') openPatternLog('${safeName}');"></i>
+                        </div>
                     </div>
                     
                     <!-- Apple Switch -->
