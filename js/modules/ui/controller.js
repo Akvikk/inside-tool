@@ -395,10 +395,10 @@
         const knob = document.getElementById('selectAllKnob');
         if (!sw || !knob) return;
         if (isAllOn) {
-            sw.className = 'h-5 w-9 rounded-full relative transition-all duration-500 flex-shrink-0 bg-[#30D158] shadow-[0_0_12px_rgba(48,209,88,0.4)]';
+            sw.className = 'h-5 w-9 rounded-full relative transition-all duration-500 flex-shrink-0 bg-[#30D158] shadow-[0_0_12px_rgba(48,209,88,0.4)] hover:scale-110 hover:brightness-110 cursor-pointer';
             knob.style.left = '18px';
         } else {
-            sw.className = 'h-5 w-9 rounded-full relative transition-all duration-500 flex-shrink-0 bg-white/20';
+            sw.className = 'h-5 w-9 rounded-full relative transition-all duration-500 flex-shrink-0 bg-white/20 hover:scale-110 hover:brightness-110 cursor-pointer';
             knob.style.left = '3px';
         }
     };
@@ -496,7 +496,7 @@
                     </div>
                     
                     <!-- Apple Switch -->
-                    <div class="h-5 w-9 rounded-full relative transition-all duration-500 flex-shrink-0 
+                    <div class="h-5 w-9 rounded-full relative transition-all duration-500 flex-shrink-0 hover:scale-110 hover:brightness-110
                         ${isEnabled ? 'bg-[#30D158] shadow-[0_0_12px_rgba(48,209,88,0.5)]' : 'bg-white/20'}"
                         style="border: 1px solid rgba(255,255,255,0.1);">
                         <div class="absolute top-[2px] transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] h-3.5 w-3.5 rounded-full bg-white shadow-sm" 

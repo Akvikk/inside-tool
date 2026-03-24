@@ -242,6 +242,63 @@ window.addEventListener('DOMContentLoaded', async () => {
             letter-spacing: 0.05em;
             border-bottom: 0.5px solid rgba(255, 255, 255, 0.1) !important;
         }
+
+        /* High-fidelity Glass Analytics Tables */
+        table:has(#heatmapBody), 
+        table:has(#userBetsBody), 
+        table:has(#patternDetailBody), 
+        .intel-table {
+            border-collapse: separate !important;
+            border-spacing: 0 6px !important;
+            width: 100%;
+        }
+
+        #heatmapBody tr, 
+        #userBetsBody tr, 
+        #patternDetailBody tr, 
+        .intel-table tbody tr {
+            background: rgba(255, 255, 255, 0.02) !important;
+            backdrop-filter: blur(16px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        
+        #heatmapBody tr:hover, 
+        #userBetsBody tr:hover, 
+        #patternDetailBody tr:hover, 
+        .intel-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.06) !important;
+            transform: scale(1.01);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            z-index: 10;
+            position: relative;
+        }
+
+        #heatmapBody td, 
+        #userBetsBody td, 
+        #patternDetailBody td, 
+        .intel-table tbody td {
+            border-top: 0.5px solid rgba(255, 255, 255, 0.08) !important;
+            border-bottom: 0.5px solid rgba(255, 255, 255, 0.08) !important;
+        }
+
+        #heatmapBody td:first-child, 
+        #userBetsBody td:first-child, 
+        #patternDetailBody td:first-child, 
+        .intel-table tbody td:first-child {
+            border-left: 0.5px solid rgba(255, 255, 255, 0.08) !important;
+            border-top-left-radius: 12px !important;
+            border-bottom-left-radius: 12px !important;
+        }
+
+        #heatmapBody td:last-child, 
+        #userBetsBody td:last-child, 
+        #patternDetailBody td:last-child, 
+        .intel-table tbody td:last-child {
+            border-right: 0.5px solid rgba(255, 255, 255, 0.08) !important;
+            border-top-right-radius: 12px !important;
+            border-bottom-right-radius: 12px !important;
+        }
         
         /* Lists and secondary interaction areas */
         #patternsList > div {
