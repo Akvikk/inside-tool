@@ -310,6 +310,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     if (window.renderGapStats) window.renderGapStats();
     if (window.renderDashboardSafe) window.renderDashboardSafe();
+    if (window.initPerimeterUI) window.initPerimeterUI();
     if (window.initComboBridgeAutoLayout) window.initComboBridgeAutoLayout();
     if (window.scheduleComboBridgeRelayout) window.scheduleComboBridgeRelayout();
 

@@ -282,6 +282,47 @@
                     </select>
                 </div>
             </div>
+
+            <!-- PERIMETER SETTINGS -->
+            <div class="flex items-center justify-between p-3 rounded-xl transition-all duration-300 hover:bg-white/[0.05] active:scale-[0.98] cursor-pointer group"
+                onclick="toggleAccordion('perimeterSubMenu')">
+                <span class="text-[11px] font-bold text-white/90 tracking-wide flex items-center gap-3">
+                    <i
+                        class="fas fa-satellite-dish text-white/40 group-hover:text-[#FF9F0A] transition-colors w-4 text-center"></i>
+                    Perimeter
+                </span>
+                <i class="fas fa-chevron-down text-white/30 text-[10px] transition-transform duration-300"
+                    id="perimeterSubMenuIcon"></i>
+            </div>
+            <div id="perimeterSubMenu"
+                class="hidden overflow-hidden transition-all duration-300 flex flex-col gap-2 px-2 pb-2">
+                <!-- Toggle Row -->
+                <div class="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.02]">
+                    <span class="text-[11px] font-bold text-white/70 tracking-wide flex items-center">
+                        <i class="fas fa-power-off mr-2 text-[#FF9F0A] text-[10px]"></i>
+                        Enable
+                    </span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="perimeterToggle" class="sr-only peer" checked
+                            onchange="if(window.togglePerimeterEnabled) window.togglePerimeterEnabled()">
+                        <div class="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-[#FF9F0A] transition-all duration-300 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all after:duration-300 peer-checked:after:translate-x-full after:shadow-md"></div>
+                    </label>
+                </div>
+                <!-- Slider Row -->
+                <div id="perimeterSliderContainer" class="p-2.5 rounded-lg bg-white/[0.02]">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[10px] font-black text-white/50 uppercase tracking-widest">Lookback Window</span>
+                        <span id="perimeterWindowLabel" class="text-[11px] font-black text-[#FF9F0A] bg-[#FF9F0A]/10 px-2 py-0.5 rounded-md border border-[#FF9F0A]/20">14</span>
+                    </div>
+                    <input type="range" id="perimeterSlider" min="14" max="50" value="14"
+                        oninput="if(window.updatePerimeterWindow) window.updatePerimeterWindow(this.value)"
+                        class="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#FF9F0A]">
+                    <div class="flex justify-between mt-1">
+                        <span class="text-[9px] text-white/30 font-bold">14</span>
+                        <span class="text-[9px] text-white/30 font-bold">50</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="h-[1px] bg-white/[0.05] mx-2"></div>
@@ -660,6 +701,7 @@
     <!-- 4. ENGINE LAYER -->
     <script src="js/modules/engine/core.js?v=apple_v4"></script>
     <script src="js/modules/engine/prediction.js?v=apple_v4"></script>
+    <script src="js/modules/engine/perimeter.js?v=apple_v4"></script>
     <script src="js/modules/engine/contract.js?v=apple_v4"></script>
     <script src="js/modules/engine/adapter.js?v=apple_v4"></script>
 

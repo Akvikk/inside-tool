@@ -17,6 +17,19 @@
             const subtitle = bet.subtitle || (bet.comboLabel ? `${bet.comboLabel} combo` : bet.patternName);
             const accent = bet.accentColor || '#FF3B30';
 
+            // --- PERIMETER FREQUENCY ---
+            let perimeterBadge = '';
+            if (state.perimeterRuleEnabled && typeof window.calculatePerimeterFrequency === 'function') {
+                const freq = window.calculatePerimeterFrequency(bet);
+                const pWindow = state.predictionPerimeterWindow || 14;
+                if (freq > 0) {
+                    const freqColor = freq >= 3 ? '#FF453A' : freq >= 2 ? '#FF9F0A' : '#32D74B';
+                    perimeterBadge = `<div class="flex items-center gap-1 mt-0.5">
+                        <span class="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md border" style="color:${freqColor}; border-color:${freqColor}40; background:${freqColor}15;">${freq}x in ${pWindow}</span>
+                    </div>`;
+                }
+            }
+
             // New Premium Glassmorphism Card
             const bgStyle = bet.confirmed
                 ? `background: linear-gradient(135deg, ${accent}40, ${accent}10); backdrop-filter: blur(24px) saturate(150%); -webkit-backdrop-filter: blur(24px) saturate(150%);`
@@ -34,7 +47,7 @@
             const subColor = bet.confirmed ? 'text-white/80' : 'text-white/40';
 
             cards.push(`
-                <div class="min-w-[240px] h-[60px] px-3.5 py-2 rounded-[16px] flex items-center justify-between cursor-pointer select-none transition-all duration-300 hover:-translate-y-0.5"
+                <div class="min-w-[240px] min-h-[60px] px-3.5 py-2 rounded-[16px] flex items-center justify-between cursor-pointer select-none transition-all duration-300 hover:-translate-y-0.5"
                      ondblclick="if(window.toggleBetConfirmation) window.toggleBetConfirmation(${index})"
                      title="Double-click to ${bet.confirmed ? 'unselect' : 'select'}"
                      style="${bgStyle} ${borderStyle}">
@@ -43,6 +56,7 @@
                         <div class="flex flex-col min-w-0">
                             <span class="text-[15px] leading-tight font-black tracking-widest uppercase ${titleColor}">F${bet.targetFace} TARGET</span>
                             <span class="text-[9px] leading-tight font-bold tracking-widest uppercase ${subColor} mt-0.5 truncate max-w-[140px]">${subtitle}</span>
+                            ${perimeterBadge}
                         </div>
                     </div>
                     ${iconHTML}
