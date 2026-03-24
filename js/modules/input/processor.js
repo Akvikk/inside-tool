@@ -81,6 +81,8 @@
                     window.UiController.showToast('Queue recovery: ' + error.message, 'error');
                 }
             })
+            // Yield to the main thread to prevent UI hangs and dropped frames during rapid burst inputs
+            .then(() => new Promise(resolve => setTimeout(resolve, 0)))
             .then(() => processSpinValue(val));
         return stateRef.spinProcessingQueue;
     }
@@ -303,7 +305,11 @@
         }
 
         if (!options.silent) {
-            if (window.saveSessionData) window.saveSessionData();
+            // Debounce the synchronous disk write to prevent micro-stutters during fast input
+            if (window.saveSessionData) {
+                clearTimeout(stateRef.saveTimeout);
+                stateRef.saveTimeout = setTimeout(() => window.saveSessionData(), 500);
+            }
             if (window.syncAppStore) window.syncAppStore();
         }
 

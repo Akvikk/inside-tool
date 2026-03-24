@@ -4,9 +4,15 @@
 
 window.syncPredictionEngine = async function () {
     if (!window.PredictionEngine || typeof window.PredictionEngine.evaluatePredictionEngine !== 'function') return null;
-    const strategy = window.state.currentGameplayStrategy === 'combo' ? 'momentum-gap' : 'legacy-face';
+
+    // Perimeter feature is strictly limited to the Pattern (inside) strategy
+    if (window.state && window.state.currentGameplayStrategy !== 'inside') {
+        window.state.engineSnapshot = null;
+        return null;
+    }
+
     const snapshot = await window.PredictionEngine.evaluatePredictionEngine(window.state.history, {
-        currentPredictionStrategy: strategy
+        currentPredictionStrategy: 'legacy-face'
     });
     window.state.engineSnapshot = snapshot || null;
     return snapshot;

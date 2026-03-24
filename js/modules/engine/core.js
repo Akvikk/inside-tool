@@ -117,20 +117,24 @@ window.EngineCore = {
         // Resolve Background Bets
         const registry = window.StrategyRegistry || {};
         for (const stratKey of Object.keys(registry)) {
-            if (stratKey === currentGameplayStrategy) continue;
-            const bgBets = this.backgroundBets[stratKey] || [];
+            // Resolve standard background bets (from other strategies) 
+            // AND any shadow bets specifically returned by the active strategy
+            const bgBets = (this.backgroundBets[stratKey] || []).concat(this.shadowBets?.[stratKey] || []);
+            
             bgBets.forEach(bet => {
                 const isWin = (matchedFaceMask & (faceMasks[bet.targetFace] || 0)) !== 0;
                 const count = faces[bet.targetFace] ? faces[bet.targetFace].nums.length : 0;
                 const unitChange = isWin ? (35 - count) : -count;
 
-                this.updateStats(isWin, bet.patternName, unitChange, bet.strategy, bet.patternName, historyLength, val);
+                this.updateStats(isWin, bet.patternName, unitChange, bet.strategy || stratKey, bet.patternName, historyLength, val);
 
                 if (bet.strategy === 'TripleCs' && bet.originPairKey) {
                     this.tripleCsResets[bet.originPairKey] = historyLength;
                 }
             });
+            
             this.backgroundBets[stratKey] = [];
+            if (this.shadowBets) this.shadowBets[stratKey] = [];
         }
 
         return resolvedTurnBets;
@@ -161,6 +165,11 @@ window.EngineCore = {
 
             if (stratKey === activeStrategyKey) {
                 activeResults = result;
+                // Store shadow bets for the active strategy to be resolved next turn
+                if (!this.shadowBets) this.shadowBets = {};
+                this.shadowBets[stratKey] = result.backgroundResults || [];
+            } else {
+                this.backgroundBets[stratKey] = result.nextBets || [];
             }
         }
         return {
