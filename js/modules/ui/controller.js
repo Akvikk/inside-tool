@@ -310,6 +310,48 @@
 
     // --- GENERIC UI & MODALS ---
     // --- PATTERN FILTER RECOVERY ---
+    window.updateGridHighlights = function () {
+        const gridBtns = document.querySelectorAll('.grid-btn');
+        if (!gridBtns.length) return;
+
+        // Clear Highlights
+        gridBtns.forEach(btn => {
+            btn.classList.remove('ring-2', 'ring-[#FFD60A]', 'shadow-[0_0_15px_rgba(255,214,10,0.5)]', 'z-10');
+        });
+
+        if (!window.state || !window.state.activeBets || !window.state.patternConfig) return;
+
+        const config = window.state.patternConfig;
+        const faces = window.FACES || (typeof FACES !== 'undefined' ? FACES : null);
+        if (!faces) return;
+
+        // Number Mapping & Filter Check
+        const activeNumbers = new Set();
+        window.state.activeBets.forEach(bet => {
+            const filterKey = bet.filterKey || bet.patternName;
+            if (config[filterKey] !== false && bet.targetFace) {
+                const faceData = faces[bet.targetFace];
+                if (faceData && Array.isArray(faceData.nums)) {
+                    faceData.nums.forEach(n => activeNumbers.add(n));
+                }
+            }
+        });
+
+        // Action: Apply new highlighting classes
+        gridBtns.forEach(btn => {
+            const onclick = btn.getAttribute('onclick');
+            if (onclick) {
+                const match = onclick.match(/handleGridClick\((\d+)\)/);
+                if (match) {
+                    const num = parseInt(match[1], 10);
+                    if (activeNumbers.has(num)) {
+                        btn.classList.add('ring-2', 'ring-[#FFD60A]', 'shadow-[0_0_15px_rgba(255,214,10,0.5)]', 'z-10');
+                    }
+                }
+            }
+        });
+    };
+
     window.togglePatternFilterPopover = function (forceOpen = null) {
         const popover = document.getElementById('patternFilterPopover');
         const button = document.getElementById('patternsToggleBtn');
@@ -383,9 +425,17 @@
         window.renderPatternFilterList();
         if (window.syncPatternFilterButton) window.syncPatternFilterButton();
         if (window.saveSessionData) window.saveSessionData();
-        if (window.scanAllStrategies) {
+    
+        const historyRef = window.state.history || [];
+        const oldSpins = historyRef.map(s => s.num);
+        if (oldSpins.length > 0 && window.rebuildSessionFromSpins) {
+            window.rebuildSessionFromSpins(oldSpins).then(() => {
+                if (window.updateGridHighlights) window.updateGridHighlights();
+            });
+        } else if (window.scanAllStrategies) {
             window.scanAllStrategies({ silent: true }).then(() => {
                 if (window.renderDashboardSafe) window.renderDashboardSafe(window.state.activeBets || []);
+                if (window.updateGridHighlights) window.updateGridHighlights();
             }).catch(err => console.error("Toggle all scan error:", err));
         }
     };
@@ -575,9 +625,16 @@
         if (window.syncPatternFilterButton) window.syncPatternFilterButton();
         if (window.saveSessionData) window.saveSessionData();
 
-        if (window.scanAllStrategies) {
+        const historyRef = window.state.history || [];
+        const oldSpins = historyRef.map(s => s.num);
+        if (oldSpins.length > 0 && window.rebuildSessionFromSpins) {
+            window.rebuildSessionFromSpins(oldSpins).then(() => {
+                if (window.updateGridHighlights) window.updateGridHighlights();
+            });
+        } else if (window.scanAllStrategies) {
             window.scanAllStrategies({ silent: true }).then(result => {
                 if (window.renderDashboardSafe) window.renderDashboardSafe(window.state.activeBets || []);
+                if (window.updateGridHighlights) window.updateGridHighlights();
             }).catch(err => console.error("Filter scan error:", err));
         }
     };
