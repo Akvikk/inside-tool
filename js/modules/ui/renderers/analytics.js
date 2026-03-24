@@ -294,18 +294,21 @@
         if (!tbody) return;
 
         const strategy = window.StrategyRegistry && window.StrategyRegistry[strategyKey];
-        if (!strategy || !strategy.PATTERN_FILTER_META) {
-            tbody.innerHTML = '<tr><td colspan="4" class="p-6 md:p-8 text-center text-white/40 italic text-xs">Strategy data unavailable...</td></tr>';
-            return;
-        }
+        const meta = (strategy && strategy.PATTERN_FILTER_META) ? strategy.PATTERN_FILTER_META : {};
 
-        const meta = strategy.PATTERN_FILTER_META;
-        const keys = strategy.PATTERN_ORDER || Object.keys(meta);
+        let keys = strategy && strategy.PATTERN_ORDER ? [...strategy.PATTERN_ORDER] : Object.keys(meta);
+
+        // Force the table to render EVERYTHING tracked by the Engine's background process
+        Object.keys(patternData).forEach(dataKey => {
+            const alreadyInList = keys.some(k => k === dataKey || (meta[k] && meta[k].label === dataKey));
+            if (!alreadyInList) keys.push(dataKey);
+        });
+
         let hasData = false;
         let html = '';
 
         keys.forEach(key => {
-            const config = meta[key];
+            const config = meta[key] || {};
             const label = config.label || key;
             // Lookup stats using key first, fallback to label for legacy session data
             const stats = patternData[key] || patternData[label] || { wins: 0, losses: 0 };

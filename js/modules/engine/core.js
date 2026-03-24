@@ -86,7 +86,7 @@ window.EngineCore = {
                 const count = faces[bet.targetFace] ? faces[bet.targetFace].nums.length : 0;
                 const unitChange = isWin ? (35 - count) : -count;
 
-                this.updateStats(isWin, bet.patternName, unitChange, bet.strategy, bet.patternName, historyLength, val);
+                this.updateStats(isWin, bet.patternName, unitChange, bet.strategy || currentGameplayStrategy, bet.filterKey || bet.patternName, historyLength, val);
 
                 if (bet.confirmed && typeof updateUserStats === 'function') {
                     updateUserStats(isWin, bet, historyLength, unitChange);
@@ -126,7 +126,7 @@ window.EngineCore = {
                 const count = faces[bet.targetFace] ? faces[bet.targetFace].nums.length : 0;
                 const unitChange = isWin ? (35 - count) : -count;
 
-                this.updateStats(isWin, bet.patternName, unitChange, bet.strategy || stratKey, bet.patternName, historyLength, val);
+                this.updateStats(isWin, bet.patternName, unitChange, bet.strategy || stratKey, bet.filterKey || bet.patternName, historyLength, val);
 
                 if (bet.strategy === 'TripleCs' && bet.originPairKey) {
                     this.tripleCsResets[bet.originPairKey] = historyLength;
@@ -187,24 +187,10 @@ window.EngineCore = {
             history: [0], patterns: {}
         };
 
-        // Ensure new verbose names are mapped correctly for Analytics chart tracking
-        const insideLabels = [
-            'RPT',
-            '1C RPT',
-            'BRKT',
-            '1-2-1',
-            '1-2-3',
-            '2-2',
-            'SV BRKT',
-            // Recognize machine-readable keys
-            'rptng',
-            '1c-rptng',
-            'brkt',
-            '121',
-            '123',
-            '22',
-            'sv-brkt'
-        ];
+        const registry = window.StrategyRegistry || {};
+        const strategy = registry[displayStrategy];
+        const metaKeys = strategy && strategy.PATTERN_FILTER_META ? Object.keys(strategy.PATTERN_FILTER_META) : [];
+        const metaLabels = metaKeys.map(k => strategy.PATTERN_FILTER_META[k].label || k);
 
         this.stats.signalLog.forEach(log => {
             let isMatch = false;
@@ -214,7 +200,12 @@ window.EngineCore = {
             } else if (displayStrategy === 'combo') {
                 isMatch = (strat === 'combo');
             } else if (displayStrategy === 'inside') {
-                isMatch = (strat === 'inside' || insideLabels.includes(log.rawPattern));
+                isMatch = (strat === 'inside' ||
+                    metaKeys.includes(log.rawPattern) ||
+                    metaLabels.includes(log.rawPattern) ||
+                    metaKeys.includes(log.patternName) ||
+                    metaLabels.includes(log.patternName) ||
+                    (!['combo', 'sequence', 'triplecs', 'series'].includes(strat)));
             }
 
             if (isMatch) {
@@ -229,7 +220,7 @@ window.EngineCore = {
                 displayStats.history.push(displayStats.net);
 
                 // Group Triple Cs
-                let patternLabel = log.patternName;
+                let patternLabel = log.rawPattern || log.patternName;
                 if (log.rawStrategy === 'TripleCs' || (log.patternName && log.patternName.startsWith('TripleCs:'))) {
                     patternLabel = 'Triple Cs';
                 }
