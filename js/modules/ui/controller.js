@@ -430,7 +430,7 @@
             let pct = -1;
             if (window.EngineCore && window.EngineCore.stats && window.EngineCore.stats.patternStats) {
                 const labelMatch = meta.label || key;
-                const pStats = window.EngineCore.stats.patternStats[labelMatch] || window.EngineCore.stats.patternStats[key];
+                const pStats = window.EngineCore.stats.patternStats[key] || window.EngineCore.stats.patternStats[labelMatch];
                 if (pStats) {
                     const total = pStats.wins + pStats.losses;
                     if (total > 0) {

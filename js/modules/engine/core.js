@@ -120,7 +120,7 @@ window.EngineCore = {
             // Resolve standard background bets (from other strategies) 
             // AND any shadow bets specifically returned by the active strategy
             const bgBets = (this.backgroundBets[stratKey] || []).concat(this.shadowBets?.[stratKey] || []);
-            
+
             bgBets.forEach(bet => {
                 const isWin = (matchedFaceMask & (faceMasks[bet.targetFace] || 0)) !== 0;
                 const count = faces[bet.targetFace] ? faces[bet.targetFace].nums.length : 0;
@@ -132,7 +132,7 @@ window.EngineCore = {
                     this.tripleCsResets[bet.originPairKey] = historyLength;
                 }
             });
-            
+
             this.backgroundBets[stratKey] = [];
             if (this.shadowBets) this.shadowBets[stratKey] = [];
         }
@@ -195,17 +195,26 @@ window.EngineCore = {
             '1-2-1',
             '1-2-3',
             '2-2',
-            'SV BRKT'
+            'SV BRKT',
+            // Recognize machine-readable keys
+            'rptng',
+            '1c-rptng',
+            'brkt',
+            '121',
+            '123',
+            '22',
+            'sv-brkt'
         ];
 
         this.stats.signalLog.forEach(log => {
             let isMatch = false;
+            const strat = log.rawStrategy ? log.rawStrategy.toLowerCase() : '';
             if (displayStrategy === 'series') {
-                isMatch = (log.rawStrategy === 'Sequence' || log.rawStrategy === 'TripleCs');
+                isMatch = (strat === 'sequence' || strat === 'triplecs' || strat === 'series');
             } else if (displayStrategy === 'combo') {
-                isMatch = (log.rawStrategy === 'Combo');
+                isMatch = (strat === 'combo');
             } else if (displayStrategy === 'inside') {
-                isMatch = (log.rawStrategy === 'Inside' || insideLabels.includes(log.rawPattern));
+                isMatch = (strat === 'inside' || insideLabels.includes(log.rawPattern));
             }
 
             if (isMatch) {

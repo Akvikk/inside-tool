@@ -44,7 +44,7 @@
     window.getAnalyticsTabConfig = function () {
         const buttons = Array.from(document.querySelectorAll('[data-analytics-tab]:not(.hidden)'));
         if (buttons.length > 0) return buttons.map(button => ({ key: button.dataset.analyticsTab, button, panelId: button.dataset.analyticsPanel || '', rendererName: button.dataset.analyticsRenderer || '' })).filter(tab => tab.key && tab.panelId);
-        
+
         // Fallback (Only return non-hidden buttons)
         const allTabs = [
             { key: 'strategy', button: document.getElementById('tabBtnStrategy'), panelId: 'strategyAnalyticsPanel', rendererName: 'renderStrategyAnalytics' },
@@ -66,10 +66,10 @@
         const totalSignals = document.getElementById('advTotalSignals');
         const winRate = document.getElementById('advWinRate');
         const logContainer = document.getElementById('advancementLogContainer');
-        
+
         const history = (window.state && window.state.history) || [];
         const spins = history.length;
-        
+
         // Count signals and outcomes
         let signals = 0, wins = 0, losses = 0;
         if (window.EngineCore && window.EngineCore.stats && window.EngineCore.stats.patternStats) {
@@ -80,14 +80,14 @@
                 losses += ps[key].losses || 0;
             }
         }
-        
+
         const rate = signals > 0 ? Math.round((wins / signals) * 100) : 0;
         const rateColor = rate >= 50 ? 'text-[#32D74B]' : rate > 0 ? 'text-[#FF453A]' : 'text-white/90';
-        
+
         if (totalSpins) totalSpins.textContent = spins;
         if (totalSignals) totalSignals.textContent = signals;
         if (winRate) { winRate.textContent = `${rate}%`; winRate.className = `text-2xl font-semibold tracking-tight ${rateColor}`; }
-        
+
         // Milestone log
         if (logContainer) {
             const milestones = [];
@@ -96,7 +96,7 @@
             if (signals >= 20) milestones.push({ icon: 'fas fa-broadcast-tower', label: '20+ Signals Fired', color: '#BF5AF2' });
             if (wins >= 10) milestones.push({ icon: 'fas fa-check-circle', label: '10+ Wins', color: '#32D74B' });
             if (rate >= 60 && signals > 5) milestones.push({ icon: 'fas fa-star', label: `${rate}% Win Rate`, color: '#FFD60A' });
-            
+
             if (milestones.length > 0) {
                 logContainer.innerHTML = milestones.map(m => `
                     <div class="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] mb-2">
@@ -307,10 +307,10 @@
         keys.forEach(key => {
             const config = meta[key];
             const label = config.label || key;
-            // The core.js aggregates using the pattern name/label
-            const stats = patternData[label] || { wins: 0, losses: 0 };
+            // Lookup stats using key first, fallback to label for legacy session data
+            const stats = patternData[key] || patternData[label] || { wins: 0, losses: 0 };
             const total = stats.wins + stats.losses;
-            
+
             if (total > 0) {
                 hasData = true;
                 const accuracy = Math.round((stats.wins / total) * 100);
