@@ -2,12 +2,13 @@
 (function () {
     function getState() {
         if (!window.state) {
-            window.state = { history: [], faceGaps: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }, activeBets: [], currentGameplayStrategy: 'inside' };
+            window.state = { history: [], faceGaps: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }, activeBets: [], currentGameplayStrategy: 'inside', patternConfig: {} };
         }
         if (!window.state.history) window.state.history = [];
         if (!window.state.faceGaps) window.state.faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
         if (!window.state.activeBets) window.state.activeBets = [];
         if (!window.state.currentGameplayStrategy) window.state.currentGameplayStrategy = 'inside';
+        if (!window.state.patternConfig) window.state.patternConfig = {};
         return window.state;
     }
     window.InputProcessor = {

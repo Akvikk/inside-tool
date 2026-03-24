@@ -446,16 +446,23 @@
             const { key, meta, isEnabled, accuracyText } = item;
 
             entries.push(`
-                <div class="flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 hover:bg-white/[0.05] active:scale-[0.98] cursor-pointer" 
-                     onclick="event.stopPropagation(); togglePatternFilter('${key}')">
-                    <div class="flex flex-col flex-1 min-w-0 pr-4">
-                        <span class="text-[11px] font-bold text-white/90 tracking-wide truncate">${meta.label || key}${accuracyText}</span>
+                <div class="flex items-center justify-between p-3 px-4 rounded-2xl transition-all duration-300 group/item cursor-pointer
+                    ${isEnabled ? 'bg-white/5 border border-white/10 shadow-lg' : 'bg-white/[0.02] border border-transparent hover:bg-white/5'}"
+                    onclick="event.stopPropagation(); togglePatternFilter('${key}')">
+                    
+                    <div class="flex flex-col flex-1 min-w-0 pr-3">
+                        <span class="text-[11px] font-black tracking-wide ${isEnabled ? 'text-white' : 'text-white/60'} transition-colors duration-300 truncate uppercase">
+                            ${meta.label || key}
+                        </span>
+                        ${accuracyText ? `<span class="text-[9px] font-bold ${isEnabled ? 'text-[#BF5AF2]/80' : 'text-white/20'} mt-0.5">${accuracyText}</span>` : ''}
                     </div>
                     
-                    <!-- APPLE NATIVE SWITCH (Stabilized) -->
-                    <div class="h-5 w-9 rounded-full relative transition-all duration-300 flex-shrink-0 ${isEnabled ? 'bg-[#30D158]/80 backdrop-blur-md' : 'bg-white/10 backdrop-blur-md'} border border-white/5">
-                        <div class="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white/90 backdrop-blur-sm transition-transform duration-300 shadow-md" 
-                             style="transform: translateX(${isEnabled ? '16px' : '0'});"></div>
+                    <!-- REFINED APPLE SWITCH -->
+                    <div class="h-5 w-9 rounded-full relative transition-all duration-500 flex-shrink-0 
+                        ${isEnabled ? 'bg-[#30D158] shadow-[0_0_12px_rgba(48,209,88,0.4)]' : 'bg-white/20'}"
+                        style="border: 1px solid rgba(255,255,255,0.1);">
+                        <div class="absolute top-[2px] transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] h-3.5 w-3.5 rounded-full bg-white shadow-sm" 
+                             style="left: ${isEnabled ? '18px' : '3px'}; transform: scale(${isEnabled ? '1' : '0.95'});"></div>
                     </div>
                 </div>
             `);
@@ -526,12 +533,25 @@
 
         if (badge) {
             badge.innerText = String(enabledCount);
-            badge.classList.toggle('pattern-toggle-badge-off', enabledCount === 0);
+            if (enabledCount === 0) {
+                badge.style.opacity = '0.3';
+                badge.style.boxShadow = 'none';
+                badge.style.backgroundColor = 'rgba(255,255,255,0.1)';
+            } else {
+                badge.style.opacity = '1';
+                badge.style.boxShadow = '0 0 15px rgba(191,90,242,0.5)';
+                badge.style.backgroundColor = '#BF5AF2';
+            }
         }
 
         if (button) {
-            button.classList.toggle('text-[#BF5AF2]', enabledCount > 0);
-            button.classList.toggle('text-white/40', enabledCount === 0);
+            if (enabledCount === 0) {
+                button.classList.add('opacity-40');
+                button.classList.remove('hover:border-[#BF5AF2]/40', 'hover:bg-[#BF5AF2]/5');
+            } else {
+                button.classList.remove('opacity-40');
+                button.classList.add('hover:border-[#BF5AF2]/40', 'hover:bg-[#BF5AF2]/5');
+            }
         }
     };
 

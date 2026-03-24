@@ -183,8 +183,17 @@
         tbody.appendChild(tr);
 
         if (!targetContainer) {
-            const sc = document.querySelector('#scrollContainer > div') || document.getElementById('scrollContainer') || (document.getElementById('historyBody') ? document.getElementById('historyBody').closest('.overflow-y-auto, .overflow-auto') : null);
-            if (sc) { setTimeout(() => { sc.scrollTop = sc.scrollHeight + 150; }, 50); }
+            const sc = document.getElementById('historyScrollContainer') || document.querySelector('#scrollContainer > div') || document.getElementById('scrollContainer');
+            if (sc) {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        sc.scrollTop = sc.scrollHeight + 150;
+                    });
+                    requestAnimationFrame(() => {
+                        sc.scrollTop = sc.scrollHeight + 150;
+                    });
+                });
+            }
             if (window.layoutComboBridge) requestAnimationFrame(() => window.layoutComboBridge(spin.id));
         }
     };
@@ -205,9 +214,11 @@
         }
 
         if (options.scrollToEnd !== false) {
-            const sc = document.querySelector('#scrollContainer > div') || document.getElementById('scrollContainer') || (document.getElementById('historyBody') ? document.getElementById('historyBody').closest('.overflow-y-auto, .overflow-auto') : null);
+            const sc = document.getElementById('historyScrollContainer') || document.querySelector('#scrollContainer > div') || document.getElementById('scrollContainer');
             if (sc) {
-                setTimeout(() => { sc.scrollTop = sc.scrollHeight + 150; }, 50);
+                requestAnimationFrame(() => {
+                    sc.scrollTop = sc.scrollHeight + 150;
+                });
             }
         }
     };

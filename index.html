@@ -96,23 +96,45 @@
         <div class="flex items-center gap-1.5 order-3">
             <div id="patternFilterShell" class="relative">
                 <button id="patternsToggleBtn"
-                    class="h-8 px-3 bg-white/5 hover:bg-white/10 text-[#BF5AF2] font-bold rounded-xl border border-[#BF5AF2]/10 flex items-center gap-2 text-[11px] tracking-wide transition-all duration-300 active:scale-[0.98]">
-                    <i class="fas fa-filter"></i>
-                    <span class="hidden md:inline">PATTERNS</span>
+                    class="relative group h-9 px-4 flex items-center gap-2.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-xl transition-all duration-500 hover:border-[#BF5AF2]/40 hover:bg-[#BF5AF2]/5 active:scale-95">
+                    <!-- Subtle Glow Aura -->
+                    <div class="absolute inset-0 rounded-full bg-[#BF5AF2]/5 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    
+                    <i class="fas fa-filter text-[11px] text-[#BF5AF2] drop-shadow-[0_0_8px_rgba(191,90,242,0.5)]"></i>
+                    <span class="text-[10px] font-black uppercase tracking-[0.18em] text-white/90">Filters</span>
+                    
+                    <div id="patternsActiveCount" 
+                         class="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#BF5AF2] text-[9px] font-black text-white shadow-[0_0_15px_rgba(191,90,242,0.5)] transition-all duration-300">
+                        --
+                    </div>
                 </button>
                 <div id="patternFilterPopover"
-                    class="pattern-filter-popover hidden opacity-0 pointer-events-none scale-95 transition-all duration-300 origin-top-left refined-glass rounded-[24px] shadow-2xl absolute top-full left-0 mt-2 w-[280px] p-2 z-[70]">
-                    <div class="flex justify-between items-center p-3 border-b border-white/[0.05] mb-2">
-                        <div id="patternFilterHeaderTitle" class="flex-1 pr-2">
-                            <!-- Dynamic Sort Button Injected Here -->
+                    class="pattern-filter-popover hidden opacity-0 pointer-events-none scale-95 transition-all duration-300 origin-top-left absolute top-full left-0 mt-3 w-[300px] z-[70] overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-b from-[#2c2c2e]/90 to-[#1c1c1e]/95 backdrop-blur-[50px] shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
+                    
+                    <!-- Popover Header -->
+                    <div class="flex justify-between items-center p-4 bg-white/5 border-b border-white/5">
+                        <div id="patternFilterHeaderTitle" class="flex-1">
+                            <button onclick="event.stopPropagation(); window.cyclePatternSort()" 
+                                    class="text-[9px] font-black tracking-widest uppercase text-[#BF5AF2] hover:text-white transition-all bg-[#BF5AF2]/10 px-3 py-2 rounded-lg border border-[#BF5AF2]/20 shadow-lg active:scale-[0.95] flex items-center">
+                                <i class="fas fa-clock mr-1.5"></i> Chrono
+                            </button>
                         </div>
-                        <button onclick="window.closePatternFilterPopover()"
-                            class="text-white/40 hover:text-[#FF453A] hover:bg-[#FF453A]/10 transition-all duration-300 h-7 w-7 flex items-center justify-center rounded-full bg-white/5 border border-white/[0.05] active:scale-[0.98]">
-                            <i class="fas fa-times text-[11px]"></i>
+                        <button onclick="window.closePatternFilterPopover()" 
+                                class="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all">
+                            <i class="fas fa-times text-xs"></i>
                         </button>
                     </div>
-                    <div id="patternsList" class="max-h-[320px] overflow-y-auto custom-scroll pr-1 flex flex-col gap-1">
-                        <!-- Popover content remains managed by JS -->
+
+                    <!-- Popover Content -->
+                    <div id="patternsList" class="p-2 max-h-[400px] overflow-y-auto custom-scrollbar space-y-1">
+                        <!-- Items injected by controller.js -->
+                    </div>
+
+                    <!-- Popover Footer -->
+                    <div class="p-3 bg-black/20 border-t border-white/5 text-center">
+                        <span id="patternFilterSummary" class="text-[9px] font-bold uppercase tracking-widest text-white/30">
+                            Loading Protocols...
+                        </span>
                     </div>
                 </div>
             </div>
@@ -397,7 +419,7 @@
                 </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto custom-scroll">
+            <div id="historyScrollContainer" class="flex-1 overflow-y-auto custom-scroll">
                 <table class="history-table">
                     <colgroup>
                         <col style="width: 8%;">

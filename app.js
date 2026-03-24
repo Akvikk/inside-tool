@@ -21,10 +21,16 @@ window.ensureActivePatternConfig = function () {
 
     if (strategy && typeof strategy.buildPatternConfig === 'function') {
         const defaults = strategy.buildPatternConfig(true);
+        let changed = false;
         for (const key of Object.keys(defaults)) {
             if (window.state.patternConfig[key] === undefined) {
                 window.state.patternConfig[key] = true;
+                changed = true;
             }
+        }
+        // If we initialized new keys, immediately sync the UI button badge
+        if (changed && window.syncPatternFilterButton) {
+            window.syncPatternFilterButton();
         }
     }
 };
@@ -89,6 +95,7 @@ window.resetData = async function () {
             window.state.engineStats = { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {}, signalLog: [] };
             window.state.globalSpinIdCounter = 0;
             window.state.currentGameplayStrategy = 'inside';
+            window.state.patternConfig = {};
             if (window.ensureActivePatternConfig) window.ensureActivePatternConfig();
         }
         window.currentAlerts = [];
@@ -251,6 +258,29 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
     `;
     document.head.appendChild(glassStyle);
+
+    // Dynamic Cursor Tracking Blob
+    const cursorBlob = document.createElement('div');
+    // Signature purple with heavy blur, disabled on mobile to preserve resources
+    cursorBlob.className = 'fixed top-0 left-0 w-[500px] h-[500px] bg-[#BF5AF2]/10 rounded-full blur-[120px] pointer-events-none z-[-1] hidden md:block will-change-transform';
+    document.body.appendChild(cursorBlob);
+
+    let tgtX = window.innerWidth / 2;
+    let tgtY = window.innerHeight / 2;
+    let curX = tgtX;
+    let curY = tgtY;
+
+    window.addEventListener('mousemove', (e) => {
+        tgtX = e.clientX;
+        tgtY = e.clientY;
+    });
+    const animateCursorBlob = () => {
+        curX += (tgtX - curX) * 0.03; // Smooth easing multiplier for the "heavy float" effect
+        curY += (tgtY - curY) * 0.03;
+        cursorBlob.style.transform = `translate3d(${curX - 250}px, ${curY - 250}px, 0)`;
+        requestAnimationFrame(animateCursorBlob);
+    };
+    animateCursorBlob();
 
     if (window.InputProcessor && window.InputProcessor.init) window.InputProcessor.init();
     if (window.UiController && window.UiController.init) window.UiController.init();
