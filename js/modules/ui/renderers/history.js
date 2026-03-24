@@ -43,20 +43,40 @@
         }
 
         const signals = spin.newSignals || [];
-        signals.forEach(sig => {
-            const detail = window.formatPredictionDetail(sig) || 'Prediction Perimeter';
-            const note = sig.reason ? `<div class="prediction-entry-note">${sig.reason}</div>` : '';
+        if (signals.length > 0) {
+            const registry = window.StrategyRegistry || {};
+            const stratKey = window.state?.currentGameplayStrategy || 'series';
+            const strategy = registry[stratKey];
+
+            let tooltipContent = signals.map((sig, index) => {
+                const detail = window.formatPredictionDetail(sig) || 'Prediction Perimeter';
+                const reasonStr = sig.reason ? `<div class="text-white/50 text-[9px] mt-0.5 leading-tight">${sig.reason}</div>` : '';
+
+                let metaColor = null;
+                let metaIcon = 'fa-bolt'; // Default fallback icon
+                if (strategy && strategy.PATTERN_FILTER_META && strategy.PATTERN_FILTER_META[sig.filterKey]) {
+                    metaColor = strategy.PATTERN_FILTER_META[sig.filterKey].accent;
+                    if (strategy.PATTERN_FILTER_META[sig.filterKey].icon) {
+                        metaIcon = strategy.PATTERN_FILTER_META[sig.filterKey].icon;
+                    }
+                }
+                const color = sig.accentColor || metaColor || '#BF5AF2';
+                const delay = 100 + (index * 75); // Stagger delays by 75ms
+                return `<div class="mb-1.5 last:mb-0 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out" style="transition-delay: ${delay}ms"><div class="font-bold tracking-wide flex items-center gap-1.5" style="color: ${color}; text-shadow: 0 2px 4px rgba(0,0,0,0.5), 0 0 10px currentColor;"><i class="fas ${metaIcon} opacity-80 text-[10px]"></i><span>${detail}</span></div>${reasonStr}</div>`;
+            }).join('');
 
             blocks.push(`
-                <div class="prediction-entry-block">
-                    <div class="prediction-entry prediction-entry--signal">
-                        <span class="prediction-entry-label">Active Signal</span>
-                        <span class="prediction-entry-detail">${detail}</span>
+                <div class="prediction-entry-block group relative inline-block w-full">
+                    <div class="prediction-entry prediction-entry--signal cursor-help flex items-center justify-between">
+                        <span class="prediction-entry-label transition-all duration-300 group-hover:text-[#BF5AF2] group-hover:[text-shadow:0_2px_4px_rgba(0,0,0,0.5),0_0_10px_currentColor]">Active Signals (${signals.length})</span>
+                        <span class="prediction-entry-detail text-white/50 group-hover:text-white transition-colors ml-2"><i class="fas fa-info-circle mr-1"></i>Details</span>
                     </div>
-                    ${note}
+                    <div class="absolute bottom-full right-0 mb-2 w-max max-w-[240px] p-2.5 bg-[#1C1C1E]/95 border border-white/[0.08] text-white/90 text-[10px] rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-[100] backdrop-blur-xl whitespace-normal text-left pointer-events-none">
+                        ${tooltipContent}
+                    </div>
                 </div>
             `);
-        });
+        }
 
         if (blocks.length === 0) return '<span class="prediction-empty text-white/5">—</span>';
         return `<div class="prediction-cell-content">${blocks.join('')}</div>`;
@@ -106,7 +126,11 @@
             else if (stratKey === 'inside') label = signal.patternName || 'PATTERN';
             else label = signal.patternName || '-';
 
-            const color = signal.accentColor || '#BF5AF2';
+            let metaColor = null;
+            if (strategy && strategy.PATTERN_FILTER_META && strategy.PATTERN_FILTER_META[signal.filterKey]) {
+                metaColor = strategy.PATTERN_FILTER_META[signal.filterKey].accent;
+            }
+            const color = signal.accentColor || metaColor || '#BF5AF2';
 
             if (label !== '-') {
                 return `
@@ -154,7 +178,7 @@
             <td class="text-center"><div class="num-box ${bgClass}">${spin.num}</div></td>
             <td class="text-center relative z-[5]">${faceHTML}</td>
             <td class="text-center relative overflow-visible z-[1]">${comboHTML}</td>
-            <td class="prediction-cell">${predictionHTML}</td>
+            <td class="prediction-cell relative overflow-visible z-[10]">${predictionHTML}</td>
         `;
         tbody.appendChild(tr);
 
@@ -296,7 +320,8 @@
                             confidence: Number.isFinite(b.confidence) ? b.confidence : null,
                             reason: b.reason || b.subtitle || '',
                             status: b.status || 'GO',
-                            signalSource: b.signalSource || 'math'
+                            signalSource: b.signalSource || 'math',
+                            accentColor: b.accentColor
                         }));
                     }
                 }

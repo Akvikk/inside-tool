@@ -254,7 +254,8 @@
                 reason: b.reason || b.subtitle || '',
                 mode: b.mode || null,
                 status: b.status || 'GO',
-                signalSource: b.signalSource || 'math'
+                signalSource: b.signalSource || 'math',
+                accentColor: b.accentColor
             }));
         }
 
