@@ -368,18 +368,18 @@
         if (!window.state.patternConfig) window.state.patternConfig = {};
         const metaData = getPatternMetaData();
         const keys = Object.keys(metaData);
-        
+
         // Check if ALL are currently on
         const allOn = keys.every(k => window.state.patternConfig[k] !== false);
         const newState = !allOn;
-        
+
         for (const key of keys) {
             window.state.patternConfig[key] = newState;
         }
-        
+
         // Sync the toggle switch visual
         window.syncSelectAllSwitch(newState);
-        
+
         window.renderPatternFilterList();
         if (window.syncPatternFilterButton) window.syncPatternFilterButton();
         if (window.saveSessionData) window.saveSessionData();
