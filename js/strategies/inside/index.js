@@ -52,6 +52,7 @@
         run(historyData, snapshot, patternConfig, options = {}) {
             const notifications = [];
             const nextBets = [];
+            const backgroundResults = [];
             const resultsByPattern = {};
 
             // Iterate through all registered patterns strictly in chronological order
@@ -59,18 +60,26 @@
             for (const key of orderedKeys) {
                 const pattern = this.patterns[key];
 
-                // Skip if a defined pattern isn't loaded/registered yet or is disabled
-                if (!pattern || (patternConfig && patternConfig[key] === false)) continue;
+                // Skip if a defined pattern isn't loaded/registered yet
+                if (!pattern) continue;
+
+                const isEnabled = !(patternConfig && patternConfig[key] === false);
 
                 try {
                     const result = pattern.run(historyData, snapshot, patternConfig, options);
 
                     if (result) {
-                        if (Array.isArray(result.notifications)) {
-                            notifications.push(...result.notifications);
-                        }
-                        if (Array.isArray(result.nextBets)) {
-                            nextBets.push(...result.nextBets);
+                        if (isEnabled) {
+                            if (Array.isArray(result.notifications)) {
+                                notifications.push(...result.notifications);
+                            }
+                            if (Array.isArray(result.nextBets)) {
+                                nextBets.push(...result.nextBets);
+                            }
+                        } else {
+                            if (Array.isArray(result.nextBets)) {
+                                backgroundResults.push(...result.nextBets);
+                            }
                         }
                         resultsByPattern[key] = result;
                     }
@@ -82,6 +91,7 @@
             return {
                 notifications,
                 nextBets,
+                backgroundResults,
                 resultsByPattern
             };
         },

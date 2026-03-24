@@ -424,7 +424,6 @@
         let patternItems = Object.keys(metaData).map(key => {
             const meta = metaData[key];
             const isEnabled = config[key] !== false;
-            const accent = meta.accent || 'var(--apple-p3-blue)';
 
             // Fetch accuracy stats
             let accuracyText = '';
@@ -470,6 +469,7 @@
         let entries = [];
         for (const item of patternItems) {
             const { key, meta, isEnabled, accuracyText, pct } = item;
+            const accent = meta.accent || '#BF5AF2';
 
             // pct is -1 if no data, 0-100 otherwise
             const barWidth = pct >= 0 ? pct : 0;
