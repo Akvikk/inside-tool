@@ -124,7 +124,40 @@
 
                         <div id="intelligenceContent" class="space-y-4"></div>
                     </div>
-                </div>
+
+                    <!-- ADVANCEMENTS TAB -->
+                    <div id="advancementsPanel" class="hidden space-y-5">
+                        <div class="flex justify-between items-center">
+                            <div class="text-xs font-medium text-[#FF9F0A] flex items-center bg-[#FF9F0A]/10 px-3 py-1.5 rounded-lg border border-[#FF9F0A]/20">
+                                <i class="fas fa-trophy mr-2"></i> Session Milestones
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="bg-white/[0.02] border border-white/[0.08] rounded-2xl p-4 text-center shadow-sm">
+                                <div class="text-xs font-medium text-white/50 mb-1">Total Spins</div>
+                                <div id="advTotalSpins" class="text-2xl font-semibold tracking-tight text-white/90">0</div>
+                            </div>
+                            <div class="bg-white/[0.02] border border-white/[0.08] rounded-2xl p-4 text-center shadow-sm">
+                                <div class="text-xs font-medium text-white/50 mb-1">Signals Fired</div>
+                                <div id="advTotalSignals" class="text-2xl font-semibold tracking-tight text-white/90">0</div>
+                            </div>
+                            <div class="bg-white/[0.02] border border-white/[0.08] rounded-2xl p-4 text-center shadow-sm">
+                                <div class="text-xs font-medium text-white/50 mb-1">Win Rate</div>
+                                <div id="advWinRate" class="text-2xl font-semibold tracking-tight text-white/90">0%</div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white/[0.02] border border-white/[0.08] rounded-2xl overflow-hidden shadow-sm">
+                            <div class="bg-white/[0.02] text-white/70 text-sm font-medium p-4 border-b border-white/[0.08] flex justify-between items-center">
+                                <span>Advancement Log</span>
+                                <i class="fas fa-stream text-white/30"></i>
+                            </div>
+                            <div id="advancementLogContainer" class="p-4 min-h-[120px]">
+                                <div class="text-white/30 text-center py-8 text-[11px] font-black uppercase tracking-widest">Awaiting threshold breaches.</div>
+                            </div>
+                        </div>
+                    </div>
             </div>
         </div>
     </div>`;

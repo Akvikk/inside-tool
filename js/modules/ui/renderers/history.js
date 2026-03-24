@@ -105,7 +105,7 @@
                                      data-color="${bridge.color}"></div>
                                 <div class="relative z-[2] inline-flex items-center justify-center">
                             <span class="combo-badge relative px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase border shadow-2xl transition-all duration-300"
-                                          style="color:${bridge.color}; border-color:${bridge.color}55; background-color:rgba(11,11,13,0.4); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow: 0 0 8px ${bridge.color}40, inset 0 0 4px ${bridge.color}15;">
+                                          style="color:${bridge.color}; border-color:${bridge.color}55; background-color:rgba(11,11,13,0.85); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow: 0 0 8px ${bridge.color}40, inset 0 0 4px ${bridge.color}15;">
                                         ${bridge.label}
                                     </span>
                                 </div>
@@ -136,7 +136,7 @@
                 return `
                     <div class="relative z-[2] inline-flex items-center justify-center py-1">
                     <span class="combo-badge relative px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase border shadow-2xl transition-all duration-300"
-                              style="color:${color}; border-color:${color}55; background-color:rgba(11,11,13,0.4); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow: 0 0 8px ${color}40, inset 0 0 4px ${color}15;">
+                              style="color:${color}; border-color:${color}55; background-color:rgba(11,11,13,0.85); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); box-shadow: 0 0 8px ${color}40, inset 0 0 4px ${color}15;">
                             ${label}
                         </span>
                     </div>

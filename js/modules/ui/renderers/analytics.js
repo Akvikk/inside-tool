@@ -55,8 +55,52 @@
     };
 
     window.renderAdvancementAnalytics = function () {
-        const advPanel = document.getElementById('advancementLogContainer');
-        if (advPanel) advPanel.innerHTML = '<div class="text-white/30 text-center py-8 text-[11px] font-black uppercase tracking-widest">Advancements tracking active. Awaiting threshold breaches.</div>';
+        const totalSpins = document.getElementById('advTotalSpins');
+        const totalSignals = document.getElementById('advTotalSignals');
+        const winRate = document.getElementById('advWinRate');
+        const logContainer = document.getElementById('advancementLogContainer');
+        
+        const history = (window.state && window.state.history) || [];
+        const spins = history.length;
+        
+        // Count signals and outcomes
+        let signals = 0, wins = 0, losses = 0;
+        if (window.EngineCore && window.EngineCore.stats && window.EngineCore.stats.patternStats) {
+            const ps = window.EngineCore.stats.patternStats;
+            for (const key of Object.keys(ps)) {
+                signals += (ps[key].wins || 0) + (ps[key].losses || 0);
+                wins += ps[key].wins || 0;
+                losses += ps[key].losses || 0;
+            }
+        }
+        
+        const rate = signals > 0 ? Math.round((wins / signals) * 100) : 0;
+        const rateColor = rate >= 50 ? 'text-[#32D74B]' : rate > 0 ? 'text-[#FF453A]' : 'text-white/90';
+        
+        if (totalSpins) totalSpins.textContent = spins;
+        if (totalSignals) totalSignals.textContent = signals;
+        if (winRate) { winRate.textContent = `${rate}%`; winRate.className = `text-2xl font-semibold tracking-tight ${rateColor}`; }
+        
+        // Milestone log
+        if (logContainer) {
+            const milestones = [];
+            if (spins >= 100) milestones.push({ icon: 'fas fa-fire', label: '100 Spins Reached', color: '#FF9F0A' });
+            if (spins >= 50) milestones.push({ icon: 'fas fa-bolt', label: '50 Spins Milestone', color: '#FF9F0A' });
+            if (signals >= 20) milestones.push({ icon: 'fas fa-broadcast-tower', label: '20+ Signals Fired', color: '#BF5AF2' });
+            if (wins >= 10) milestones.push({ icon: 'fas fa-check-circle', label: '10+ Wins', color: '#32D74B' });
+            if (rate >= 60 && signals > 5) milestones.push({ icon: 'fas fa-star', label: `${rate}% Win Rate`, color: '#FFD60A' });
+            
+            if (milestones.length > 0) {
+                logContainer.innerHTML = milestones.map(m => `
+                    <div class="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.05] mb-2">
+                        <i class="${m.icon} text-sm" style="color:${m.color}"></i>
+                        <span class="text-xs font-bold text-white/80 tracking-wide">${m.label}</span>
+                    </div>
+                `).join('');
+            } else {
+                logContainer.innerHTML = '<div class="text-white/30 text-center py-8 text-[11px] font-black uppercase tracking-widest">Awaiting threshold breaches.</div>';
+            }
+        }
     };
 
     window.renderAnalytics = function () {
