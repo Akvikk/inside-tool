@@ -319,14 +319,14 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
 
         /* Animated Mesh Gradient Background */
-        @keyframes blob {
-            0% { transform: translate(0px, 0px) scale(1); }
-            33% { transform: translate(30px, -50px) scale(1.1); }
-            66% { transform: translate(-20px, 20px) scale(0.9); }
-            100% { transform: translate(0px, 0px) scale(1); }
+        @keyframes volumetricFloat {
+            0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+            33% { transform: translate(4vw, -4vh) rotate(120deg) scale(1.15); }
+            66% { transform: translate(-3vw, 3vh) rotate(240deg) scale(0.9); }
+            100% { transform: translate(0, 0) rotate(360deg) scale(1); }
         }
         .animate-blob {
-            animation: blob 8s infinite alternate;
+            animation: volumetricFloat 20s linear infinite;
         }
         .animation-delay-2000 {
             animation-delay: 2s;
@@ -353,44 +353,145 @@ window.addEventListener('DOMContentLoaded', async () => {
         tgtY = e.clientY;
     });
     const animateCursorBlob = () => {
-        curX += (tgtX - curX) * 0.03; // Smooth easing multiplier for the "heavy float" effect
-        curY += (tgtY - curY) * 0.03;
+        curX += (tgtX - curX) * 0.08; // Smooth easing multiplier for the "heavy float" effect
+        curY += (tgtY - curY) * 0.08;
         cursorBlob.style.transform = `translate3d(${curX - 250}px, ${curY - 250}px, 0)`;
         requestAnimationFrame(animateCursorBlob);
     };
     animateCursorBlob();
 
     // --- UI Cleanup (Header & Modals) ---
-    const filterBtn = document.getElementById('patternsToggleBtn');
-    if (filterBtn) {
-        Array.from(filterBtn.childNodes).forEach(node => {
-            if (node.nodeType === Node.TEXT_NODE && node.textContent.trim().toLowerCase() === 'filters') {
-                node.textContent = '';
-            }
-            if (node.tagName === 'SPAN' && node.id !== 'patternsActiveCount' && node.innerText.toLowerCase().includes('filters')) {
-                node.style.display = 'none';
-            }
-        });
-        filterBtn.classList.remove('px-3', 'px-4');
-        filterBtn.classList.add('px-2');
+    try {
+        const filterBtn = document.getElementById('patternsToggleBtn');
+        if (filterBtn) {
+            // 1. Shrink Filter Button (Icon-only)
+            Array.from(filterBtn.childNodes).forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE && node.textContent.trim().toLowerCase() === 'filters') node.textContent = '';
+                const isSpan = node.tagName === 'SPAN';
+                if (isSpan && node.id !== 'patternsActiveCount' && node.innerText.toLowerCase().includes('filters')) node.style.display = 'none';
+            });
+            filterBtn.classList.remove('px-3', 'px-4');
+            filterBtn.classList.add('px-2', 'flex', 'items-center', 'justify-center');
 
-        if (!document.getElementById('strategySwitcherBtn')) {
-            const switcher = document.createElement('button');
-            switcher.id = 'strategySwitcherBtn';
-            switcher.className = filterBtn.className;
-            switcher.classList.remove('pattern-toggle-active');
-            switcher.innerHTML = '<i class="fas fa-repeat"></i>';
-            switcher.onclick = () => {
-                if (window.cycleGameplayStrategy) window.cycleGameplayStrategy();
-            };
-            filterBtn.parentNode.insertBefore(switcher, filterBtn.nextSibling);
+            // 2. Correct Strategy Switcher Injection into tools container
+            const shellParent = filterBtn.closest('#patternFilterShell') || filterBtn;
+            const toolsGroup = shellParent.closest('.gap-1\\.5') || shellParent.parentNode;
+
+            if (toolsGroup && !document.getElementById('strategySwitcherBtn')) {
+                // Enforce proper header gap spacing and click-target height on the tools container
+                if (toolsGroup.classList.contains('gap-1.5')) {
+                    toolsGroup.classList.replace('gap-1.5', 'gap-4');
+                }
+
+                // Scale up standard header buttons and their icons dynamically
+                toolsGroup.querySelectorAll('button').forEach(btn => {
+                    if (btn.classList.contains('h-8')) btn.classList.replace('h-8', 'h-10');
+                    if (btn.classList.contains('h-9')) btn.classList.replace('h-9', 'h-10');
+                    if (btn.classList.contains('w-8')) btn.classList.replace('w-8', 'w-10');
+                    if (btn.classList.contains('w-9')) btn.classList.replace('w-9', 'w-10');
+
+                    const icon = btn.querySelector('i');
+                    if (icon) {
+                        if (icon.classList.contains('text-[11px]')) icon.classList.replace('text-[11px]', 'text-sm');
+                        if (icon.classList.contains('text-xs')) icon.classList.replace('text-xs', 'text-sm');
+                    }
+        try {
+            const filterBtn = document.getElementById('patternsToggleBtn');
+            if (filterBtn) {
+                // 1. Shrink Filter Button (Icon-only)
+                Array.from(filterBtn.childNodes).forEach(node => {
+                    if (node.nodeType === Node.TEXT_NODE && node.textContent.trim().toLowerCase() === 'filters') node.textContent = '';
+                    const isSpan = node.tagName === 'SPAN';
+                    if (isSpan && node.id !== 'patternsActiveCount' && node.innerText.toLowerCase().includes('filters')) node.style.display = 'none';
+                });
+                filterBtn.classList.remove('px-3', 'px-4');
+                filterBtn.classList.add('px-2', 'flex', 'items-center', 'justify-center');
+
+                // 2. Correct Strategy Switcher Injection into tools container
+                const shellParent = filterBtn.closest('#patternFilterShell') || filterBtn;
+                const toolsGroup = shellParent.closest('.gap-1\\.5') || shellParent.parentNode;
+
+                if (toolsGroup && !document.getElementById('strategySwitcherBtn')) {
+                    // Enforce proper header gap spacing and click-target height on the tools container
+                    if (toolsGroup.classList.contains('gap-1.5')) {
+                        toolsGroup.classList.replace('gap-1.5', 'gap-4');
+                    }
+
+                    // Scale up standard header buttons and their icons dynamically
+                    toolsGroup.querySelectorAll('button').forEach(btn => {
+                        if (btn.classList.contains('h-8')) btn.classList.replace('h-8', 'h-10');
+                        if (btn.classList.contains('h-9')) btn.classList.replace('h-9', 'h-10');
+                        if (btn.classList.contains('w-8')) btn.classList.replace('w-8', 'w-10');
+                        if (btn.classList.contains('w-9')) btn.classList.replace('w-9', 'w-10');
+
+                        const icon = btn.querySelector('i');
+                        if (icon) {
+                            if (icon.classList.contains('text-[11px]')) icon.classList.replace('text-[11px]', 'text-sm');
+                            if (icon.classList.contains('text-xs')) icon.classList.replace('text-xs', 'text-sm');
+                        }
+                    });
+
+                    // Scale up header separator height
+                    toolsGroup.querySelectorAll('div.h-4').forEach(div => div.classList.replace('h-4', 'h-6'));
+
+                    const container = document.createElement('div');
+                    container.className = 'relative flex items-center';
+
+                    const switcher = document.createElement('button');
+                    switcher.id = 'strategySwitcherBtn';
+                    switcher.className = "flex items-center justify-center h-10 w-10 bg-white/5 hover:bg-white/10 text-[#BF5AF2] rounded-xl border border-[#BF5AF2]/10 transition-all duration-300 active:scale-[0.98]";
+                    switcher.innerHTML = '<i class="fas fa-repeat text-sm"></i>';
+
+                    const dropdown = document.createElement('div');
+                    dropdown.id = 'strategyDropdown';
+                    dropdown.className = "hidden absolute top-full right-0 mt-2 w-44 rounded-2xl border border-white/10 bg-[#1C1C1E]/95 backdrop-blur-[40px] shadow-2xl z-[100] overflow-hidden opacity-0 scale-95 transition-all duration-200 origin-top-right";
+
+                    const strategies = [
+                        { key: 'series', label: 'SERIES', color: '#0A84FF' },
+                        { key: 'combo', label: 'COMBOS', color: '#BF5AF2' },
+                        { key: 'inside', label: 'PATTERN MODE', color: '#30D158' }
+                    ];
+
+                    strategies.forEach(s => {
+                        const opt = document.createElement('div');
+                        opt.className = "px-4 py-3 flex items-center gap-3 hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5 last:border-0";
+                        opt.innerHTML = `<div class="w-1.5 h-1.5 rounded-full" style="background: ${s.color}"></div><span class="text-[10px] font-black tracking-widest text-white/70">${s.label}</span>`;
+                        opt.onclick = (e) => {
+                            e.stopPropagation();
+                            if (window.setGameplayStrategy) window.setGameplayStrategy(s.key);
+                            dropdown.classList.add('hidden', 'opacity-0', 'scale-95');
+                        };
+                        dropdown.appendChild(opt);
+                    });
+
+                    switcher.onclick = (e) => {
+                        e.stopPropagation();
+                        const isHidden = dropdown.classList.contains('hidden');
+                        document.querySelectorAll('#strategyDropdown').forEach(d => d.classList.add('hidden', 'opacity-0', 'scale-95'));
+                        if (isHidden) {
+                            dropdown.classList.remove('hidden');
+                            setTimeout(() => dropdown.classList.remove('opacity-0', 'scale-95'), 10);
+                        }
+                    };
+
+                    document.addEventListener('click', () => dropdown.classList.add('hidden', 'opacity-0', 'scale-95'));
+
+                    container.appendChild(switcher);
+                    container.appendChild(dropdown);
+                    toolsGroup.insertBefore(container, shellParent.nextSibling);
+                }
+            }
+        } catch (err) {
+            console.warn("INSIDE TOOL: Header refinement error (Recovering...)", err);
         }
-    }
 
-    const intelBtn = document.getElementById('tabBtnIntelligence');
-    if (intelBtn) intelBtn.style.display = 'none';
-    const advBtn = document.getElementById('tabBtnAdvancements');
-    if (advBtn) advBtn.style.display = 'none';
+        const intelBtn = document.getElementById('tabBtnIntelligence');
+        if (intelBtn) intelBtn.style.display = 'none';
+        const advBtn = document.getElementById('tabBtnAdvancements');
+        if (advBtn) advBtn.style.display = 'none';
+    } catch (err) {
+        console.error("UI Cleanup Error (Non-Fatal):", err);
+    }
 
     if (window.InputProcessor && window.InputProcessor.init) window.InputProcessor.init();
     if (window.UiController && window.UiController.init) window.UiController.init();

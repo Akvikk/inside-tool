@@ -395,10 +395,10 @@
         const knob = document.getElementById('selectAllKnob');
         if (!sw || !knob) return;
         if (isAllOn) {
-            sw.className = 'h-5 w-9 rounded-full relative transition-all duration-500 flex-shrink-0 bg-[#30D158] shadow-[0_0_12px_rgba(48,209,88,0.4)] hover:scale-110 hover:brightness-110 cursor-pointer';
+            sw.className = 'h-5 w-9 rounded-full relative transition-all duration-500 flex-shrink-0 bg-[#30D158] shadow-[0_0_15px_rgba(48,209,88,0.5)] hover:scale-110 cursor-pointer';
             knob.style.left = '18px';
         } else {
-            sw.className = 'h-5 w-9 rounded-full relative transition-all duration-500 flex-shrink-0 bg-white/20 hover:scale-110 hover:brightness-110 cursor-pointer';
+            sw.className = 'h-5 w-9 rounded-full relative transition-all duration-500 flex-shrink-0 bg-white/20 hover:scale-110 cursor-pointer';
             knob.style.left = '3px';
         }
     };
@@ -436,15 +436,7 @@
                     const total = pStats.wins + pStats.losses;
                     if (total > 0) {
                         pct = Math.round((pStats.wins / total) * 100);
-                        let colorClass;
-                        if (pct === 0) {
-                            colorClass = 'text-white/40';
-                        } else if (pct >= 50) {
-                            colorClass = 'text-[#30D158]';
-                        } else {
-                            colorClass = 'text-[#FF453A]';
-                        }
-                        accuracyText = ` <span class="${colorClass} font-bold ml-1">(${pct}%)</span>`;
+                        accuracyText = ` <span class="opacity-40">(${pct}%)</span>`;
                     }
                 }
             }
@@ -481,23 +473,23 @@
 
             // pct is -1 if no data, 0-100 otherwise
             const barWidth = pct >= 0 ? pct : 0;
-            const bgGradient = isEnabled ? `background: linear-gradient(90deg, ${accent}15 ${barWidth}%, transparent ${barWidth}%);` : '';
+            const bgGradient = isEnabled ? `background: linear-gradient(90deg, ${accent}20 ${barWidth}%, transparent ${barWidth}%);` : '';
 
             entries.push(`
                 <div class="flex items-center justify-between p-3.5 px-4 rounded-2xl transition-all duration-300 group/item cursor-pointer border
-                    ${isEnabled ? 'border-white/10 shadow-lg' : 'bg-white/[0.02] border-transparent hover:bg-white/5'}"
+                    ${isEnabled ? 'border-white/5 shadow-lg' : 'bg-white/[0.02] border-transparent hover:bg-white/5'}"
                     style="${bgGradient}"
                     onclick="event.stopPropagation(); togglePatternFilter('${key}')">
                     
                     <div class="flex flex-col flex-1 min-w-0 pr-4">
-                        <span class="text-[10px] font-black tracking-[0.1em] ${isEnabled ? 'text-white' : 'text-white/60'} transition-colors duration-300 truncate uppercase">
+                        <span class="font-black text-[10px] tracking-widest ${isEnabled ? 'text-white' : 'text-white/60'} transition-colors duration-300 truncate uppercase">
                             ${meta.label || key}${accuracyText}
                         </span>
                     </div>
                     
                     <!-- Apple Switch -->
-                    <div class="h-5 w-9 rounded-full relative transition-all duration-500 flex-shrink-0 hover:scale-110 hover:brightness-110
-                        ${isEnabled ? 'bg-[#30D158] shadow-[0_0_12px_rgba(48,209,88,0.5)]' : 'bg-white/20'}"
+                    <div class="h-5 w-9 rounded-full relative transition-all duration-500 flex-shrink-0 hover:scale-110
+                        ${isEnabled ? 'bg-[#30D158] shadow-[0_0_15px_rgba(48,209,88,0.5)]' : 'bg-white/20'}"
                         style="border: 1px solid rgba(255,255,255,0.1);">
                         <div class="absolute top-[2px] transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] h-3.5 w-3.5 rounded-full bg-white shadow-sm" 
                              style="left: ${isEnabled ? '18px' : '3px'}; transform: scale(${isEnabled ? '1' : '0.95'});"></div>
