@@ -135,6 +135,19 @@ window.syncUIWithStrategyMode = function () {
 
     // Re-render the pattern filter list so it instantly rebuilds with correct toggles
     if (window.renderPatternFilterList) window.renderPatternFilterList();
+
+    // --- PERIMETER VISIBILITY ---
+    const perimeterMenu = document.querySelector('[onclick="toggleAccordion(\'perimeterSubMenu\')"]')?.parentElement;
+    if (perimeterMenu) {
+        if (strategyKey === 'inside') {
+            perimeterMenu.classList.remove('hidden');
+        } else {
+            perimeterMenu.classList.add('hidden');
+            // Also close it if it was open
+            const subMenu = document.getElementById('perimeterSubMenu');
+            if (subMenu) subMenu.classList.add('hidden');
+        }
+    }
 };
 
 window.setGameplayStrategy = async function (strategyKey) {

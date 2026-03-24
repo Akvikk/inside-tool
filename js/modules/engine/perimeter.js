@@ -20,6 +20,9 @@
     window.calculatePerimeterFrequency = function (signal, windowOverride) {
         const state = window.state;
         if (!state || !state.perimeterRuleEnabled) return 0;
+        
+        // --- ONLY AVAILABLE IN PATTERN MODE ---
+        if (state.currentGameplayStrategy !== 'inside') return 0;
 
         const history = state.history || [];
         const windowSize = windowOverride || state.predictionPerimeterWindow || 14;

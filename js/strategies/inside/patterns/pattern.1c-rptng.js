@@ -20,26 +20,41 @@
                 return { notifications, nextBets };
             }
 
-            // Slice 1: Guard & Extraction
-            if (!Array.isArray(historyData) || historyData.length < 3) {
+            // Slice 1: Guard & Extraction (Need at least 5 spins for "# 5 # 5 #")
+            if (!Array.isArray(historyData) || historyData.length < 5) {
                 return { notifications, nextBets };
             }
 
-            const latestSpin = historyData[historyData.length - 1];
-            const middleSpin = historyData[historyData.length - 2];
-            const oldestSpin = historyData[historyData.length - 3];
+            const getFace = (index) => {
+                const spin = historyData[index];
+                return (spin && Array.isArray(spin.faces) && spin.faces.length > 0) ? spin.faces[0] : null;
+            };
 
-            if (!latestSpin || !middleSpin || !oldestSpin || !Array.isArray(latestSpin.faces) || !Array.isArray(middleSpin.faces) || !Array.isArray(oldestSpin.faces) ||
-                latestSpin.faces.length === 0 || middleSpin.faces.length === 0 || oldestSpin.faces.length === 0) {
+            const len = historyData.length;
+            const f_1 = getFace(len - 1); // Latest (#) - Spin 5
+            const f_2 = getFace(len - 2); // (5) - Spin 4
+            const f_3 = getFace(len - 3); // (#) - Spin 3
+            const f_4 = getFace(len - 4); // (5) - Spin 2
+            const f_5 = getFace(len - 5); // (#) - Spin 1
+
+            if (f_1 === null || f_2 === null || f_3 === null || f_4 === null || f_5 === null) {
                 return { notifications, nextBets };
             }
 
-            const latestFace = latestSpin.faces[0];
-            const middleFace = middleSpin.faces[0];
-            const oldestFace = oldestSpin.faces[0];
+            /**
+             * "One Cut" 6-Spin vision logic:
+             * Spin 1: # (Not Fx)
+             * Spin 2: Fx
+             * Spin 3: # (Not Fx)
+             * Spin 4: Fx
+             * Spin 5: # (Not Fx)
+             * -> Result: Bet Fx for Spin 6
+             */
+            const Fx = f_4; // The target is F5 (Spin 2/4)
+            const isMatch = (f_2 === Fx && f_5 !== Fx && f_3 !== Fx && f_1 !== Fx);
 
             // Slice 2 & 3: Comparison Logic & Result Construction
-            if (latestFace !== undefined && latestFace === oldestFace && latestFace !== middleFace) {
+            if (isMatch) {
                 notifications.push({
                     type: 'ACTIVE',
                     strategy: 'inside',
@@ -48,9 +63,10 @@
                 });
 
                 nextBets.push({
-                    targetFace: latestFace,
+                    targetFace: Fx,
                     strategy: 'inside',
                     patternName: this.name,
+                    comboLabel: 'One Cut Riff',
                     filterKey: this.key,
                     confirmed: false
                 });
