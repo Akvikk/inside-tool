@@ -42,9 +42,16 @@
     };
 
     window.getAnalyticsTabConfig = function () {
-        const buttons = Array.from(document.querySelectorAll('[data-analytics-tab]'));
+        const buttons = Array.from(document.querySelectorAll('[data-analytics-tab]:not(.hidden)'));
         if (buttons.length > 0) return buttons.map(button => ({ key: button.dataset.analyticsTab, button, panelId: button.dataset.analyticsPanel || '', rendererName: button.dataset.analyticsRenderer || '' })).filter(tab => tab.key && tab.panelId);
-        return [{ key: 'strategy', button: document.getElementById('tabBtnStrategy'), panelId: 'strategyAnalyticsPanel', rendererName: 'renderStrategyAnalytics' }, { key: 'intelligence', button: document.getElementById('tabBtnIntelligence'), panelId: 'intelligencePanel', rendererName: 'renderIntelligencePanel' }, { key: 'advancements', button: document.getElementById('tabBtnAdvancements'), panelId: 'advancementsPanel', rendererName: 'renderAdvancementAnalytics' }].filter(tab => tab.button);
+        
+        // Fallback (Only return non-hidden buttons)
+        const allTabs = [
+            { key: 'strategy', button: document.getElementById('tabBtnStrategy'), panelId: 'strategyAnalyticsPanel', rendererName: 'renderStrategyAnalytics' },
+            { key: 'intelligence', button: document.getElementById('tabBtnIntelligence'), panelId: 'intelligencePanel', rendererName: 'renderIntelligencePanel' },
+            { key: 'advancements', button: document.getElementById('tabBtnAdvancements'), panelId: 'advancementsPanel', rendererName: 'renderAdvancementAnalytics' }
+        ];
+        return allTabs.filter(tab => tab.button && !tab.button.classList.contains('hidden'));
     };
 
     window.ensureActiveAnalyticsTab = function (tabs) {

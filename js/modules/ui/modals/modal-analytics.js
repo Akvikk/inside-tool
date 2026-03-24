@@ -38,9 +38,9 @@
 
                                 <div class="flex gap-6">
                                      <button id="tabBtnIntelligence" data-analytics-tab="intelligence" data-analytics-panel="intelligencePanel" data-analytics-renderer="renderIntelligencePanel"
-                                        class="pb-2 text-[10px] font-black uppercase tracking-[0.2em] text-white/20 border-b-2 border-transparent transition-all hover:text-white/60">AI Intelligence</button>
+                                        class="hidden pb-2 text-[10px] font-black uppercase tracking-[0.2em] text-white/20 border-b-2 border-transparent transition-all hover:text-white/60">AI Intelligence</button>
                                      <button id="tabBtnAdvancements" data-analytics-tab="advancements" data-analytics-panel="advancementsPanel" data-analytics-renderer="renderAdvancementAnalytics"
-                                        class="pb-2 text-[10px] font-black uppercase tracking-[0.2em] text-white/20 border-b-2 border-transparent transition-all hover:text-white/60">Advancements</button>
+                                        class="hidden pb-2 text-[10px] font-black uppercase tracking-[0.2em] text-white/20 border-b-2 border-transparent transition-all hover:text-white/60">Advancements</button>
                                 </div>
                             </div>
 
