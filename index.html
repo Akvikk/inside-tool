@@ -48,15 +48,11 @@
 
 <body class="h-screen flex flex-col text-sm selection:bg-blue-500/30">
 
-    <!-- 2026 iOS PURE DARK MODE BACKGROUND -->
-    <div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none bg-[#000000]">
-        <!-- Volumetric Blobs (Animated Mesh Gradient) -->
-        <div class="absolute top-0 -left-4 w-72 h-72 bg-indigo-500/10 rounded-full mix-blend-screen filter blur-3xl opacity-70 animate-blob"></div>
-        <div class="absolute top-0 -right-4 w-72 h-72 bg-purple-500/10 rounded-full mix-blend-screen filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
-        <div class="absolute -bottom-8 left-20 w-72 h-72 bg-pink-500/10 rounded-full mix-blend-screen filter blur-3xl opacity-70 animate-blob animation-delay-4000"></div>
-        
-        <!-- Ultra subtle volumetric gradient to give depth without color pollution -->
-        <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.03)_0%,transparent_60%)]"></div>
+    <!-- VOLUMETRIC DEPTH LAYER (blends with base.css ambient gradient) -->
+    <div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
+        <div class="absolute top-[-10%] -left-[5%] w-[40vw] h-[40vw] bg-indigo-600/15 rounded-full mix-blend-screen filter blur-[120px] opacity-[0.15] animate-blob"></div>
+        <div class="absolute top-[10%] -right-[5%] w-[35vw] h-[35vw] bg-purple-500/12 rounded-full mix-blend-screen filter blur-[100px] opacity-[0.15] animate-blob animation-delay-2000"></div>
+        <div class="absolute -bottom-[15%] left-[20%] w-[45vw] h-[45vw] bg-fuchsia-600/10 rounded-full mix-blend-screen filter blur-[130px] opacity-[0.15] animate-blob animation-delay-4000"></div>
     </div>
 
     <!-- HAMBURGER MENU BACKDROP (FULL SCREEN BLUR) -->
@@ -112,15 +108,19 @@
                     class="pattern-filter-popover hidden opacity-0 pointer-events-none scale-95 transition-all duration-300 origin-top-left absolute top-full left-0 mt-3 w-[300px] z-[70] overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-b from-[#2c2c2e]/90 to-[#1c1c1e]/95 backdrop-blur-[50px] shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
                     
                     <!-- Popover Header -->
-                    <div class="flex justify-between items-center p-4 bg-white/5 border-b border-white/5">
-                        <div id="patternFilterHeaderTitle" class="flex-1">
+                    <div class="flex justify-between items-center p-4 bg-white/5 border-b border-white/5 gap-2">
+                        <div id="patternFilterHeaderTitle" class="flex-shrink-0">
                             <button onclick="event.stopPropagation(); window.cyclePatternSort()" 
                                     class="text-[9px] font-black tracking-widest uppercase text-[#BF5AF2] hover:text-white transition-all bg-[#BF5AF2]/10 px-3 py-2 rounded-lg border border-[#BF5AF2]/20 shadow-lg active:scale-[0.95] flex items-center">
                                 <i class="fas fa-clock mr-1.5"></i> Chrono
                             </button>
                         </div>
+                        <button onclick="event.stopPropagation(); window.selectAllPatternFilters()"
+                                class="text-[9px] font-black tracking-widest uppercase text-[#30D158] hover:text-white transition-all bg-[#30D158]/10 px-3 py-2 rounded-lg border border-[#30D158]/20 active:scale-[0.95] flex items-center">
+                            <i class="fas fa-check-double mr-1.5"></i> All On
+                        </button>
                         <button onclick="window.closePatternFilterPopover()" 
-                                class="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all">
+                                class="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all flex-shrink-0">
                             <i class="fas fa-times text-xs"></i>
                         </button>
                     </div>

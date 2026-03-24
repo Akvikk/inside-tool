@@ -363,6 +363,22 @@
         window.renderPatternFilterList();
     };
 
+    window.selectAllPatternFilters = function () {
+        if (!window.state || !window.state.patternConfig) return;
+        const metaData = getPatternMetaData();
+        for (const key of Object.keys(metaData)) {
+            window.state.patternConfig[key] = true;
+        }
+        window.renderPatternFilterList();
+        if (window.syncPatternFilterButton) window.syncPatternFilterButton();
+        if (window.saveSessionData) window.saveSessionData();
+        if (window.scanAllStrategies) {
+            window.scanAllStrategies({ silent: true }).then(() => {
+                if (window.renderDashboardSafe) window.renderDashboardSafe(window.state.activeBets || []);
+            }).catch(err => console.error("Select all scan error:", err));
+        }
+    };
+
     window.renderPatternFilterList = function () {
         const list = document.getElementById('patternsList');
         if (!list || !window.state) return;
@@ -371,14 +387,8 @@
 
         if (!window.state.patternSortMode) window.state.patternSortMode = 'chrono';
 
-        // Active Badge Reset: disable pattern configs that don't belong to the active strategy
+        // Initialize pattern configs — default ALL keys to ON
         if (!window.state.patternConfig) window.state.patternConfig = {};
-        for (const key of Object.keys(window.state.patternConfig)) {
-            if (!metaData[key]) {
-                window.state.patternConfig[key] = false;
-            }
-        }
-        // Initialize newly exposed strategy patterns if they don't exist
         for (const key of Object.keys(metaData)) {
             if (window.state.patternConfig[key] === undefined) {
                 window.state.patternConfig[key] = true;
@@ -443,21 +453,30 @@
 
         let entries = [];
         for (const item of patternItems) {
-            const { key, meta, isEnabled, accuracyText } = item;
+            const { key, meta, isEnabled, accuracyText, pct } = item;
+
+            // pct is -1 if no data, 0-100 otherwise
+            const barWidth = pct >= 0 ? pct : 0;
 
             entries.push(`
-                <div class="flex items-center justify-between p-3 px-4 rounded-2xl transition-all duration-300 group/item cursor-pointer
+                <div class="flex items-center justify-between p-3.5 px-4 rounded-2xl transition-all duration-300 group/item cursor-pointer
                     ${isEnabled ? 'bg-white/5 border border-white/10 shadow-lg' : 'bg-white/[0.02] border border-transparent hover:bg-white/5'}"
                     onclick="event.stopPropagation(); togglePatternFilter('${key}')">
                     
-                    <div class="flex flex-col flex-1 min-w-0 pr-3">
-                        <span class="text-[11px] font-black tracking-wide ${isEnabled ? 'text-white' : 'text-white/60'} transition-colors duration-300 truncate uppercase">
-                            ${meta.label || key}
+                    <div class="flex flex-col flex-1 min-w-0 pr-4">
+                        <!-- Row 1: Name + Inline Percentage -->
+                        <span class="text-[10px] font-black tracking-[0.1em] ${isEnabled ? 'text-white' : 'text-white/60'} transition-colors duration-300 truncate uppercase mb-1.5">
+                            ${meta.label || key}${accuracyText}
                         </span>
-                        ${accuracyText ? `<span class="text-[9px] font-bold ${isEnabled ? 'text-[#BF5AF2]/80' : 'text-white/20'} mt-0.5">${accuracyText}</span>` : ''}
+                        
+                        <!-- Row 2: Slim Progress Bar -->
+                        <div class="h-[3px] w-full bg-white/5 rounded-full overflow-hidden">
+                            <div class="h-full rounded-full transition-all duration-700 ease-out ${isEnabled ? 'bg-[#BF5AF2] shadow-[0_0_6px_rgba(191,90,242,0.4)]' : 'bg-white/15'}" 
+                                 style="width: ${barWidth}%;"></div>
+                        </div>
                     </div>
                     
-                    <!-- REFINED APPLE SWITCH -->
+                    <!-- Apple Switch -->
                     <div class="h-5 w-9 rounded-full relative transition-all duration-500 flex-shrink-0 
                         ${isEnabled ? 'bg-[#30D158] shadow-[0_0_12px_rgba(48,209,88,0.4)]' : 'bg-white/20'}"
                         style="border: 1px solid rgba(255,255,255,0.1);">
