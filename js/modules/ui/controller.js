@@ -363,19 +363,43 @@
         window.renderPatternFilterList();
     };
 
-    window.selectAllPatternFilters = function () {
-        if (!window.state || !window.state.patternConfig) return;
+    window.toggleAllPatternFilters = function () {
+        if (!window.state) return;
+        if (!window.state.patternConfig) window.state.patternConfig = {};
         const metaData = getPatternMetaData();
-        for (const key of Object.keys(metaData)) {
-            window.state.patternConfig[key] = true;
+        const keys = Object.keys(metaData);
+        
+        // Check if ALL are currently on
+        const allOn = keys.every(k => window.state.patternConfig[k] !== false);
+        const newState = !allOn;
+        
+        for (const key of keys) {
+            window.state.patternConfig[key] = newState;
         }
+        
+        // Sync the toggle switch visual
+        window.syncSelectAllSwitch(newState);
+        
         window.renderPatternFilterList();
         if (window.syncPatternFilterButton) window.syncPatternFilterButton();
         if (window.saveSessionData) window.saveSessionData();
         if (window.scanAllStrategies) {
             window.scanAllStrategies({ silent: true }).then(() => {
                 if (window.renderDashboardSafe) window.renderDashboardSafe(window.state.activeBets || []);
-            }).catch(err => console.error("Select all scan error:", err));
+            }).catch(err => console.error("Toggle all scan error:", err));
+        }
+    };
+
+    window.syncSelectAllSwitch = function (isAllOn) {
+        const sw = document.getElementById('selectAllSwitch');
+        const knob = document.getElementById('selectAllKnob');
+        if (!sw || !knob) return;
+        if (isAllOn) {
+            sw.className = 'h-5 w-9 rounded-full relative transition-all duration-500 flex-shrink-0 bg-[#30D158] shadow-[0_0_12px_rgba(48,209,88,0.4)]';
+            knob.style.left = '18px';
+        } else {
+            sw.className = 'h-5 w-9 rounded-full relative transition-all duration-500 flex-shrink-0 bg-white/20';
+            knob.style.left = '3px';
         }
     };
 
@@ -504,10 +528,15 @@
         }
 
         if (entries.length === 0) {
-            list.innerHTML = '<div class="text-[9px] font-bold uppercase tracking-widest text-white/10 text-center py-8 italic">No protocols found for this strategy.</div>';
+            list.innerHTML = '<div class="text-[9px] font-bold uppercase tracking-widest text-white/10 text-center py-8 italic">No filters found for this strategy.</div>';
         } else {
             list.innerHTML = `<div class="divide-y divide-white/[0.03]">${entries.join('')}</div>`;
         }
+
+        // Sync the master ALL toggle
+        const metaKeys = Object.keys(metaData);
+        const allOn = metaKeys.length > 0 && metaKeys.every(k => config[k] !== false);
+        if (window.syncSelectAllSwitch) window.syncSelectAllSwitch(allOn);
     };
 
     window.togglePatternFilter = function (key) {

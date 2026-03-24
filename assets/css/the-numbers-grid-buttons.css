@@ -1,11 +1,11 @@
-/* --- THE NUMBERS (Grid Buttons) --- */
+/* --- THE NUMBERS (Grid Buttons) — 2026 Premium --- */
 .grid-btn {
     position: relative;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
     backdrop-filter: blur(20px);
-    font-weight: 700;
+    font-weight: 800;
     font-size: 0.95rem;
     transition: all 0.2s var(--ease-strike);
     color: #ffffff;
@@ -14,42 +14,38 @@
     justify-content: center;
     height: 42px;
     width: 100%;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.08);
 }
-
-
 
 .grid-btn:hover {
     transform: translateY(-1px);
     color: #ffffff;
-    background: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.15);
 }
 
 .grid-btn:active {
     transform: scale(0.96) !important;
 }
 
-/* Active iOS-style Toggles */
+/* Color Variants */
 .grid-red {
-    background: linear-gradient(180deg, #FF5147 0%, #FF3B30 100%) !important;
+    background: linear-gradient(145deg, #FF5147 0%, #D92B24 100%) !important;
     color: #ffffff !important;
-    border: 1px solid rgba(255, 59, 48, 0.4) !important;
-    box-shadow: 0 4px 12px rgba(255, 59, 48, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+    border: 1px solid rgba(255, 59, 48, 0.5) !important;
+    box-shadow: 0 4px 16px rgba(255, 59, 48, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.2) !important;
 }
 
 .grid-green {
-    background: linear-gradient(180deg, #34d65c 0%, #28a745 100%) !important;
+    background: linear-gradient(145deg, #34d65c 0%, #1fa33e 100%) !important;
     color: #ffffff !important;
-    border: 1px solid rgba(52, 214, 92, 0.4) !important;
-    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+    border: 1px solid rgba(52, 214, 92, 0.5) !important;
+    box-shadow: 0 4px 16px rgba(40, 167, 69, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.2) !important;
 }
 
 .grid-black {
-    background: linear-gradient(180deg, #3a3a3c 0%, #1c1c1e 100%) !important;
+    background: linear-gradient(145deg, #3a3a3e 0%, #18181a 100%) !important;
     color: #ffffff !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.12) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.08) !important;
 }
-
-
