@@ -106,15 +106,15 @@
     window.handleGridClick = handleGridClick;
 
     function buildRacetrackSVG() {
-        const svgW = 220;
-        const svgH = 640;
+        const svgW = 208;
+        const svgH = 620;
 
-        const boardX = 6;
-        const boardY = 12;
-        const boardW = 208;
-        const boardH = 616;
+        const boardX = 10;
+        const boardY = 10;
+        const boardW = 188;
+        const boardH = 600;
         const outerR = boardW / 2;
-        const trackThickness = 56;
+        const trackThickness = 44;
         const innerR = outerR - trackThickness;
         const cx = boardX + outerR;
         const cyTop = boardY + outerR;
@@ -129,12 +129,12 @@
         const leftArray = [32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8];
         const topArc = [23, 10];
         const bottomArc = [3, 26, 0];
-        const tierY = 214;
-        const orphelinsY = 324;
-        const voisinsY = 432;
-        const zeroCapsuleH = 154;
-        const zeroCapsuleY = 400;
-        const zeroCapsuleW = 88;
+        const tierY = cyTop + (straightH * 0.19);
+        const orphelinsY = cyTop + (straightH * 0.46);
+        const voisinsY = cyTop + (straightH * 0.73);
+        const zeroCapsuleH = Math.round(straightH * 0.3);
+        const zeroCapsuleY = cyBottom - zeroCapsuleH - (blockH * 0.4);
+        const zeroCapsuleW = centerW - 8;
 
         let getWedgePath = (cx, cy, rIn, rOut, a1Deg, a2Deg) => {
             const a1 = a1Deg * Math.PI / 180;

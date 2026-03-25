@@ -9,9 +9,9 @@
     height: 100%;
     min-height: 0;
     display: flex;
-    align-items: stretch;
+    align-items: center;
     justify-content: center;
-    padding: 2px;
+    padding: 0;
     border-radius: 30px;
     background:
         radial-gradient(circle at top center, rgba(191, 90, 242, 0.12), transparent 40%),
@@ -24,11 +24,11 @@
 }
 
 .roulette-racetrack {
-    width: 100%;
-    height: auto;
+    width: auto;
+    height: 94%;
     max-width: 100%;
-    max-height: none;
-    aspect-ratio: 220 / 640;
+    max-height: 94%;
+    aspect-ratio: 208 / 620;
     display: block;
     margin: 0;
     pointer-events: auto;
