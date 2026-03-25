@@ -139,6 +139,28 @@ window.syncUIWithStrategyMode = function () {
     const strategySelect = document.getElementById('hamburgerStrategySelect');
     if (strategySelect) strategySelect.value = strategyKey;
 
+    const switcherBtn = document.getElementById('strategySwitcherBtn');
+    const switcherLabel = document.getElementById('strategySwitcherLabel');
+    if (switcherBtn && switcherLabel) {
+        let label = 'INSIDE';
+        let color = '#BF5AF2';
+        let borderColor = 'rgba(191, 90, 242, 0.1)';
+
+        if (strategyKey === 'combo') {
+            label = 'COMBOS';
+            color = '#30D158'; // Green
+            borderColor = 'rgba(48, 209, 88, 0.1)';
+        } else if (strategyKey === 'series') {
+            label = 'SERIES';
+            color = '#0A84FF'; // Blue
+            borderColor = 'rgba(10, 132, 255, 0.1)';
+        }
+
+        switcherLabel.innerText = label;
+        switcherBtn.style.color = color;
+        switcherBtn.style.borderColor = borderColor;
+    }
+
     // Re-render the pattern filter list so it instantly rebuilds with correct toggles
     if (window.renderPatternFilterList) window.renderPatternFilterList();
 
