@@ -101,6 +101,7 @@ window.resetData = async function () {
             window.state.engineStats = { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {}, signalLog: [] };
             window.state.globalSpinIdCounter = 0;
             window.state.currentGameplayStrategy = 'inside';
+            window.state.analyticsDisplayStrategy = 'inside';
             window.state.patternConfig = {};
             if (window.ensureActivePatternConfig) window.ensureActivePatternConfig();
         }
@@ -395,11 +396,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     const restoredSession = window.loadSessionData ? window.loadSessionData() : false;
 
-    if (window.state) {
-        // Force default mode to inside
-        if (!window.state.currentGameplayStrategy || window.state.currentGameplayStrategy === 'series') {
-            window.state.currentGameplayStrategy = 'inside';
-        }
+    if (window.state && !window.state.currentGameplayStrategy) {
+        window.state.currentGameplayStrategy = 'inside';
+    }
+    if (window.state && !window.state.analyticsDisplayStrategy) {
+        window.state.analyticsDisplayStrategy = window.state.currentGameplayStrategy || 'inside';
     }
 
     if (window.ensureActivePatternConfig) window.ensureActivePatternConfig();
@@ -409,20 +410,15 @@ window.addEventListener('DOMContentLoaded', async () => {
     else if (window.renderPatternFilterUi) window.renderPatternFilterUi();
 
     if (restoredSession && window.state.history.length > 0) {
-        // Hydrate the EngineCore internal stats from restored session
         if (window.EngineCore && window.EngineCore.restoreStats) {
             window.EngineCore.restoreStats(window.state.engineStats);
         }
-        
-        // Restore History UI
+
         if (window.reRenderHistory) window.reRenderHistory({ scrollToEnd: true });
-        
-        // Perform a safe scan to refresh dashboard without clearing confirmations
-        if (window.scanAllStrategies) {
-            window.scanAllStrategies({ silent: true }).then(result => {
-                if (window.renderDashboardSafe) window.renderDashboardSafe(result.nextBets || []);
-            });
-        }
+
+        if (window.renderDashboardSafe) window.renderDashboardSafe(window.state.activeBets || []);
+        if (window.HudManager && window.HudManager.update) window.HudManager.update();
+        if (window.syncAppStore) window.syncAppStore();
     }
 
     if (window.renderGapStats) window.renderGapStats();

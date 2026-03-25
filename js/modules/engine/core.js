@@ -4,20 +4,39 @@
  */
 
 window.EngineCore = {
+    ensureStatsBinding() {
+        if (!window.state) window.state = {};
+        if (!window.state.engineStats || typeof window.state.engineStats !== 'object') {
+            window.state.engineStats = {
+                totalWins: 0,
+                totalLosses: 0,
+                netUnits: 0,
+                currentStreak: 0,
+                bankrollHistory: [0],
+                patternStats: {},
+                signalLog: []
+            };
+        }
+        if (!Array.isArray(window.state.engineStats.bankrollHistory) || window.state.engineStats.bankrollHistory.length === 0) {
+            window.state.engineStats.bankrollHistory = [0];
+        }
+        if (!window.state.engineStats.patternStats || typeof window.state.engineStats.patternStats !== 'object') {
+            window.state.engineStats.patternStats = {};
+        }
+        if (!Array.isArray(window.state.engineStats.signalLog)) {
+            window.state.engineStats.signalLog = [];
+        }
+        return window.state.engineStats;
+    },
+
     // 1. DATA STORE - Bind to window.state for persistence
     get stats() {
-        return window.state && window.state.engineStats ? window.state.engineStats : {
-            totalWins: 0,
-            totalLosses: 0,
-            netUnits: 0,
-            currentStreak: 0,
-            bankrollHistory: [0],
-            patternStats: {},
-            signalLog: []
-        };
+        return this.ensureStatsBinding();
     },
     set stats(val) {
-        if (window.state) window.state.engineStats = val;
+        if (!window.state) window.state = {};
+        window.state.engineStats = val;
+        this.ensureStatsBinding();
     },
 
     backgroundBets: {},  // { 'strategy': [bets...] }
@@ -44,7 +63,10 @@ window.EngineCore = {
      * Restores engine stats from a saved state.
      */
     restoreStats(savedStats) {
-        if (!savedStats) return;
+        if (!savedStats || typeof savedStats !== 'object') {
+            this.ensureStatsBinding();
+            return;
+        }
         this.stats = JSON.parse(JSON.stringify(savedStats));
     },
 

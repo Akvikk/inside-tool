@@ -19,7 +19,7 @@
             betLog: []
         },
         currentPredictionStrategy: 'series',
-        currentGameplayStrategy: 'series', // 'series', 'combo', 'inside'
+        currentGameplayStrategy: 'inside', // 'series', 'combo', 'inside'
         strategies: {},
         changeStrategyTimeout: null,
         cachedAddSpinBtn: null,
@@ -32,7 +32,7 @@
         lastActionableComboLabel: null,
         lastActionableTargetFace: null,
         lastActionableCheckpointSpin: 0,
-        analyticsDisplayStrategy: 'series',
+        analyticsDisplayStrategy: 'inside',
         historyRenderVersion: 0,
         strategySyncCache: { series: null, combo: null, inside: null }
     };
