@@ -44,8 +44,12 @@
             if (!spin) continue;
 
             // Check if this spin's result matches the target face
-            const spinFace = spin.face || spin.faceIndex;
-            if (spinFace != targetFace) continue; // eslint-disable-line eqeqeq
+            // History entries store faces as an array (spin.faces), primary face is [0].
+            // Fall back to spin.face / spin.faceIndex for any legacy entries.
+            const spinFace = (Array.isArray(spin.faces) && spin.faces.length > 0)
+                ? spin.faces[0]
+                : (spin.face !== undefined ? spin.face : spin.faceIndex);
+            if (spinFace == null || spinFace != targetFace) continue; // eslint-disable-line eqeqeq
 
             // Check if any signal on this spin matches the pattern key
             const spinSignals = spin.newSignals || [];
