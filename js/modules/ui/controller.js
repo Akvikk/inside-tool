@@ -106,17 +106,21 @@
     window.handleGridClick = handleGridClick;
 
     function buildRacetrackSVG() {
-        const svgW = 300;
-        const svgH = 560;
+        const svgW = 340;
+        const svgH = 680;
 
-        const trackThickness = 60;
-        const innerR = 58;
-        const outerR = innerR + trackThickness; // 118
+        const trackThickness = 48;
+        const innerR = 78;
+        const outerR = innerR + trackThickness; // 126
 
-        const cx = 150;
-        const cy1 = 90;
-        const blockH = 23.75;
+        const cx = 170;
+        const cy1 = 126;
+        const blockH = 26.75;
         const cy2 = cy1 + (16 * blockH);
+        const boardX = cx - outerR;
+        const boardY = cy1 - outerR;
+        const boardW = outerR * 2;
+        const boardH = (cy2 - cy1) + (outerR * 2);
 
         const rightArray = [5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35];
         const leftArray = [32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8];
@@ -145,22 +149,40 @@
             return RED_NUMS.includes(num) ? 'rt-num-red' : 'rt-num-black';
         };
 
+        let defs = `
+            <defs>
+                <linearGradient id="rtBoardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="rgba(245, 244, 251, 0.96)" />
+                    <stop offset="100%" stop-color="rgba(214, 220, 235, 0.92)" />
+                </linearGradient>
+                <linearGradient id="rtCoreGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="rgba(123, 116, 148, 0.96)" />
+                    <stop offset="100%" stop-color="rgba(96, 109, 129, 0.96)" />
+                </linearGradient>
+                <linearGradient id="rtSegGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="rgba(255, 255, 255, 0.16)" />
+                    <stop offset="100%" stop-color="rgba(255, 255, 255, 0.05)" />
+                </linearGradient>
+            </defs>
+        `;
+        let chrome = '';
         let paths = '';
         let texts = '';
 
-        // Inner Area - Transparent but bordered to match UI
-        paths += `<path d="M ${cx - innerR} ${cy1} L ${cx - innerR} ${cy2} A ${innerR} ${innerR} 0 0 0 ${cx + innerR} ${cy2} L ${cx + innerR} ${cy1} A ${innerR} ${innerR} 0 0 0 ${cx - innerR} ${cy1} Z" class="rt-inner" />`;
+        chrome += `<rect x="${boardX}" y="${boardY}" width="${boardW}" height="${boardH}" rx="${outerR}" class="rt-board" />`;
+        chrome += `<path d="M ${boardX + 18} ${boardY + 18} h ${boardW - 36}" class="rt-board-sheen" />`;
+        chrome += `<path d="M ${cx - innerR} ${cy1} L ${cx - innerR} ${cy2} A ${innerR} ${innerR} 0 0 0 ${cx + innerR} ${cy2} L ${cx + innerR} ${cy1} A ${innerR} ${innerR} 0 0 0 ${cx - innerR} ${cy1} Z" class="rt-inner" />`;
 
-        // Division Lines inside the track
-        paths += `<line x1="${cx - innerR}" y1="188" x2="${cx + innerR}" y2="188" class="rt-div-line" />`;
-        paths += `<line x1="${cx - innerR}" y1="298" x2="${cx + innerR}" y2="298" class="rt-div-line" />`;
-        paths += `<path d="M ${cx - innerR} 410 C ${cx - innerR + 18} 384, ${cx + innerR - 18} 384, ${cx + innerR} 410" fill="none" class="rt-div-line" />`;
+        // Division Lines inside the core
+        paths += `<line x1="${cx - innerR + 10}" y1="218" x2="${cx + innerR - 10}" y2="218" class="rt-div-line" />`;
+        paths += `<line x1="${cx - innerR + 10}" y1="344" x2="${cx + innerR - 10}" y2="344" class="rt-div-line" />`;
+        paths += `<path d="M ${cx - innerR + 10} 474 C ${cx - innerR + 34} 446, ${cx + innerR - 34} 446, ${cx + innerR - 10} 474" fill="none" class="rt-div-line" />`;
 
-        // Static text overlays (Rotated down for elegant fit)
-        texts += `<text x="${cx}" y="138" transform="rotate(90, ${cx}, 138)" class="rt-label">TIER</text>`;
-        texts += `<text x="${cx}" y="248" transform="rotate(90, ${cx}, 248)" class="rt-label">ORPHELINS</text>`;
-        texts += `<text x="${cx}" y="360" transform="rotate(90, ${cx}, 360)" class="rt-label">VOISINS</text>`;
-        texts += `<text x="${cx}" y="458" transform="rotate(90, ${cx}, 458)" class="rt-label">ZERO</text>`;
+        // Static text overlays
+        texts += `<text x="${cx}" y="176" transform="rotate(90, ${cx}, 176)" class="rt-label">TIER</text>`;
+        texts += `<text x="${cx}" y="298" transform="rotate(90, ${cx}, 298)" class="rt-label">ORPHELINS</text>`;
+        texts += `<text x="${cx}" y="424" transform="rotate(90, ${cx}, 424)" class="rt-label">VOISINS</text>`;
+        texts += `<text x="${cx}" y="548" transform="rotate(90, ${cx}, 548)" class="rt-label">ZERO</text>`;
 
         let createGroup = (num, pathD, tx, ty) => {
             return `<g class="rt-seg cursor-pointer transition-all duration-300 hover:brightness-125 active:scale-[0.92] origin-center" style="transform-box: fill-box;" onclick="handleGridClick(${num})">
@@ -186,7 +208,7 @@
         }
 
         // 3. Bottom Arc
-        let tr = innerR + trackThickness / 2; // 44
+        let tr = innerR + trackThickness / 2;
         paths += createGroup(3, getWedgePath(cx, cy2, innerR, outerR, 0, 60), cx + tr * Math.cos(30 * Math.PI / 180), cy2 + tr * Math.sin(30 * Math.PI / 180));
         paths += createGroup(26, getWedgePath(cx, cy2, innerR, outerR, 60, 120), cx, cy2 + tr);
         paths += createGroup(0, getWedgePath(cx, cy2, innerR, outerR, 120, 180), cx + tr * Math.cos(150 * Math.PI / 180), cy2 + tr * Math.sin(150 * Math.PI / 180));
@@ -196,7 +218,9 @@
         paths += createGroup(10, getWedgePath(cx, cy1, innerR, outerR, 270, 360), cx + tr * Math.cos(315 * Math.PI / 180), cy1 + tr * Math.sin(315 * Math.PI / 180));
 
         return `
-            <svg id="racetrackSvg" width="100%" height="100%" viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="none" class="roulette-racetrack">
+            <svg id="racetrackSvg" width="100%" height="100%" viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="xMidYMid meet" class="roulette-racetrack">
+                ${defs}
+                ${chrome}
                 ${paths}
                 ${texts}
             </svg>
