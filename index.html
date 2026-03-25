@@ -381,27 +381,6 @@
 
         <div class="h-[1px] bg-white/[0.05] mx-2"></div>
 
-        <!-- VIEWS — always in menu -->
-        <div class="p-2 flex flex-col gap-0.5">
-            <button onclick="toggleModal('betsModal'); renderUserAnalytics(); document.getElementById('hamburgerMenu').classList.add('hidden');"
-                class="flex items-center p-2.5 rounded-xl transition-all duration-300 hover:bg-white/[0.04] active:scale-[0.98] group/item w-full text-left">
-                <i class="fas fa-list-check mr-3 text-[#0A84FF] w-4 text-center text-[11px] group-hover/item:scale-110 transition-transform"></i>
-                <span class="text-[11px] font-bold text-white/70 group-hover/item:text-white/90 tracking-wide">Bets</span>
-            </button>
-            <button onclick="toggleModal('analyticsModal'); renderAnalytics(); document.getElementById('hamburgerMenu').classList.add('hidden');"
-                class="flex items-center p-2.5 rounded-xl transition-all duration-300 hover:bg-white/[0.04] active:scale-[0.98] group/item w-full text-left">
-                <i class="fas fa-chart-line mr-3 text-[#FFD60A] w-4 text-center text-[11px] group-hover/item:scale-110 transition-transform"></i>
-                <span class="text-[11px] font-bold text-white/70 group-hover/item:text-white/90 tracking-wide">Stats</span>
-            </button>
-            <button onclick="toggleAnalyticsHUD(); document.getElementById('hamburgerMenu').classList.add('hidden');"
-                class="flex items-center p-2.5 rounded-xl transition-all duration-300 hover:bg-white/[0.04] active:scale-[0.98] group/item w-full text-left">
-                <i class="fas fa-chart-pie mr-3 text-[#30D158] w-4 text-center text-[11px] group-hover/item:scale-110 transition-transform"></i>
-                <span class="text-[11px] font-bold text-white/70 group-hover/item:text-white/90 tracking-wide">HUD</span>
-            </button>
-        </div>
-
-        <div class="h-[1px] bg-white/[0.05] mx-2"></div>
-
         <div class="p-2">
             <button onclick="resetSession()"
                 class="flex items-center p-3 rounded-xl transition-all duration-300 hover:bg-[#FF453A]/10 active:scale-[0.98] group w-full text-left">
