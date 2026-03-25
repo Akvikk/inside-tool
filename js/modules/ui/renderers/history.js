@@ -338,17 +338,6 @@
             if (window.renderDashboardSafe) window.renderDashboardSafe(alerts);
             if (window.HudManager) window.HudManager.update();
             
-            // CRITICAL: Ensure the global engineStats.signalLog is synced with the internal EngineCore stats
-            if (window.state && window.state.engineStats && window.EngineCore && window.EngineCore.stats) {
-                window.state.engineStats.signalLog = [...(window.EngineCore.stats.signalLog || [])];
-                window.state.engineStats.totalWins = window.EngineCore.stats.totalWins;
-                window.state.engineStats.totalLosses = window.EngineCore.stats.totalLosses;
-                window.state.engineStats.netUnits = window.EngineCore.stats.netUnits;
-                window.state.engineStats.currentStreak = window.EngineCore.stats.currentStreak;
-                window.state.engineStats.bankrollHistory = [...(window.EngineCore.stats.bankrollHistory || [0])];
-                window.state.engineStats.patternStats = JSON.parse(JSON.stringify(window.EngineCore.stats.patternStats || {}));
-            }
-
             if (window.saveSessionData) window.saveSessionData();
             if (window.syncAppStore) window.syncAppStore();
         } finally {
