@@ -143,15 +143,15 @@ window.syncUIWithStrategyMode = function () {
     if (window.renderPatternFilterList) window.renderPatternFilterList();
 
     // --- PERIMETER VISIBILITY ---
-    const perimeterMenu = document.querySelector('[onclick="toggleAccordion(\'perimeterSubMenu\')"]')?.parentElement;
-    if (perimeterMenu) {
+    const perimeterTrigger = document.querySelector('[onclick="toggleAccordion(\'perimeterSubMenu\')"]');
+    const perimeterSubMenu = document.getElementById('perimeterSubMenu');
+    
+    if (perimeterTrigger) {
         if (strategyKey === 'inside') {
-            perimeterMenu.classList.remove('hidden');
+            perimeterTrigger.classList.remove('hidden');
         } else {
-            perimeterMenu.classList.add('hidden');
-            // Also close it if it was open
-            const subMenu = document.getElementById('perimeterSubMenu');
-            if (subMenu) subMenu.classList.add('hidden');
+            perimeterTrigger.classList.add('hidden');
+            if (perimeterSubMenu) perimeterSubMenu.classList.add('hidden');
         }
     }
 };
