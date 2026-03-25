@@ -4,15 +4,20 @@
  */
 
 window.EngineCore = {
-    // 1. DATA STORE
-    stats: {
-        totalWins: 0,
-        totalLosses: 0,
-        netUnits: 0,
-        currentStreak: 0,
-        bankrollHistory: [0],
-        patternStats: {},
-        signalLog: []
+    // 1. DATA STORE - Bind to window.state for persistence
+    get stats() {
+        return window.state && window.state.engineStats ? window.state.engineStats : {
+            totalWins: 0,
+            totalLosses: 0,
+            netUnits: 0,
+            currentStreak: 0,
+            bankrollHistory: [0],
+            patternStats: {},
+            signalLog: []
+        };
+    },
+    set stats(val) {
+        if (window.state) window.state.engineStats = val;
     },
 
     backgroundBets: {},  // { 'strategy': [bets...] }
@@ -40,15 +45,7 @@ window.EngineCore = {
      */
     restoreStats(savedStats) {
         if (!savedStats) return;
-        this.stats = {
-            totalWins: savedStats.totalWins || 0,
-            totalLosses: savedStats.totalLosses || 0,
-            netUnits: savedStats.netUnits || 0,
-            currentStreak: savedStats.currentStreak || 0,
-            bankrollHistory: [...(savedStats.bankrollHistory || [0])],
-            patternStats: JSON.parse(JSON.stringify(savedStats.patternStats || {})),
-            signalLog: [...(savedStats.signalLog || [])]
-        };
+        this.stats = JSON.parse(JSON.stringify(savedStats));
     },
 
     /**
@@ -279,52 +276,7 @@ window.EngineCore = {
                     const spin = action.payload;
                     if (!window.state) return;
 
-                    if (!window.state.engineStats) {
-                        window.state.engineStats = { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {}, signalLog: [] };
-                    }
-                    const eStats = window.state.engineStats;
-
-                    if (spin.resolvedBets && spin.resolvedBets.length > 0) {
-                        spin.resolvedBets.forEach(bet => {
-                            const isWin = bet.isWin;
-                            const count = window.FACES && window.FACES[bet.targetFace] ? window.FACES[bet.targetFace].nums.length : 0;
-                            const unitChange = isWin ? (35 - count) : -count;
-                            const pName = bet.patternName || 'Unknown';
-                            const fKey = bet.filterKey || pName;
-
-                            if (isWin) {
-                                eStats.totalWins++;
-                                eStats.currentStreak = eStats.currentStreak >= 0 ? eStats.currentStreak + 1 : 1;
-                            } else {
-                                eStats.totalLosses++;
-                                eStats.currentStreak = eStats.currentStreak <= 0 ? eStats.currentStreak - 1 : -1;
-                            }
-                            eStats.netUnits += unitChange;
-                            eStats.bankrollHistory.push(eStats.netUnits);
-
-                            if (!eStats.patternStats[fKey]) eStats.patternStats[fKey] = { wins: 0, losses: 0 };
-                            if (isWin) eStats.patternStats[fKey].wins++;
-                            else eStats.patternStats[fKey].losses++;
-
-                            const pFreq = (bet.perimeterFreq !== undefined) ? bet.perimeterFreq : ((window.calculatePerimeterFrequency) ? window.calculatePerimeterFrequency(bet) : 0);
-                            eStats.signalLog.push({ 
-                                result: isWin ? 'WIN' : 'LOSS', 
-                                units: unitChange, 
-                                patternName: pName, 
-                                filterKey: fKey, 
-                                rawStrategy: bet.strategy || (window.state.currentGameplayStrategy || 'inside'),
-                                rawPattern: fKey,
-                                spinIndex: spin.index, 
-                                spinNum: spin.num, 
-                                perimeterFreq: pFreq 
-                            });
-
-                            if (bet.confirmed && window.updateUserStats) window.updateUserStats(isWin, bet, spin.index, unitChange);
-                        });
-                    }
-
                     if (window.renderRow) window.renderRow(spin);
-                    if (window.renderGapStats) window.renderGapStats();
                 } else if (action.type === 'engine/sync') {
                     if (window.renderDashboardSafe) window.renderDashboardSafe(window.state.activeBets || []);
                     if (window.debounceHeavyUIUpdates) window.debounceHeavyUIUpdates();

@@ -127,6 +127,13 @@
 
     window.renderAnalytics = function () {
         if (!window.state) return;
+
+        // Context-Aware Defaulting:
+        // Ensure the display strategy matches the active gameplay strategy when opening
+        if (window.state.currentGameplayStrategy && window.state.currentGameplayStrategy !== window.state.analyticsDisplayStrategy) {
+            window.state.analyticsDisplayStrategy = window.state.currentGameplayStrategy;
+        }
+
         if (window.syncAnalyticsVisibility) window.syncAnalyticsVisibility();
         const tabs = window.getAnalyticsTabConfig(), activeTab = window.ensureActiveAnalyticsTab(tabs);
         window.applyAnalyticsTabUI();
