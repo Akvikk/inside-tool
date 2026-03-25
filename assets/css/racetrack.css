@@ -38,7 +38,7 @@
 
 .rt-num {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 800;
     pointer-events: none;
     dominant-baseline: central;
@@ -69,7 +69,9 @@
 
 .rt-seg path {
     stroke: rgba(255, 245, 220, 0.92);
-    stroke-width: 1.55px;
+    stroke-width: 1.15px;
+    stroke-linejoin: round;
+    stroke-linecap: round;
     transition: all 0.2s var(--ease-strike);
 }
 
@@ -86,8 +88,16 @@
 }
 
 .rt-seg:hover .rt-num {
-    font-size: 17px;
+    font-size: 15px;
     text-shadow: 0 0 12px currentColor;
+}
+
+.rt-num-straight {
+    font-size: 14px;
+}
+
+.rt-num-arc {
+    font-size: 12px;
 }
 
 .rt-board {

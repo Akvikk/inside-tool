@@ -114,7 +114,7 @@
         const boardW = 208;
         const boardH = 616;
         const outerR = boardW / 2;
-        const trackThickness = 48;
+        const trackThickness = 56;
         const innerR = outerR - trackThickness;
         const cx = boardX + outerR;
         const cyTop = boardY + outerR;
@@ -200,24 +200,38 @@
         texts += `<text x="${cx}" y="${voisinsY}" transform="rotate(90, ${cx}, ${voisinsY})" class="rt-label">VOISINS</text>`;
         texts += `<text x="${cx}" y="${zeroCapsuleY + (zeroCapsuleH / 2) + 4}" transform="rotate(90, ${cx}, ${zeroCapsuleY + (zeroCapsuleH / 2) + 4})" class="rt-label">ZERO</text>`;
 
-        let createGroup = (num, pathD, tx, ty) => {
+        let createGroup = (num, pathD, tx, ty, segmentClass = '', numberClass = '') => {
             const pathClass = num === 0 ? 'rt-fill-green' : (RED_NUMS.includes(num) ? 'rt-fill-red' : 'rt-fill-black');
-            return `<g class="rt-seg cursor-pointer transition-all duration-300 hover:brightness-125 active:scale-[0.92] origin-center" style="transform-box: fill-box;" onclick="handleGridClick(${num})">
+            return `<g class="rt-seg ${segmentClass} cursor-pointer transition-all duration-300 hover:brightness-125 active:scale-[0.92] origin-center" style="transform-box: fill-box;" onclick="handleGridClick(${num})">
                 <path d="${pathD}" class="${pathClass} transition-colors duration-300" />
-                <text x="${tx}" y="${ty}" class="rt-num ${getColorClass(num)} font-black">${num}</text>
+                <text x="${tx}" y="${ty}" class="rt-num ${numberClass} ${getColorClass(num)} font-black">${num}</text>
             </g>`;
         };
 
         for (let i = 0; i < rightArray.length; i++) {
             const n = rightArray[i];
             const y = cyTop + (i * blockH);
-            paths += createGroup(n, getRectPath(rightX, y, trackThickness, blockH), rightX + (trackThickness / 2), y + (blockH / 2));
+            paths += createGroup(
+                n,
+                getRectPath(rightX + 0.8, y + 0.8, trackThickness - 1.6, blockH - 1.6),
+                rightX + (trackThickness / 2),
+                y + (blockH / 2),
+                'rt-seg-straight',
+                'rt-num-straight'
+            );
         }
 
         for (let i = 0; i < leftArray.length; i++) {
             const n = leftArray[i];
             const y = cyBottom - ((i + 1) * blockH);
-            paths += createGroup(n, getRectPath(leftX, y, trackThickness, blockH), leftX + (trackThickness / 2), y + (blockH / 2));
+            paths += createGroup(
+                n,
+                getRectPath(leftX + 0.8, y + 0.8, trackThickness - 1.6, blockH - 1.6),
+                leftX + (trackThickness / 2),
+                y + (blockH / 2),
+                'rt-seg-straight',
+                'rt-num-straight'
+            );
         }
 
         const ringMid = innerR + (trackThickness / 2);
@@ -227,13 +241,27 @@
         topArc.forEach((num, index) => {
             const [a1, a2] = topAngles[index];
             const mid = ((a1 + a2) / 2) * Math.PI / 180;
-            paths += createGroup(num, getWedgePath(cx, cyTop, innerR, outerR, a1, a2), cx + (ringMid * Math.cos(mid)), cyTop + (ringMid * Math.sin(mid)));
+            paths += createGroup(
+                num,
+                getWedgePath(cx, cyTop, innerR, outerR, a1, a2),
+                cx + (ringMid * Math.cos(mid)),
+                cyTop + (ringMid * Math.sin(mid)),
+                'rt-seg-arc',
+                'rt-num-arc'
+            );
         });
 
         bottomArc.forEach((num, index) => {
             const [a1, a2] = bottomAngles[index];
             const mid = ((a1 + a2) / 2) * Math.PI / 180;
-            paths += createGroup(num, getWedgePath(cx, cyBottom, innerR, outerR, a1, a2), cx + (ringMid * Math.cos(mid)), cyBottom + (ringMid * Math.sin(mid)));
+            paths += createGroup(
+                num,
+                getWedgePath(cx, cyBottom, innerR, outerR, a1, a2),
+                cx + (ringMid * Math.cos(mid)),
+                cyBottom + (ringMid * Math.sin(mid)),
+                'rt-seg-arc',
+                'rt-num-arc'
+            );
         });
 
         return `
