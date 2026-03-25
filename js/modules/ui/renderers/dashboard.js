@@ -30,9 +30,7 @@
                 const pWindow = state.predictionPerimeterWindow || 14;
                 if (freq > 0) {
                     const freqColor = freq >= 3 ? '#FF453A' : freq >= 2 ? '#FF9F0A' : '#32D74B';
-                    perimeterBadge = `<div class="flex items-center gap-1 mt-0.5">
-                        <span class="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md border" style="color:${freqColor}; border-color:${freqColor}40; background:${freqColor}15;">${freq}x in ${pWindow}</span>
-                    </div>`;
+                    perimeterBadge = `<span class="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md border" style="color:${freqColor}; border-color:${freqColor}40; background:${freqColor}15; margin-left: 8px;">${freq}x in ${pWindow}</span>`;
                 }
             }
 
@@ -60,9 +58,11 @@
                     <div class="flex items-center gap-3 min-w-0">
                         <div class="w-1 h-8 rounded-full" style="background: ${accent}; box-shadow: 0 0 8px ${accent};"></div>
                         <div class="flex flex-col min-w-0">
-                            <span class="text-[15px] leading-tight font-black tracking-widest uppercase ${titleColor}">F${bet.targetFace} TARGET</span>
+                            <div class="flex items-center">
+                                <span class="text-[15px] leading-tight font-black tracking-widest uppercase ${titleColor}">F${bet.targetFace} TARGET</span>
+                                ${perimeterBadge}
+                            </div>
                             <span class="text-[9px] leading-tight font-bold tracking-widest uppercase ${subColor} mt-0.5 truncate max-w-[140px]">${subtitle}</span>
-                            ${perimeterBadge}
                         </div>
                     </div>
                     ${iconHTML}
