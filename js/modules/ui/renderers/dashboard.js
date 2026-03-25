@@ -96,7 +96,7 @@
                 emptyLabel = 'SIGNAL CLEAR • STANDBY';
             }
 
-            dash.innerHTML = `<div class="w-full text-center text-[10px] font-black text-white/10 select-none uppercase tracking-[0.3em] h-[68px] flex items-center justify-center">${emptyLabel}</div>`;
+            dash.innerHTML = `<div class="w-full text-center text-[10px] font-black text-white/10 select-none uppercase tracking-[0.3em] h-11 flex items-center justify-center">${emptyLabel}</div>`;
             return;
         }
 

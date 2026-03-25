@@ -46,7 +46,34 @@
     </style>
 </head>
 
-<body class="h-screen flex flex-col text-sm selection:bg-blue-500/30">
+<body class="h-screen flex text-sm selection:bg-blue-500/30 overflow-hidden bg-[#050505]">
+
+    <!-- FULL HEIGHT SIDEBAR: GRID -->
+    <div class="hidden md:block w-[240px] shrink-0 mesmer-grid p-2 overflow-y-auto border-r border-white/5 bg-[#1C1C1E]/30 backdrop-blur-xl" id="desktopGrid">
+        <div class="grid grid-cols-3 gap-1.5">
+            <button
+                class="grid-btn grid-green col-span-3 font-black text-[11px] tracking-widest text-white rounded-lg transition-all duration-300 active:scale-[0.94] min-h-[38px] mb-1"
+                onclick="handleGridClick(0)">ZERO</button>
+            <script>
+                // Inline helper to generate 1-36 buttons with smaller height
+                (function(){
+                    const container = document.currentScript.parentElement;
+                    const RED_NUMS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+                    for(let i=1; i<=36; i++) {
+                        const isRed = RED_NUMS.includes(i);
+                        const btn = document.createElement('button');
+                        btn.className = `grid-btn ${isRed ? 'grid-red' : 'grid-black'} font-black text-[13px] text-white rounded-lg transition-all duration-300 active:scale-[0.94] min-h-[36px]`;
+                        btn.onclick = () => handleGridClick(i);
+                        btn.innerText = i;
+                        container.appendChild(btn);
+                    }
+                })();
+            </script>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div class="flex-1 flex flex-col overflow-hidden">
 
     <!-- VOLUMETRIC DEPTH LAYER (blends with base.css ambient gradient) -->
     <div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
@@ -67,29 +94,32 @@
 
     <!-- 1. REFINED GLOBAL HEADER -->
     <header
-        class="px-4 flex justify-between items-center shrink-0 z-50 h-16 bg-[#1C1C1E]/70 backdrop-blur-[40px] saturate-150 border-b border-white/[0.08] shadow-sm transition-colors duration-300">
-        <!-- LEFT: INPUTS -->
-        <div class="flex items-center gap-2">
+        class="flex items-center shrink-0 z-50 h-11 bg-[#1C1C1E]/70 backdrop-blur-[40px] saturate-150 border-b border-white/[0.08] shadow-sm transition-colors duration-300">
+        
+        <!-- LEFT: INPUTS (Now far left of main area) -->
+        <div class="flex items-center gap-2 px-4">
             <div class="relative">
                 <input type="text" id="spinInput" inputmode="numeric" autocomplete="off" maxlength="2"
                     onkeydown="if(event.key==='Enter'){event.preventDefault();addSpin();}"
-                    class="ios-input w-20 h-10 text-xl font-bold text-center placeholder-white/20 bg-white/5 border border-white/10 rounded-xl focus:border-[#0A84FF] transition-all duration-300"
+                    class="ios-input w-20 h-[30px] text-lg font-bold text-center placeholder-white/20 bg-white/5 border border-white/10 rounded-lg focus:border-[#0A84FF] transition-all duration-300"
                     placeholder="#">
             </div>
 
             <button id="addSpinBtn" onclick="addSpin()"
-                class="h-10 px-5 bg-[#0A84FF] hover:bg-[#007AFF] text-white font-black rounded-xl shadow-sm text-[12px] tracking-widest flex items-center justify-center transition-all duration-300 active:scale-[0.98]">
+                class="h-[30px] px-4 bg-[#FF453A] hover:bg-[#FF3B30] text-white font-black rounded-lg shadow-sm text-[10px] tracking-widest flex items-center justify-center transition-all duration-300 active:scale-[0.98]">
                 ADD
             </button>
 
             <button onclick="undoSpin()"
-                class="hidden sm:flex h-10 w-10 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white rounded-xl border border-white/10 items-center justify-center transition-all duration-300 active:scale-[0.98]">
-                <i class="fas fa-undo text-xs"></i>
+                class="hidden sm:flex h-[30px] w-8 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white rounded-lg border border-white/10 items-center justify-center transition-all duration-300 active:scale-[0.98]">
+                <i class="fas fa-undo text-[10px]"></i>
             </button>
         </div>
 
+        <div class="flex-1"></div>
+
         <!-- RIGHT: TOOLS -->
-        <div class="flex items-center gap-1.5 order-3">
+        <div class="flex items-center gap-1.5 px-4">
             <div id="patternFilterShell" class="relative">
                 <button id="patternsToggleBtn"
                     class="relative group h-10 px-5 flex items-center gap-3 rounded-full border border-white/10 bg-white/5 backdrop-blur-xl transition-all duration-500 hover:border-[#BF5AF2]/40 hover:bg-[#BF5AF2]/5 active:scale-95">
@@ -294,7 +324,7 @@
                             class="fas fa-th mr-3 text-[#BF5AF2] w-4 text-center text-[10px] group-hover/item:scale-110 transition-transform"></i>
                         Layout Map
                     </div>
-                    <span id="layoutLabel"
+                    <span id="hamburgerLayoutLabel"
                         class="text-[9px] font-black bg-white/10 px-2 py-1 rounded-md text-white shadow-inner uppercase tracking-widest">GRID</span>
                 </div>
             </div>
@@ -394,130 +424,13 @@
     </div>
 
 
-    <!-- 3. MAIN CONTENT -->
-    <div class="flex-1 flex overflow-hidden">
-        <div class="hidden md:block w-[240px] shrink-0 mesmer-grid p-3 overflow-y-auto custom-scroll" id="desktopGrid">
-            <div class="grid grid-cols-3 gap-2">
-                <button
-                    class="grid-btn grid-green col-span-3 font-black text-[12px] tracking-widest text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(0)">ZERO</button>
-                <button
-                    class="grid-btn grid-red font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(1)">1</button>
-                <button
-                    class="grid-btn grid-black font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(2)">2</button>
-                <button
-                    class="grid-btn grid-red font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(3)">3</button>
-                <button
-                    class="grid-btn grid-black font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(4)">4</button>
-                <button
-                    class="grid-btn grid-red font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(5)">5</button>
-                <button
-                    class="grid-btn grid-black font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(6)">6</button>
-                <button
-                    class="grid-btn grid-red font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(7)">7</button>
-                <button
-                    class="grid-btn grid-black font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(8)">8</button>
-                <button
-                    class="grid-btn grid-red font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(9)">9</button>
-                <button
-                    class="grid-btn grid-black font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(10)">10</button>
-                <button
-                    class="grid-btn grid-black font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(11)">11</button>
-                <button
-                    class="grid-btn grid-red font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(12)">12</button>
-                <button
-                    class="grid-btn grid-black font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(13)">13</button>
-                <button
-                    class="grid-btn grid-red font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(14)">14</button>
-                <button
-                    class="grid-btn grid-black font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(15)">15</button>
-                <button
-                    class="grid-btn grid-red font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(16)">16</button>
-                <button
-                    class="grid-btn grid-black font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(17)">17</button>
-                <button
-                    class="grid-btn grid-red font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(18)">18</button>
-                <button
-                    class="grid-btn grid-red font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(19)">19</button>
-                <button
-                    class="grid-btn grid-black font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(20)">20</button>
-                <button
-                    class="grid-btn grid-red font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(21)">21</button>
-                <button
-                    class="grid-btn grid-black font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(22)">22</button>
-                <button
-                    class="grid-btn grid-red font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(23)">23</button>
-                <button
-                    class="grid-btn grid-black font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(24)">24</button>
-                <button
-                    class="grid-btn grid-red font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(25)">25</button>
-                <button
-                    class="grid-btn grid-black font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(26)">26</button>
-                <button
-                    class="grid-btn grid-red font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(27)">27</button>
-                <button
-                    class="grid-btn grid-black font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(28)">28</button>
-                <button
-                    class="grid-btn grid-black font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(29)">29</button>
-                <button
-                    class="grid-btn grid-red font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(30)">30</button>
-                <button
-                    class="grid-btn grid-black font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(31)">31</button>
-                <button
-                    class="grid-btn grid-red font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(32)">32</button>
-                <button
-                    class="grid-btn grid-black font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(33)">33</button>
-                <button
-                    class="grid-btn grid-red font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(34)">34</button>
-                <button
-                    class="grid-btn grid-black font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(35)">35</button>
-                <button
-                    class="grid-btn grid-red font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]"
-                    onclick="handleGridClick(36)">36</button>
-            </div>
-        </div>
 
         <div class="flex-1 flex flex-col relative w-full bg-transparent overflow-hidden" id="scrollContainer">
-            <!-- DASHBOARD (Relocated to Right Column to allow Grid Height Expansion) -->
+            <!-- DASHBOARD -->
             <div id="dashboard"
-                class="px-2 py-1 flex gap-1.5 overflow-x-auto h-[60px] shrink-0 items-center bg-[#1C1C1E]/30 backdrop-blur-[20px] border-b border-white/[0.04] transition-colors duration-300 z-40">
+                class="px-2 py-1 flex gap-1.5 overflow-x-auto h-11 shrink-0 items-center bg-[#1C1C1E]/30 backdrop-blur-[20px] border-b border-white/[0.04] transition-colors duration-300 z-40">
                 <div
-                    class="dashboard-empty w-full text-center text-[10px] font-semibold text-[#8E8E93] border border-white/[0.05] rounded-[18px] p-2 select-none tracking-widest flex items-center justify-center h-[44px]">
+                    class="dashboard-empty w-full text-center text-[9px] font-semibold text-[#8E8E93] border border-white/[0.05] rounded-lg p-2 select-none tracking-widest flex items-center justify-center h-8">
                     AWAITING ENGINE ACTIVITY
                 </div>
             </div>
@@ -545,7 +458,8 @@
                 <div class="h-16"></div>
             </div>
         </div>
-    </div>
+    </div> <!-- CLOSING MAIN APP CONTAINER -->
+</div> <!-- CLOSING BODY FLEX ROOT -->
 
     <!-- MODAL TEMPLATES (Injected Dynamically) -->
 

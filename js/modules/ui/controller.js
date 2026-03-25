@@ -216,15 +216,15 @@
             grid.classList.remove('p-3');
         } else {
             const RED_NUMS = window.config && window.config.RED_NUMS ? window.config.RED_NUMS : [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
-            let gridHtml = '<div class="grid grid-cols-3 gap-2 w-full" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem;">';
-            gridHtml += '<button class="grid-btn grid-green col-span-3 font-black text-[12px] tracking-widest text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]" style="grid-column: span 3 / span 3;" onclick="handleGridClick(0)">ZERO</button>';
+            let gridHtml = '<div class="grid grid-cols-3 gap-1.5 w-full">';
+            gridHtml += '<button class="grid-btn grid-green col-span-3 font-black text-[11px] tracking-widest text-white rounded-lg transition-all duration-300 active:scale-[0.94] min-h-[38px] mb-1" onclick="handleGridClick(0)">ZERO</button>';
             for (let i = 1; i <= 36; i++) {
                 const isRed = RED_NUMS.includes(i);
                 const colorClass = isRed ? 'grid-red' : 'grid-black';
-                gridHtml += `<button class="grid-btn ${colorClass} font-black text-[14px] text-white rounded-xl transition-all duration-300 active:scale-[0.94] min-h-[44px]" onclick="handleGridClick(${i})">${i}</button>`;
+                gridHtml += `<button class="grid-btn ${colorClass} font-black text-[13px] text-white rounded-lg transition-all duration-300 active:scale-[0.94] min-h-[36px]" onclick="handleGridClick(${i})">${i}</button>`;
             }
             gridHtml += '</div>';
-            grid.classList.add('p-3');
+            grid.classList.add('p-2');
             grid.innerHTML = gridHtml;
         }
     }
@@ -735,15 +735,19 @@
     window.toggleInputLayout = function () {
         if (!window.state) return;
         window.state.currentInputLayout = window.state.currentInputLayout === 'grid' ? 'racetrack' : 'grid';
-        const label = document.getElementById('layoutLabel');
-        if (label) {
-            label.innerText = window.state.currentInputLayout.toUpperCase();
-            if (window.state.currentInputLayout === 'racetrack') {
-                label.className = "text-[9px] font-black bg-[#BF5AF2]/20 px-2.5 py-1 rounded-md text-[#BF5AF2] shadow-inner";
-            } else {
-                label.className = "text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white shadow-inner";
+        
+        // Update all layout labels (Header and Hamburger)
+        const labels = [document.getElementById('layoutLabel'), document.getElementById('hamburgerLayoutLabel')];
+        labels.forEach(label => {
+            if (label) {
+                label.innerText = window.state.currentInputLayout.toUpperCase();
+                if (window.state.currentInputLayout === 'racetrack') {
+                    label.className = "text-[9px] font-black bg-[#BF5AF2]/20 px-2.5 py-1 rounded-md text-[#BF5AF2] shadow-inner";
+                } else {
+                    label.className = "text-[9px] font-black bg-white/10 px-2.5 py-1 rounded-md text-white shadow-inner";
+                }
             }
-        }
+        });
         window.UiController.initDesktopGrid();
         if (window.scheduleComboBridgeRelayout) window.scheduleComboBridgeRelayout();
         if (window.saveSessionData) window.saveSessionData();
