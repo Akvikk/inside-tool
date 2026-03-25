@@ -409,9 +409,20 @@ window.addEventListener('DOMContentLoaded', async () => {
     else if (window.renderPatternFilterUi) window.renderPatternFilterUi();
 
     if (restoredSession && window.state.history.length > 0) {
-        const spinNumbers = window.state.history.map(s => s.num);
-        if (window.rebuildSessionFromSpins) await window.rebuildSessionFromSpins(spinNumbers);
-
+        // Hydrate the EngineCore internal stats from restored session
+        if (window.EngineCore && window.EngineCore.restoreStats) {
+            window.EngineCore.restoreStats(window.state.engineStats);
+        }
+        
+        // Restore History UI
+        if (window.reRenderHistory) window.reRenderHistory({ scrollToEnd: true });
+        
+        // Perform a safe scan to refresh dashboard without clearing confirmations
+        if (window.scanAllStrategies) {
+            window.scanAllStrategies({ silent: true }).then(result => {
+                if (window.renderDashboardSafe) window.renderDashboardSafe(result.nextBets || []);
+            });
+        }
     }
 
     if (window.renderGapStats) window.renderGapStats();

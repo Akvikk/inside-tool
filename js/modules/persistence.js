@@ -17,6 +17,11 @@
             if (data.analyticsDisplayStrategy === 'series' || data.analyticsDisplayStrategy === 'combo') window.state.analyticsDisplayStrategy = data.analyticsDisplayStrategy;
             if (data.isHudColdMode !== undefined) window.state.isHudColdMode = data.isHudColdMode === true;
             if (data.hudHistoryScope !== undefined) window.state.hudHistoryScope = data.hudHistoryScope === 'recent' ? 'recent' : 'all';
+            
+            // Restore persistent stats objects
+            if (data.userStats) window.state.userStats = data.userStats;
+            if (data.engineStats) window.state.engineStats = data.engineStats;
+
             return true;
         } catch (e) {
             console.error("Session load failed:", e);
@@ -37,7 +42,11 @@
                 currentIntelligenceMode: state.currentIntelligenceMode,
                 analyticsDisplayStrategy: state.analyticsDisplayStrategy,
                 isHudColdMode: state.isHudColdMode === true,
-                hudHistoryScope: state.hudHistoryScope === 'recent' ? 'recent' : 'all'
+                hudHistoryScope: state.hudHistoryScope === 'recent' ? 'recent' : 'all',
+                
+                // Add persistent stats
+                userStats: state.userStats,
+                engineStats: state.engineStats
             }));
         } catch (e) {
             console.warn("Session save failed:", e);

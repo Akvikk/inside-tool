@@ -36,6 +36,22 @@ window.EngineCore = {
     },
 
     /**
+     * Restores engine stats from a saved state.
+     */
+    restoreStats(savedStats) {
+        if (!savedStats) return;
+        this.stats = {
+            totalWins: savedStats.totalWins || 0,
+            totalLosses: savedStats.totalLosses || 0,
+            netUnits: savedStats.netUnits || 0,
+            currentStreak: savedStats.currentStreak || 0,
+            bankrollHistory: [...(savedStats.bankrollHistory || [0])],
+            patternStats: JSON.parse(JSON.stringify(savedStats.patternStats || {})),
+            signalLog: [...(savedStats.signalLog || [])]
+        };
+    },
+
+    /**
      * Updates engine stats with a new result.
      */
     updateStats(isWin, patternName, unitChange, rawStrategy, rawPattern, spinIndex, spinNum, perimeterFreq = 0) {
