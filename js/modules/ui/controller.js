@@ -481,10 +481,10 @@
             let hasData = false;
 
             let pStats = null;
-            if (window.state && window.state.engineStats && window.state.engineStats.patternStats) {
-                pStats = window.state.engineStats.patternStats;
-            } else if (window.EngineCore && window.EngineCore.stats && window.EngineCore.stats.patternStats) {
+            if (window.EngineCore && window.EngineCore.stats && window.EngineCore.stats.patternStats) {
                 pStats = window.EngineCore.stats.patternStats;
+            } else if (window.state && window.state.engineStats && window.state.engineStats.patternStats) {
+                pStats = window.state.engineStats.patternStats;
             }
 
             if (pStats) {

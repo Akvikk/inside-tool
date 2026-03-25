@@ -50,25 +50,31 @@
             const titleColor = bet.confirmed ? 'text-white drop-shadow-md' : 'text-white/80';
             const subColor = bet.confirmed ? 'text-white/80' : 'text-white/40';
 
-            const stats = (state.engineStats && state.engineStats.patternStats) ? state.engineStats.patternStats : {};
-            const pStat = stats[filterKey] || stats[bet.patternName] || { wins: 0, losses: 0 };
+            let pStats = (window.EngineCore && window.EngineCore.stats && window.EngineCore.stats.patternStats) ? window.EngineCore.stats.patternStats : null;
+            if (!pStats && window.state && window.state.engineStats && window.state.engineStats.patternStats) {
+                pStats = window.state.engineStats.patternStats;
+            }
+            if (!pStats) pStats = {};
+
+            const pStat = pStats[filterKey] || pStats[bet.patternName] || { wins: 0, losses: 0 };
             const total = pStat.wins + pStat.losses;
             const accuracy = total > 0 ? Math.round((pStat.wins / total) * 100) : 0;
-            const accuracyHTML = total > 0 ? `<span class="text-xs font-bold opacity-50 ml-1">(${accuracy}%)</span>` : '';
+            const accuracyHTML = total > 0 ? `<span class="text-[10px] font-bold opacity-50 ml-1">(${accuracy}%)</span>` : '';
+            const bgClass = bet.confirmed ? 'opacity-100' : 'opacity-90';
 
             cards.push(`
-                <div class="min-w-[240px] min-h-[60px] px-3.5 py-2 rounded-[16px] flex items-center justify-between cursor-pointer select-none transition-all duration-300 hover:-translate-y-0.5"
+                <div class="min-w-[160px] min-h-[52px] px-2 py-1.5 rounded-[12px] flex items-center justify-between cursor-pointer select-none transition-all duration-300 hover:bg-white/[0.05] ${bgClass}"
                      ondblclick="if(window.toggleBetConfirmation) window.toggleBetConfirmation(${index})"
                      title="Double-click to ${bet.confirmed ? 'unselect' : 'select'}"
                      style="${bgStyle} ${borderStyle}">
-                    <div class="flex items-center gap-3 min-w-0">
-                        <div class="w-1 h-8 rounded-full" style="background: ${accent}; box-shadow: 0 0 8px ${accent};"></div>
+                    <div class="flex items-center gap-2 min-w-0">
+                        <div class="w-1 h-6 rounded-full" style="background: ${accent}; box-shadow: 0 0 6px ${accent};"></div>
                         <div class="flex flex-col min-w-0">
                             <div class="flex items-center">
-                                <span class="text-[15px] leading-tight font-black tracking-widest uppercase ${titleColor}">F${bet.targetFace}${accuracyHTML}</span>
+                                <span class="text-[13px] leading-tight font-black tracking-widest uppercase ${titleColor}">F${bet.targetFace}${accuracyHTML}</span>
                                 ${perimeterBadge}
                             </div>
-                            <span class="text-[9px] leading-tight font-bold tracking-widest uppercase ${subColor} mt-0.5 truncate max-w-[140px]">${subtitle}</span>
+                            <span class="text-[8px] leading-tight font-bold tracking-widest uppercase ${subColor} mt-0.5 truncate max-w-[100px]">${subtitle}</span>
                         </div>
                     </div>
                     ${iconHTML}
