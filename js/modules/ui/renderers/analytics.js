@@ -20,12 +20,22 @@
 
         const tabs = window.getAnalyticsTabConfig ? window.getAnalyticsTabConfig() : [];
         const activeTab = window.ensureActiveAnalyticsTab ? window.ensureActiveAnalyticsTab(tabs) : '';
+        const activePanelIds = new Set(
+            tabs
+                .filter(tab => tab.key === activeTab && tab.panelId)
+                .map(tab => tab.panelId)
+        );
         
         tabs.forEach(tab => {
             const btn = tab.button;
-            const panel = document.getElementById(tab.panelId);
             if (btn) btn.className = tab.key === activeTab ? "pb-2 text-[10px] font-black uppercase tracking-[0.2em] text-[#FFD60A] border-b-2 border-[#FFD60A] transition-all hover:text-[#FFD60A]" : "pb-2 text-[10px] font-black uppercase tracking-[0.2em] text-white/20 border-b-2 border-transparent transition-all hover:text-white/60";
-            if (panel) { if (tab.key === activeTab) panel.classList.remove('hidden'); else panel.classList.add('hidden'); }
+        });
+
+        Array.from(new Set(tabs.map(tab => tab.panelId).filter(Boolean))).forEach(panelId => {
+            const panel = document.getElementById(panelId);
+            if (!panel) return;
+            if (activePanelIds.has(panelId)) panel.classList.remove('hidden');
+            else panel.classList.add('hidden');
         });
     };
 
