@@ -11,6 +11,8 @@
                 <div class="flex gap-6" id="analyticsTabs">
                     <button data-analytics-tab="strategy" data-analytics-panel="strategyAnalyticsPanel" data-analytics-renderer="renderStrategyAnalytics" onclick="window.state.currentAnalyticsTab='strategy'; window.renderAnalytics()" id="tabBtnStrategy" 
                         class="pb-2 text-sm font-medium tracking-normal text-white border-b-2 border-white transition-all duration-300 ease-out">Terminal</button>
+                    <button data-analytics-tab="perimeter" data-analytics-panel="strategyAnalyticsPanel" data-analytics-renderer="renderStrategyAnalytics" onclick="window.state.currentAnalyticsTab='perimeter'; window.renderAnalytics()" id="tabBtnPerimeter" 
+                        class="pb-2 text-sm font-medium tracking-normal text-white/40 border-b-2 border-transparent hover:text-white transition-all duration-300 ease-out">Perimeter</button>
                     <button data-analytics-tab="intelligence" data-analytics-panel="intelligencePanel" data-analytics-renderer="renderIntelligencePanel" onclick="window.state.currentAnalyticsTab='intelligence'; window.renderAnalytics()" id="tabBtnIntelligence" 
                         class="hidden pb-2 text-sm font-medium tracking-normal text-white/50 border-b-2 border-transparent hover:text-white/80 transition-all duration-300 ease-out">Intelligence Hub</button>
                     <button data-analytics-tab="advancements" data-analytics-panel="advancementsPanel" data-analytics-renderer="renderAdvancementAnalytics" onclick="window.state.currentAnalyticsTab='advancements'; window.renderAnalytics()" id="tabBtnAdvancements" 

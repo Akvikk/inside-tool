@@ -97,21 +97,21 @@
         class="flex items-center shrink-0 z-50 h-11 bg-[#1C1C1E]/70 backdrop-blur-[40px] saturate-150 border-b border-white/[0.08] shadow-sm transition-colors duration-300">
         
         <!-- LEFT: INPUTS (Now far left of main area) -->
-        <div class="flex items-center gap-2 px-4">
+        <div class="flex items-center gap-2 px-4 h-full">
             <div class="relative">
                 <input type="text" id="spinInput" inputmode="numeric" autocomplete="off" maxlength="2"
                     onkeydown="if(event.key==='Enter'){event.preventDefault();addSpin();}"
-                    class="ios-input w-20 h-[30px] text-lg font-bold text-center placeholder-white/20 bg-white/5 border border-white/10 rounded-lg focus:border-[#0A84FF] transition-all duration-300"
+                    class="ios-input w-20 h-8 text-lg font-bold text-center placeholder-white/20 bg-white/5 border border-white/10 rounded-lg focus:border-[#0A84FF] transition-all duration-300"
                     placeholder="#">
             </div>
 
             <button id="addSpinBtn" onclick="addSpin()"
-                class="h-[30px] px-4 bg-[#FF453A] hover:bg-[#FF3B30] text-white font-black rounded-lg shadow-sm text-[10px] tracking-widest flex items-center justify-center transition-all duration-300 active:scale-[0.98]">
+                class="h-8 px-4 bg-[#FF453A] hover:bg-[#FF3B30] text-white font-black rounded-lg shadow-sm text-[10px] tracking-widest flex items-center justify-center transition-all duration-300 active:scale-[0.98]">
                 ADD
             </button>
 
             <button onclick="undoSpin()"
-                class="hidden sm:flex h-[30px] w-8 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white rounded-lg border border-white/10 items-center justify-center transition-all duration-300 active:scale-[0.98]">
+                class="hidden sm:flex h-8 w-8 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white rounded-lg border border-white/10 items-center justify-center transition-all duration-300 active:scale-[0.98]">
                 <i class="fas fa-undo text-[10px]"></i>
             </button>
         </div>
@@ -119,23 +119,18 @@
         <div class="flex-1"></div>
 
         <!-- RIGHT: TOOLS -->
-        <div class="flex items-center gap-1.5 px-4">
-            <div id="patternFilterShell" class="relative">
+        <div class="flex items-center gap-2 px-4 h-full">
+            <div id="patternFilterShell" class="relative flex items-center h-full">
                 <button id="patternsToggleBtn"
-                    class="relative group h-10 px-5 flex items-center gap-3 rounded-full border border-white/10 bg-white/5 backdrop-blur-xl transition-all duration-500 hover:border-[#BF5AF2]/40 hover:bg-[#BF5AF2]/5 active:scale-95">
-                    <!-- Subtle Glow Aura -->
-                    <div class="absolute inset-0 rounded-full bg-[#BF5AF2]/5 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                    
-                    <i class="fas fa-filter text-xs text-[#BF5AF2] drop-shadow-[0_0_8px_rgba(191,90,242,0.5)]"></i>
-                    <span class="text-[11px] font-black uppercase tracking-[0.18em] text-white/90">Filters</span>
-                    
+                    class="relative group h-8 px-3 flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl transition-all duration-300 hover:border-[#BF5AF2]/40 hover:bg-[#BF5AF2]/5 active:scale-95">
+                    <i class="fas fa-wand-magic-sparkles text-[11px] text-[#BF5AF2] drop-shadow-[0_0_8px_rgba(191,90,242,0.4)]"></i>
                     <div id="patternsActiveCount" 
-                         class="flex items-center justify-center min-w-[20px] h-[20px] px-1 rounded-full bg-[#BF5AF2] text-[10px] font-black text-white shadow-[0_0_15px_rgba(191,90,242,0.5)] transition-all duration-300">
+                         class="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#BF5AF2] text-[9px] font-black text-white shadow-[0_0_10px_rgba(191,90,242,0.4)] transition-all duration-300">
                         --
                     </div>
                 </button>
                 <div id="patternFilterPopover"
-                    class="pattern-filter-popover hidden opacity-0 pointer-events-none scale-95 transition-all duration-300 origin-top-left absolute top-full left-0 mt-3 w-[300px] z-[70] overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-b from-[#2c2c2e]/90 to-[#1c1c1e]/95 backdrop-blur-[50px] shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
+                    class="pattern-filter-popover hidden opacity-0 pointer-events-none scale-95 transition-all duration-300 origin-top-left absolute top-full left-0 mt-3 w-[300px] z-[70] overflow-hidden rounded-[24px] border border-white/10 bg-[#1C1C1E]/95 backdrop-blur-[50px] shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
                     
                     <!-- Popover Header -->
                     <div class="flex justify-between items-center p-4 bg-white/5 border-b border-white/5 gap-2">
@@ -178,69 +173,31 @@
 
             <div id="strategySwitcherContainer" class="relative hidden sm:flex items-center">
                 <button id="strategySwitcherBtn" onclick="if(window.cycleGameplayStrategy) window.cycleGameplayStrategy()"
-                    class="flex items-center justify-center h-10 w-auto px-4 bg-white/5 hover:bg-white/10 text-[#BF5AF2] rounded-xl border border-[#BF5AF2]/10 transition-all duration-300 active:scale-[0.98] gap-2.5">
-                    <i class="fas fa-repeat text-xs"></i>
-                    <span id="strategySwitcherLabel" class="text-[11px] font-black uppercase tracking-[0.12em]">INSIDE</span>
+                    class="flex items-center justify-center h-8 w-auto px-3 bg-white/5 hover:bg-white/10 text-[#5E5CE6] rounded-lg border border-white/10 transition-all duration-300 active:scale-[0.98] gap-2">
+                    <i class="fas fa-shuffle text-[11px]"></i>
+                    <span id="strategySwitcherLabel" class="text-[10px] font-black uppercase tracking-wider">INSIDE</span>
                 </button>
             </div>
 
             <button onclick="toggleModal('betsModal'); renderUserAnalytics();"
-                class="hidden sm:flex h-10 min-w-[40px] w-auto lg:px-5 bg-white/5 hover:bg-white/10 text-[#0A84FF] font-bold rounded-xl border border-[#0A84FF]/10 items-center justify-center gap-2.5 text-[12px] tracking-wide transition-all duration-300 active:scale-[0.98]">
-                <i class="fas fa-list-check text-xs"></i>
-                <span class="hidden lg:inline whitespace-nowrap">BETS</span>
+                class="hidden sm:flex h-8 w-10 bg-white/5 hover:bg-white/10 text-[#0A84FF] rounded-lg border border-white/10 items-center justify-center transition-all duration-300 active:scale-[0.98]">
+                <i class="fas fa-receipt text-[11px]"></i>
             </button>
 
             <button onclick="toggleModal('analyticsModal'); renderAnalytics();"
-                class="flex h-10 min-w-[40px] w-auto lg:px-5 bg-white/5 hover:bg-white/10 text-[#FFD60A] font-bold rounded-xl border border-[#FFD60A]/10 items-center justify-center gap-2.5 text-[12px] tracking-wide transition-all duration-300 active:scale-[0.98]">
-                <i class="fas fa-chart-line text-xs"></i>
-                <span class="hidden lg:inline whitespace-nowrap">STATS</span>
+                class="flex h-8 w-10 bg-white/5 hover:bg-white/10 text-[#FFD60A] rounded-lg border border-white/10 items-center justify-center transition-all duration-300 active:scale-[0.98]">
+                <i class="fas fa-chart-simple text-[11px]"></i>
             </button>
 
             <button onclick="toggleAnalyticsHUD()" id="hudToggleBtn"
-                class="hidden sm:flex h-10 min-w-[40px] w-auto lg:px-5 bg-white/5 hover:bg-white/10 text-[#30D158] font-bold rounded-xl border border-[#30D158]/10 items-center justify-center gap-2.5 text-[12px] tracking-wide transition-all duration-300 active:scale-[0.98]">
-                <i class="fas fa-chart-pie text-xs"></i>
-                <span class="hidden lg:inline whitespace-nowrap">HUD</span>
+                class="hidden sm:flex h-8 w-10 bg-white/5 hover:bg-white/10 text-[#32D74B] rounded-lg border border-white/10 items-center justify-center transition-all duration-300 active:scale-[0.98]">
+                <i class="fas fa-gauge-high text-[11px]"></i>
             </button>
 
-            <!-- MORE MENU (Mobile only) -->
-            <div class="relative sm:hidden flex items-center">
-                <button id="moreMenuBtn" 
-                    onclick="event.stopPropagation(); const d=document.getElementById('moreMenuDropdown'); const isH=d.classList.contains('hidden'); document.querySelectorAll('.dropdown-layer').forEach(el=>el.classList.add('hidden','opacity-0','scale-95')); if(isH){d.classList.remove('hidden'); setTimeout(()=>d.classList.remove('opacity-0','scale-95'),10);}else{d.classList.add('opacity-0','scale-95'); setTimeout(()=>d.classList.add('hidden'),200);}"
-                    class="h-10 w-10 bg-white/5 hover:bg-white/10 text-white/60 rounded-xl border border-white/10 flex items-center justify-center transition-all duration-300 active:scale-[0.98]">
-                    <i class="fas fa-ellipsis-v text-sm"></i>
-                </button>
-                <div id="moreMenuDropdown"
-                    class="dropdown-layer hidden absolute top-full right-0 mt-2 w-48 rounded-2xl border border-white/10 bg-[#1C1C1E]/95 backdrop-blur-[40px] shadow-2xl z-[100] overflow-hidden opacity-0 scale-95 transition-all duration-200 origin-top-right">
-                    <div class="p-2 flex flex-col gap-1">
-                        <button onclick="undoSpin(); document.getElementById('moreMenuDropdown').classList.add('hidden');"
-                            class="flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 rounded-xl transition-colors">
-                            <i class="fas fa-undo text-[10px] w-4 text-center text-white/40"></i>
-                            <span class="text-[11px] font-bold text-white/70">Undo Spin</span>
-                        </button>
-                        <button onclick="toggleModal('betsModal'); renderUserAnalytics(); document.getElementById('moreMenuDropdown').classList.add('hidden');"
-                            class="flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 rounded-xl transition-colors">
-                            <i class="fas fa-list-check text-[10px] w-4 text-center text-[#0A84FF]"></i>
-                            <span class="text-[11px] font-bold text-white/70">Bets List</span>
-                        </button>
-                        <button onclick="toggleAnalyticsHUD(); document.getElementById('moreMenuDropdown').classList.add('hidden');"
-                            class="flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 rounded-xl transition-colors">
-                            <i class="fas fa-chart-pie text-[10px] w-4 text-center text-[#30D158]"></i>
-                            <span class="text-[11px] font-bold text-white/70">HUD Analytics</span>
-                        </button>
-                        <div class="h-[1px] bg-white/5 my-0.5"></div>
-                        <button onclick="if(window.cycleGameplayStrategy) window.cycleGameplayStrategy(); document.getElementById('moreMenuDropdown').classList.add('hidden');"
-                            class="flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 rounded-xl transition-colors">
-                            <i class="fas fa-repeat text-[10px] w-4 text-center text-[#BF5AF2]"></i>
-                            <span class="text-[11px] font-bold text-white/70">Switch Strategy</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="hidden sm:block h-4 w-[1px] bg-white/10 mx-0.5"></div>
+            <div class="hidden sm:block h-3 w-[1px] bg-white/10 mx-0.5"></div>
 
             <button id="headerMenuBtn"
-                class="h-10 w-10 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/10 flex items-center justify-center transition-all duration-300 active:scale-[0.98]">
+                class="h-8 w-10 bg-white/5 hover:bg-white/10 text-white/70 rounded-lg border border-white/10 flex items-center justify-center transition-all duration-300 active:scale-[0.98]">
                 <i class="fas fa-bars text-sm"></i>
             </button>
         </div>
@@ -699,7 +656,6 @@
     <!-- UI COMPONENTS (Modals) -->
     <script src="js/modules/ui/components/modal-core.js?v=apple_v13"></script>
     <script src="js/modules/ui/components/modal-bets.js?v=apple_v13"></script>
-    <script src="js/modules/ui/renderers/analytics.js?v=apple_v13"></script>
     <script src="js/modules/ui/components/modal-analytics.js?v=apple_v13"></script>
     <script src="js/modules/ui/components/modal-pattern-detail.js?v=apple_v13"></script>
 

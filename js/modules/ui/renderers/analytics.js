@@ -48,6 +48,7 @@
         // Fallback (Only return non-hidden buttons)
         const allTabs = [
             { key: 'strategy', button: document.getElementById('tabBtnStrategy'), panelId: 'strategyAnalyticsPanel', rendererName: 'renderStrategyAnalytics' },
+            { key: 'perimeter', button: document.getElementById('tabBtnPerimeter'), panelId: 'strategyAnalyticsPanel', rendererName: 'renderStrategyAnalytics' },
             { key: 'intelligence', button: document.getElementById('tabBtnIntelligence'), panelId: 'intelligencePanel', rendererName: 'renderIntelligencePanel' },
             { key: 'advancements', button: document.getElementById('tabBtnAdvancements'), panelId: 'advancementsPanel', rendererName: 'renderAdvancementAnalytics' }
         ];
@@ -143,13 +144,15 @@
     window.renderStrategyAnalytics = function () {
         let displayStrategy = 'series';
         if (window.state) {
-            if (window.state.analyticsDisplayStrategy === 'combo') displayStrategy = 'combo';
+            if (window.state.currentAnalyticsTab === 'perimeter') displayStrategy = 'perimeter';
+            else if (window.state.analyticsDisplayStrategy === 'combo') displayStrategy = 'combo';
             else if (window.state.analyticsDisplayStrategy === 'inside') displayStrategy = 'inside';
         }
 
         const structHeader = document.getElementById('analyticsStructureHeader');
         if (structHeader) {
-            if (displayStrategy === 'combo') structHeader.innerText = 'Combo';
+            if (displayStrategy === 'perimeter') structHeader.innerText = 'Signal';
+            else if (displayStrategy === 'combo') structHeader.innerText = 'Combo';
             else if (displayStrategy === 'inside') structHeader.innerText = 'Pattern';
             else structHeader.innerText = 'Sequence';
         }
@@ -163,6 +166,14 @@
         if (netEl) { netEl.innerText = (coreStats.net > 0 ? '+' : '') + coreStats.net; netEl.className = `text-2xl md:text-3xl font-black tracking-wide ${coreStats.net > 0 ? 'text-[#30D158]' : (coreStats.net < 0 ? 'text-[#FF453A]' : 'text-white/90')}`; }
         const sigEl = document.getElementById('kpiSignals');
         if (sigEl) sigEl.innerText = totalSignals;
+        const formEl = document.getElementById('kpiForm');
+        if (formEl) {
+            if (coreStats.form && coreStats.form.length > 0) {
+                formEl.innerHTML = `<div class="flex items-center justify-center gap-1.5">${coreStats.form.map(res => `<span class="${res === 'W' ? 'text-[#30D158]' : 'text-[#FF453A]'} font-black text-sm">${res}</span>`).join('')}</div>`;
+            } else {
+                formEl.innerText = '-';
+            }
+        }
 
         if (window.drawAdvancedGraph) {
             window.drawAdvancedGraph(coreStats.history, coreStats.wins, coreStats.losses, 'graphContainer');
@@ -297,6 +308,7 @@
         const meta = (strategy && strategy.PATTERN_FILTER_META) ? strategy.PATTERN_FILTER_META : {};
 
         let keys = strategy && strategy.PATTERN_ORDER ? [...strategy.PATTERN_ORDER] : Object.keys(meta);
+        if (keys.length === 0) keys = Object.keys(patternData);
 
         let hasData = false;
         let html = '';

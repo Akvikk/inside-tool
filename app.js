@@ -388,30 +388,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
     animateCursorBlob();
 
-    // --- UI Cleanup (Header & Modals) ---
-    try {
-        const filterBtn = document.getElementById('patternsToggleBtn');
-        if (filterBtn) {
-            // 1. Shrink Filter Button (Icon-only)
-            Array.from(filterBtn.childNodes).forEach(node => {
-                if (node.nodeType === Node.TEXT_NODE && node.textContent.trim().toLowerCase() === 'filters') node.textContent = '';
-                const isSpan = node.tagName === 'SPAN';
-                if (isSpan && node.id !== 'patternsActiveCount' && node.innerText.toLowerCase().includes('filters')) node.style.display = 'none';
-            });
-            filterBtn.classList.remove('px-3', 'px-4');
-            filterBtn.classList.add('px-2', 'flex', 'items-center', 'justify-center');
-
-            // (Strategy Switcher handled via index.html for better responsive stability)
-        }
-
-        const intelBtn = document.getElementById('tabBtnIntelligence');
-        if (intelBtn) intelBtn.style.display = 'none';
-        const advBtn = document.getElementById('tabBtnAdvancements');
-        if (advBtn) advBtn.style.display = 'none';
-    } catch (err) {
-        console.error("UI Cleanup Error (Non-Fatal):", err);
-    }
-
     if (window.InputProcessor && window.InputProcessor.init) window.InputProcessor.init();
     if (window.UiController && window.UiController.init) window.UiController.init();
     if (window.HudManager && window.HudManager.init) window.HudManager.init();
