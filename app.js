@@ -386,32 +386,17 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (toolsGroup && !document.getElementById('strategySwitcherBtn')) {
                 // Enforce proper header gap spacing and click-target height on the tools container
                 if (toolsGroup.classList.contains('gap-1.5')) {
-                    toolsGroup.classList.replace('gap-1.5', 'gap-4');
+                    toolsGroup.classList.replace('gap-1.5', 'gap-2');
                 }
 
-                // Scale up standard header buttons and their icons dynamically
-                toolsGroup.querySelectorAll('button').forEach(btn => {
-                    if (btn.classList.contains('h-8')) btn.classList.replace('h-8', 'h-10');
-                    if (btn.classList.contains('h-9')) btn.classList.replace('h-9', 'h-10');
-                    if (btn.classList.contains('w-8')) btn.classList.replace('w-8', 'w-10');
-                    if (btn.classList.contains('w-9')) btn.classList.replace('w-9', 'w-10');
-
-                    const icon = btn.querySelector('i');
-                    if (icon) {
-                        if (icon.classList.contains('text-[11px]')) icon.classList.replace('text-[11px]', 'text-sm');
-                        if (icon.classList.contains('text-xs')) icon.classList.replace('text-xs', 'text-sm');
-                    }
-                });
-
-                // Scale up header separator height
-                toolsGroup.querySelectorAll('div.h-4').forEach(div => div.classList.replace('h-4', 'h-6'));
+                // (Button resize removed — handled via CSS for responsive sizing)
 
                 const container = document.createElement('div');
                 container.className = 'relative flex items-center';
 
                 const switcher = document.createElement('button');
                 switcher.id = 'strategySwitcherBtn';
-                switcher.className = "flex items-center justify-center h-10 w-10 bg-white/5 hover:bg-white/10 text-[#BF5AF2] rounded-xl border border-[#BF5AF2]/10 transition-all duration-300 active:scale-[0.98]";
+                switcher.className = "flex items-center justify-center h-8 w-8 bg-white/5 hover:bg-white/10 text-[#BF5AF2] rounded-xl border border-[#BF5AF2]/10 transition-all duration-300 active:scale-[0.98]";
                 switcher.innerHTML = '<i class="fas fa-repeat text-sm"></i>';
 
                 const dropdown = document.createElement('div');
