@@ -205,15 +205,17 @@ window.EngineCore = {
         logs.forEach(log => {
             let isMatch = false;
             const strat = log.rawStrategy ? log.rawStrategy.toLowerCase() : '';
+            const rawP = log.rawPattern || log.filterKey || '';
+            
             if (displayStrategy === 'series') {
                 isMatch = (strat === 'sequence' || strat === 'triplecs' || strat === 'series' || strat === 'prediction');
             } else if (displayStrategy === 'combo') {
                 isMatch = (strat === 'combo');
             } else if (displayStrategy === 'inside') {
                 isMatch = (strat === 'inside' ||
-                    metaKeys.includes(log.rawPattern) ||
-                    metaLabels.includes(log.rawPattern) ||
-                    metaKeys.includes(log.rawPattern.replace(/'/g, "\\'")) || // Match escaped labels
+                    metaKeys.includes(rawP) ||
+                    metaLabels.includes(rawP) ||
+                    metaKeys.includes(rawP.replace(/'/g, "\\'")) || // Match escaped labels
                     metaKeys.includes(log.patternName) ||
                     metaLabels.includes(log.patternName) ||
                     (!['combo', 'sequence', 'triplecs', 'series', 'prediction'].includes(strat)));
@@ -234,8 +236,8 @@ window.EngineCore = {
                 displayStats.form.push(log.result === 'WIN' ? 'W' : 'L');
 
                 // Group Triple Cs
-                let patternLabel = log.rawPattern || log.patternName;
-                if (log.rawStrategy === 'TripleCs' || (log.patternName && log.patternName.startsWith('TripleCs:'))) {
+                let patternLabel = rawP || log.patternName;
+                if (strat === 'triplecs' || (log.patternName && log.patternName.startsWith('TripleCs:'))) {
                     patternLabel = 'Triple Cs';
                 }
 
@@ -289,7 +291,17 @@ window.EngineCore = {
                             else eStats.patternStats[fKey].losses++;
 
                             const pFreq = (bet.perimeterFreq !== undefined) ? bet.perimeterFreq : ((window.calculatePerimeterFrequency) ? window.calculatePerimeterFrequency(bet) : 0);
-                            eStats.signalLog.push({ result: isWin ? 'WIN' : 'LOSS', units: unitChange, patternName: pName, filterKey: fKey, spinIndex: spin.index, spinNum: spin.num, perimeterFreq: pFreq });
+                            eStats.signalLog.push({ 
+                                result: isWin ? 'WIN' : 'LOSS', 
+                                units: unitChange, 
+                                patternName: pName, 
+                                filterKey: fKey, 
+                                rawStrategy: bet.strategy || (window.state.currentGameplayStrategy || 'inside'),
+                                rawPattern: fKey,
+                                spinIndex: spin.index, 
+                                spinNum: spin.num, 
+                                perimeterFreq: pFreq 
+                            });
 
                             if (bet.confirmed && window.updateUserStats) window.updateUserStats(isWin, bet, spin.index, unitChange);
                         });
