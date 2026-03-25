@@ -7,7 +7,7 @@
     <title>INSIDE tool</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
-    <link rel="stylesheet" href="assets/css/style.css?v=apple_v8">
+    <link rel="stylesheet" href="assets/css/style.css?v=apple_v9">
     <style>
         :root {
             --bg-dark: #050505;
@@ -83,7 +83,7 @@
             </button>
 
             <button onclick="undoSpin()"
-                class="h-8 w-8 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white rounded-xl border border-white/10 flex items-center justify-center transition-all duration-300 active:scale-[0.98]">
+                class="hidden sm:flex h-8 w-8 bg-white/5 hover:bg-white/10 text-white/40 hover:text-white rounded-xl border border-white/10 items-center justify-center transition-all duration-300 active:scale-[0.98]">
                 <i class="fas fa-undo text-[10px]"></i>
             </button>
         </div>
@@ -147,7 +147,7 @@
             </div>
 
             <button onclick="toggleModal('betsModal'); renderUserAnalytics();"
-                class="flex h-8 w-8 bg-white/5 hover:bg-white/10 text-[#0A84FF] font-bold rounded-xl border border-[#0A84FF]/10 items-center justify-center text-[11px] tracking-wide transition-all duration-300 active:scale-[0.98]">
+                class="hidden sm:flex h-8 w-8 bg-white/5 hover:bg-white/10 text-[#0A84FF] font-bold rounded-xl border border-[#0A84FF]/10 items-center justify-center text-[11px] tracking-wide transition-all duration-300 active:scale-[0.98]">
                 <i class="fas fa-list-check"></i>
                 <span class="hidden lg:inline">BETS</span>
             </button>
@@ -159,10 +159,44 @@
             </button>
 
             <button onclick="toggleAnalyticsHUD()" id="hudToggleBtn"
-                class="flex h-8 w-8 bg-white/5 hover:bg-white/10 text-[#30D158] font-bold rounded-xl border border-[#30D158]/10 items-center justify-center text-[11px] tracking-wide transition-all duration-300 active:scale-[0.98]">
+                class="hidden sm:flex h-8 w-8 bg-white/5 hover:bg-white/10 text-[#30D158] font-bold rounded-xl border border-[#30D158]/10 items-center justify-center text-[11px] tracking-wide transition-all duration-300 active:scale-[0.98]">
                 <i class="fas fa-chart-pie"></i>
                 <span class="hidden lg:inline">HUD</span>
             </button>
+
+            <!-- MORE MENU (Mobile only) -->
+            <div class="relative sm:hidden flex items-center">
+                <button id="moreMenuBtn"
+                    class="h-8 w-8 bg-white/5 hover:bg-white/10 text-white/60 rounded-xl border border-white/10 flex items-center justify-center transition-all duration-300 active:scale-[0.98]">
+                    <i class="fas fa-ellipsis-v text-xs"></i>
+                </button>
+                <div id="moreMenuDropdown"
+                    class="hidden absolute top-full right-0 mt-2 w-48 rounded-2xl border border-white/10 bg-[#1C1C1E]/95 backdrop-blur-[40px] shadow-2xl z-[100] overflow-hidden opacity-0 scale-95 transition-all duration-200 origin-top-right">
+                    <div class="p-2 flex flex-col gap-1">
+                        <button onclick="undoSpin(); document.getElementById('moreMenuDropdown').classList.add('hidden');"
+                            class="flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 rounded-xl transition-colors">
+                            <i class="fas fa-undo text-[10px] w-4 text-center text-white/40"></i>
+                            <span class="text-[11px] font-bold text-white/70">Undo Spin</span>
+                        </button>
+                        <button onclick="toggleModal('betsModal'); renderUserAnalytics(); document.getElementById('moreMenuDropdown').classList.add('hidden');"
+                            class="flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 rounded-xl transition-colors">
+                            <i class="fas fa-list-check text-[10px] w-4 text-center text-[#0A84FF]"></i>
+                            <span class="text-[11px] font-bold text-white/70">Bets List</span>
+                        </button>
+                        <button onclick="toggleAnalyticsHUD(); document.getElementById('moreMenuDropdown').classList.add('hidden');"
+                            class="flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 rounded-xl transition-colors">
+                            <i class="fas fa-chart-pie text-[10px] w-4 text-center text-[#30D158]"></i>
+                            <span class="text-[11px] font-bold text-white/70">HUD Analytics</span>
+                        </button>
+                        <div class="h-[1px] bg-white/5 my-0.5"></div>
+                        <button onclick="if(window.cycleGameplayStrategy) window.cycleGameplayStrategy(); document.getElementById('moreMenuDropdown').classList.add('hidden');"
+                            class="flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 rounded-xl transition-colors">
+                            <i class="fas fa-repeat text-[10px] w-4 text-center text-[#BF5AF2]"></i>
+                            <span class="text-[11px] font-bold text-white/70">Switch Strategy</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <div class="hidden sm:block h-4 w-[1px] bg-white/10 mx-0.5"></div>
 
@@ -720,59 +754,59 @@
 
     <!-- SCRIPTS -->
     <!-- 1. CONFIG & STATE -->
-    <script src="js/modules/config.js?v=apple_v8"></script>
-    <script src="js/modules/engine/state.js?v=apple_v8"></script>
+    <script src="js/modules/config.js?v=apple_v9"></script>
+    <script src="js/modules/engine/state.js?v=apple_v9"></script>
 
     <!-- 2. STORE & PERSISTENCE -->
-    <script src="js/modules/engine/store.js?v=apple_v8"></script>
-    <script src="js/modules/persistence.js?v=apple_v8"></script>
+    <script src="js/modules/engine/store.js?v=apple_v9"></script>
+    <script src="js/modules/persistence.js?v=apple_v9"></script>
 
     <!-- 3. SERVICES -->
-    <script src="js/modules/audio/audio-engine.js?v=apple_v8"></script>
+    <script src="js/modules/audio/audio-engine.js?v=apple_v9"></script>
 
 
     <!-- 4. ENGINE LAYER -->
-    <script src="js/modules/engine/core.js?v=apple_v8"></script>
-    <script src="js/modules/engine/prediction.js?v=apple_v8"></script>
-    <script src="js/modules/engine/perimeter.js?v=apple_v8"></script>
-    <script src="js/modules/engine/contract.js?v=apple_v8"></script>
-    <script src="js/modules/engine/adapter.js?v=apple_v8"></script>
+    <script src="js/modules/engine/core.js?v=apple_v9"></script>
+    <script src="js/modules/engine/prediction.js?v=apple_v9"></script>
+    <script src="js/modules/engine/perimeter.js?v=apple_v9"></script>
+    <script src="js/modules/engine/contract.js?v=apple_v9"></script>
+    <script src="js/modules/engine/adapter.js?v=apple_v9"></script>
 
     <!-- 5. STRATEGIES -->
-    <script src="js/strategies/strategy.series.js?v=apple_v8"></script>
-    <script src="js/strategies/strategy.combo.js?v=apple_v8"></script>
+    <script src="js/strategies/strategy.series.js?v=apple_v9"></script>
+    <script src="js/strategies/strategy.combo.js?v=apple_v9"></script>
 
     <!-- INSIDE PATTERNS (Modular Directory) -->
-    <script src="js/strategies/inside/index.js?v=apple_v8"></script>
-    <script src="js/strategies/inside/patterns/pattern.rptng.js?v=apple_v8"></script>
-    <script src="js/strategies/inside/patterns/pattern.1c-rptng.js?v=apple_v8"></script>
-    <script src="js/strategies/inside/patterns/pattern.brkt.js?v=apple_v8"></script>
-    <script src="js/strategies/inside/patterns/pattern.121.js?v=apple_v8"></script>
-    <script src="js/strategies/inside/patterns/pattern.123.js?v=apple_v8"></script>
-    <script src="js/strategies/inside/patterns/pattern.22.js?v=apple_v8"></script>
-    <script src="js/strategies/inside/patterns/pattern.seqvarbrkt.js?v=apple_v8"></script>
+    <script src="js/strategies/inside/index.js?v=apple_v9"></script>
+    <script src="js/strategies/inside/patterns/pattern.rptng.js?v=apple_v9"></script>
+    <script src="js/strategies/inside/patterns/pattern.1c-rptng.js?v=apple_v9"></script>
+    <script src="js/strategies/inside/patterns/pattern.brkt.js?v=apple_v9"></script>
+    <script src="js/strategies/inside/patterns/pattern.121.js?v=apple_v9"></script>
+    <script src="js/strategies/inside/patterns/pattern.123.js?v=apple_v9"></script>
+    <script src="js/strategies/inside/patterns/pattern.22.js?v=apple_v9"></script>
+    <script src="js/strategies/inside/patterns/pattern.seqvarbrkt.js?v=apple_v9"></script>
 
     <!-- 6. UI RENDERERS & COMPONENTS -->
-    <script src="js/modules/ui/renderers/history.js?v=apple_v8"></script>
-    <script src="js/modules/ui/renderers/dashboard.js?v=apple_v8"></script>
-    <script src="js/modules/ui/renderers/analytics.js?v=apple_v8"></script>
-    <script src="js/modules/ui/controller.js?v=apple_v8"></script>
-    <script src="js/modules/ui/hud-manager.js?v=apple_v8"></script>
+    <script src="js/modules/ui/renderers/history.js?v=apple_v9"></script>
+    <script src="js/modules/ui/renderers/dashboard.js?v=apple_v9"></script>
+    <script src="js/modules/ui/renderers/analytics.js?v=apple_v9"></script>
+    <script src="js/modules/ui/controller.js?v=apple_v9"></script>
+    <script src="js/modules/ui/hud-manager.js?v=apple_v9"></script>
 
 
     <!-- UI COMPONENTS (Modals) -->
-    <script src="js/modules/ui/components/modal-core.js?v=apple_v8"></script>
-    <script src="js/modules/ui/components/modal-bets.js?v=apple_v8"></script>
-    <script src="js/modules/ui/renderers/analytics.js?v=apple_v8"></script>
-    <script src="js/modules/ui/components/modal-analytics.js?v=apple_v8"></script>
-    <script src="js/modules/ui/components/modal-pattern-detail.js?v=apple_v8"></script>
+    <script src="js/modules/ui/components/modal-core.js?v=apple_v9"></script>
+    <script src="js/modules/ui/components/modal-bets.js?v=apple_v9"></script>
+    <script src="js/modules/ui/renderers/analytics.js?v=apple_v9"></script>
+    <script src="js/modules/ui/components/modal-analytics.js?v=apple_v9"></script>
+    <script src="js/modules/ui/components/modal-pattern-detail.js?v=apple_v9"></script>
 
-    <script src="js/modules/ui/components/modal-confirm.js?v=apple_v8"></script>
+    <script src="js/modules/ui/components/modal-confirm.js?v=apple_v9"></script>
 
 
     <!-- 7. APP BOOTSTRAP -->
-    <script src="js/modules/input/processor.js?v=apple_v8"></script>
-    <script src="app.js?v=apple_v8"></script>
+    <script src="js/modules/input/processor.js?v=apple_v9"></script>
+    <script src="app.js?v=apple_v9"></script>
 
     <!-- Graph Tooltip -->
     <div id="graphTooltip"

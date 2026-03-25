@@ -392,7 +392,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 // (Button resize removed — handled via CSS for responsive sizing)
 
                 const container = document.createElement('div');
-                container.className = 'relative flex items-center';
+                container.className = 'relative hidden sm:flex items-center';
 
                 const switcher = document.createElement('button');
                 switcher.id = 'strategySwitcherBtn';
@@ -482,4 +482,34 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     const resetBtn = document.getElementById('confirmResetBtn');
     if (resetBtn) resetBtn.addEventListener('click', window.resetData);
+
+    // MORE MENU LOGIC
+    const moreMenuBtn = document.getElementById('moreMenuBtn');
+    const moreMenuDropdown = document.getElementById('moreMenuDropdown');
+    if (moreMenuBtn && moreMenuDropdown) {
+        moreMenuBtn.onclick = (e) => {
+            e.stopPropagation();
+            const isHidden = moreMenuDropdown.classList.contains('hidden');
+            if (isHidden) {
+                moreMenuDropdown.classList.remove('hidden');
+                setTimeout(() => moreMenuDropdown.classList.remove('opacity-0', 'scale-95'), 10);
+            } else {
+                moreMenuDropdown.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => moreMenuDropdown.classList.add('hidden'), 200);
+            }
+        };
+
+        document.addEventListener('click', () => {
+            moreMenuDropdown.classList.add('opacity-0', 'scale-95');
+            setTimeout(() => moreMenuDropdown.classList.add('hidden'), 200);
+        });
+    }
+
+    // STRATEGY CYCLING HELPER
+    window.cycleGameplayStrategy = function() {
+        const order = ['inside', 'series', 'combo'];
+        const current = window.state.currentGameplayStrategy || 'inside';
+        const next = order[(order.indexOf(current) + 1) % order.length];
+        if (window.setGameplayStrategy) window.setGameplayStrategy(next);
+    };
 });
