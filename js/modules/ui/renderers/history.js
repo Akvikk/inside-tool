@@ -25,21 +25,26 @@
         const blocks = [];
 
         if (spin.resolvedBets && spin.resolvedBets.length > 0) {
-            spin.resolvedBets.forEach(bet => {
-                const icon = bet.isWin ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-times-circle"></i>';
+            const resultsHtml = spin.resolvedBets.map(bet => {
+                const icon = bet.isWin ? '<i class="fas fa-check-circle text-[10px]"></i>' : '<i class="fas fa-times-circle text-[10px]"></i>';
                 const status = bet.isWin ? 'WIN' : 'LOSS';
                 const tone = bet.isWin ? 'prediction-entry--win' : 'prediction-entry--loss';
                 const detail = window.formatPredictionDetail(bet) || 'Perimeter';
+                const color = bet.isWin ? '#30D158' : '#FF453A';
 
-                blocks.push(`
-                    <div class="prediction-entry-block">
-                        <div class="prediction-entry ${tone}">
-                            <span class="prediction-entry-status">${icon}${status}</span>
-                            <span class="prediction-entry-detail">${detail}</span>
-                        </div>
+                return `
+                    <div class="prediction-entry ${tone} flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-white/5 bg-white/5" style="border-left: 2px solid ${color};">
+                        <span class="prediction-entry-status flex items-center gap-1 font-black text-[9px]">${icon}${status}</span>
+                        <span class="prediction-entry-detail opacity-60 text-[9px] font-bold">${detail}</span>
                     </div>
-                `);
-            });
+                `;
+            }).join('');
+
+            blocks.push(`
+                <div class="prediction-entry-block flex flex-wrap gap-1 mb-1.5">
+                    ${resultsHtml}
+                </div>
+            `);
         }
 
         const signals = spin.newSignals || [];

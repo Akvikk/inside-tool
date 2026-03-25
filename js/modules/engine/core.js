@@ -197,8 +197,8 @@ window.EngineCore = {
         const metaKeys = strategy && strategy.PATTERN_FILTER_META ? Object.keys(strategy.PATTERN_FILTER_META) : [];
         const metaLabels = metaKeys.map(k => strategy.PATTERN_FILTER_META[k].label || k);
 
-        // Source of truth: prioritize window.state.engineStats.signalLog for AppStore sync
-        let logs = (window.state && window.state.engineStats && Array.isArray(window.state.engineStats.signalLog)) 
+        // Source of truth: prioritize window.state.engineStats.signalLog for AppStore sync, ONLY if it has data
+        let logs = (window.state && window.state.engineStats && Array.isArray(window.state.engineStats.signalLog) && window.state.engineStats.signalLog.length > 0) 
             ? window.state.engineStats.signalLog 
             : (this.stats && this.stats.signalLog ? this.stats.signalLog : []);
 
