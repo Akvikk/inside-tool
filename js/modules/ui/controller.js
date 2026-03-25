@@ -106,8 +106,10 @@
     window.handleGridClick = handleGridClick;
 
     function buildRacetrackSVG() {
-        const svgW = 860;
-        const svgH = 260;
+        const sourceW = 860;
+        const sourceH = 260;
+        const svgW = 320;
+        const svgH = 900;
 
         const boardX = 18;
         const boardY = 36;
@@ -237,9 +239,11 @@
         return `
             <svg id="racetrackSvg" width="100%" height="100%" viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="xMidYMid meet" class="roulette-racetrack">
                 ${defs}
-                ${chrome}
-                ${paths}
-                ${texts}
+                <g transform="translate(30 880) rotate(-90)">
+                    ${chrome}
+                    ${paths}
+                    ${texts}
+                </g>
             </svg>
         `;
     }

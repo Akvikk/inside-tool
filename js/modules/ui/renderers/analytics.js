@@ -114,22 +114,28 @@
 
     window.syncAnalyticsVisibility = function() {
         if (!window.state) return;
-        const displayMode = window.state.analyticsDisplayStrategy || 'series';
+
+        const gameplayMode = window.state.currentGameplayStrategy || 'inside';
         const tabBtnPerimeter = document.getElementById('tabBtnPerimeter');
+        const perimeterAvailable = gameplayMode === 'inside';
+
         if (tabBtnPerimeter) {
-            if (displayMode === 'inside') {
+            if (perimeterAvailable) {
                 tabBtnPerimeter.classList.remove('hidden');
             } else {
                 tabBtnPerimeter.classList.add('hidden');
             }
+        }
+
+        if (!perimeterAvailable && window.state.currentAnalyticsTab === 'perimeter') {
+            window.state.currentAnalyticsTab = 'strategy';
         }
     };
 
     window.renderAnalytics = function () {
         if (!window.state) return;
 
-        // Context-Aware Defaulting:
-        // Ensure the display strategy matches the active gameplay strategy when opening
+        // Stats should always reflect the active gameplay mode.
         if (window.state.currentGameplayStrategy && window.state.currentGameplayStrategy !== window.state.analyticsDisplayStrategy) {
             window.state.analyticsDisplayStrategy = window.state.currentGameplayStrategy;
         }
@@ -146,9 +152,11 @@
     window.setAnalyticsDisplayStrategy = function (val) {
         if (!window.state) return;
         window.state.analyticsDisplayStrategy = val;
-        
-        // If switching away from 'inside', and perimeter tab is active, switch to terminal
-        if (val !== 'inside' && window.state.currentAnalyticsTab === 'perimeter') {
+
+        const gameplayMode = window.state.currentGameplayStrategy || 'inside';
+
+        // Perimeter is an inside-mode-only analytics tab.
+        if (gameplayMode !== 'inside' && window.state.currentAnalyticsTab === 'perimeter') {
             window.state.currentAnalyticsTab = 'strategy';
         }
 
