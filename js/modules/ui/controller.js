@@ -106,34 +106,29 @@
     window.handleGridClick = handleGridClick;
 
     function buildRacetrackSVG() {
-        const sourceW = 860;
-        const sourceH = 260;
-        const svgW = 320;
-        const svgH = 900;
+        const svgW = 360;
+        const svgH = 920;
 
-        const boardX = 18;
-        const boardY = 36;
-        const boardW = 824;
-        const boardH = 188;
-        const outerR = boardH / 2;
-        const trackThickness = 48;
+        const boardX = 34;
+        const boardY = 20;
+        const boardW = 292;
+        const boardH = 880;
+        const outerR = boardW / 2;
+        const trackThickness = 50;
         const innerR = outerR - trackThickness;
-        const leftCx = boardX + outerR;
-        const rightCx = boardX + boardW - outerR;
-        const straightX = leftCx;
-        const straightW = rightCx - leftCx;
-        const cellW = straightW / 15;
-        const topY = boardY;
-        const bottomY = boardY + boardH - trackThickness;
-        const midY = boardY + (boardH / 2);
-        const zoneY = 80;
-        const zoneH = 100;
-        const zoneGap = 10;
-        const zoneWidths = [144, 182, 176, 104];
-        const topStraight = [24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35];
-        const bottomStraight = [30, 11, 36, 13, 27, 6, 34, 17, 25, 2, 21, 4, 19, 15, 32];
-        const leftArc = [5, 10, 23, 8];
-        const rightArc = [3, 26, 0];
+        const cx = boardX + outerR;
+        const cyTop = boardY + outerR;
+        const cyBottom = boardY + boardH - outerR;
+        const straightH = cyBottom - cyTop;
+        const blockH = straightH / 16;
+        const leftX = boardX;
+        const rightX = boardX + boardW - trackThickness;
+        const centerX = cx - innerR;
+        const centerW = innerR * 2;
+        const rightArray = [5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35];
+        const leftArray = [32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8];
+        const topArc = [23, 10];
+        const bottomArc = [3, 26, 0];
         const zoneLabels = ['TIER', 'ORPHELINS', 'VOISINS', 'ZERO'];
 
         let getWedgePath = (cx, cy, rIn, rOut, a1Deg, a2Deg) => {
@@ -164,25 +159,25 @@
         let defs = `
             <defs>
                 <linearGradient id="rtBoardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#0B0C16" />
-                    <stop offset="52%" stop-color="#14122A" />
-                    <stop offset="100%" stop-color="#111E47" />
+                    <stop offset="0%" stop-color="#0D0F1E" />
+                    <stop offset="48%" stop-color="#171330" />
+                    <stop offset="100%" stop-color="#132A58" />
                 </linearGradient>
-                <linearGradient id="rtZoneGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stop-color="rgba(33, 31, 71, 0.98)" />
-                    <stop offset="100%" stop-color="rgba(20, 36, 82, 0.98)" />
+                <linearGradient id="rtZoneGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#20255A" />
+                    <stop offset="100%" stop-color="#18214A" />
                 </linearGradient>
                 <linearGradient id="rtSegRed" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#C23820" />
-                    <stop offset="100%" stop-color="#991E16" />
+                    <stop offset="0%" stop-color="#D13A22" />
+                    <stop offset="100%" stop-color="#9A2016" />
                 </linearGradient>
                 <linearGradient id="rtSegBlack" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#090A11" />
-                    <stop offset="100%" stop-color="#11141F" />
+                    <stop offset="0%" stop-color="#0B0D14" />
+                    <stop offset="100%" stop-color="#131827" />
                 </linearGradient>
                 <linearGradient id="rtSegGreen" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#1A8F57" />
-                    <stop offset="100%" stop-color="#0D6E3F" />
+                    <stop offset="0%" stop-color="#1F9A5E" />
+                    <stop offset="100%" stop-color="#0D7042" />
                 </linearGradient>
             </defs>
         `;
@@ -191,13 +186,19 @@
         let texts = '';
 
         chrome += `<rect x="${boardX}" y="${boardY}" width="${boardW}" height="${boardH}" rx="${outerR}" class="rt-board" />`;
-        chrome += `<path d="M ${boardX + 24} ${boardY + 16} h ${boardW - 48}" class="rt-board-sheen" />`;
+        chrome += `<path d="M ${boardX + 22} ${boardY + 18} h ${boardW - 44}" class="rt-board-sheen" />`;
+        chrome += `<path d="M ${boardX + 18} ${boardY + boardH - 22} h ${boardW - 36}" class="rt-board-sheen rt-board-sheen--soft" />`;
 
-        let zoneX = straightX;
-        zoneWidths.forEach((width, index) => {
-            chrome += `<rect x="${zoneX}" y="${zoneY}" width="${width}" height="${zoneH}" rx="50" class="rt-zone" />`;
-            texts += `<text x="${zoneX + (width / 2)}" y="${zoneY + (zoneH / 2) + 4}" class="rt-label">${zoneLabels[index]}</text>`;
-            zoneX += width + zoneGap;
+        const zoneYStart = boardY + outerR - 6;
+        const zoneH = 132;
+        const zoneGap = 18;
+        const zoneWidths = [112, 132, 132, 96];
+        zoneLabels.forEach((label, index) => {
+            const width = zoneWidths[index];
+            const x = cx - (width / 2);
+            const y = zoneYStart + (index * (zoneH + zoneGap));
+            chrome += `<rect x="${x}" y="${y}" width="${width}" height="${zoneH}" rx="${width / 2}" class="rt-zone" />`;
+            texts += `<text x="${cx}" y="${y + (zoneH / 2) + 5}" transform="rotate(90, ${cx}, ${y + (zoneH / 2) + 5})" class="rt-label">${label}</text>`;
         });
 
         let createGroup = (num, pathD, tx, ty) => {
@@ -208,42 +209,42 @@
             </g>`;
         };
 
-        for (let i = 0; i < topStraight.length; i++) {
-            const n = topStraight[i];
-            const x = straightX + (i * cellW);
-            paths += createGroup(n, getRectPath(x, topY, cellW, trackThickness), x + (cellW / 2), topY + (trackThickness / 2));
+        for (let i = 0; i < rightArray.length; i++) {
+            const n = rightArray[i];
+            const y = cyTop + (i * blockH);
+            paths += createGroup(n, getRectPath(rightX, y, trackThickness, blockH), rightX + (trackThickness / 2), y + (blockH / 2));
         }
 
-        for (let i = 0; i < bottomStraight.length; i++) {
-            const n = bottomStraight[i];
-            const x = straightX + (i * cellW);
-            paths += createGroup(n, getRectPath(x, bottomY, cellW, trackThickness), x + (cellW / 2), bottomY + (trackThickness / 2));
+        for (let i = 0; i < leftArray.length; i++) {
+            const n = leftArray[i];
+            const y = cyBottom - ((i + 1) * blockH);
+            paths += createGroup(n, getRectPath(leftX, y, trackThickness, blockH), leftX + (trackThickness / 2), y + (blockH / 2));
         }
 
         const ringMid = innerR + (trackThickness / 2);
-        const leftAngles = [[270, 225], [225, 180], [180, 135], [135, 90]];
-        const rightAngles = [[270, 330], [330, 390], [390, 450]];
+        const topAngles = [[180, 270], [270, 360]];
+        const bottomAngles = [[0, 60], [60, 120], [120, 180]];
 
-        leftArc.forEach((num, index) => {
-            const [a1, a2] = leftAngles[index];
+        topArc.forEach((num, index) => {
+            const [a1, a2] = topAngles[index];
             const mid = ((a1 + a2) / 2) * Math.PI / 180;
-            paths += createGroup(num, getWedgePath(leftCx, midY, innerR, outerR, a1, a2), leftCx + (ringMid * Math.cos(mid)), midY + (ringMid * Math.sin(mid)));
+            paths += createGroup(num, getWedgePath(cx, cyTop, innerR, outerR, a1, a2), cx + (ringMid * Math.cos(mid)), cyTop + (ringMid * Math.sin(mid)));
         });
 
-        rightArc.forEach((num, index) => {
-            const [a1, a2] = rightAngles[index];
+        bottomArc.forEach((num, index) => {
+            const [a1, a2] = bottomAngles[index];
             const mid = ((a1 + a2) / 2) * Math.PI / 180;
-            paths += createGroup(num, getWedgePath(rightCx, midY, innerR, outerR, a1, a2), rightCx + (ringMid * Math.cos(mid)), midY + (ringMid * Math.sin(mid)));
+            paths += createGroup(num, getWedgePath(cx, cyBottom, innerR, outerR, a1, a2), cx + (ringMid * Math.cos(mid)), cyBottom + (ringMid * Math.sin(mid)));
         });
+
+        paths += `<path d="M ${centerX} ${cyTop} L ${centerX} ${cyBottom} A ${innerR} ${innerR} 0 0 0 ${centerX + centerW} ${cyBottom} L ${centerX + centerW} ${cyTop} A ${innerR} ${innerR} 0 0 0 ${centerX} ${cyTop} Z" class="rt-core-shell" />`;
 
         return `
             <svg id="racetrackSvg" width="100%" height="100%" viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="xMidYMid meet" class="roulette-racetrack">
                 ${defs}
-                <g transform="translate(30 880) rotate(-90)">
-                    ${chrome}
-                    ${paths}
-                    ${texts}
-                </g>
+                ${chrome}
+                ${paths}
+                ${texts}
             </svg>
         `;
     }
