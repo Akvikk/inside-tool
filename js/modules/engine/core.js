@@ -197,11 +197,16 @@ window.EngineCore = {
         const metaKeys = strategy && strategy.PATTERN_FILTER_META ? Object.keys(strategy.PATTERN_FILTER_META) : [];
         const metaLabels = metaKeys.map(k => strategy.PATTERN_FILTER_META[k].label || k);
 
-        this.stats.signalLog.forEach(log => {
+        // Source of truth: prioritize window.state.engineStats.signalLog for AppStore sync
+        let logs = (window.state && window.state.engineStats && Array.isArray(window.state.engineStats.signalLog)) 
+            ? window.state.engineStats.signalLog 
+            : (this.stats && this.stats.signalLog ? this.stats.signalLog : []);
+
+        logs.forEach(log => {
             let isMatch = false;
             const strat = log.rawStrategy ? log.rawStrategy.toLowerCase() : '';
             if (displayStrategy === 'series') {
-                isMatch = (strat === 'sequence' || strat === 'triplecs' || strat === 'series');
+                isMatch = (strat === 'sequence' || strat === 'triplecs' || strat === 'series' || strat === 'prediction');
             } else if (displayStrategy === 'combo') {
                 isMatch = (strat === 'combo');
             } else if (displayStrategy === 'inside') {
@@ -211,7 +216,7 @@ window.EngineCore = {
                     metaKeys.includes(log.rawPattern.replace(/'/g, "\\'")) || // Match escaped labels
                     metaKeys.includes(log.patternName) ||
                     metaLabels.includes(log.patternName) ||
-                    (!['combo', 'sequence', 'triplecs', 'series'].includes(strat)));
+                    (!['combo', 'sequence', 'triplecs', 'series', 'prediction'].includes(strat)));
             } else if (displayStrategy === 'perimeter') {
                 isMatch = (log.perimeterFreq > 0);
             }

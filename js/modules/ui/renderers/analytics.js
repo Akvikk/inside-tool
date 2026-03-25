@@ -20,6 +20,7 @@
 
         const tabs = window.getAnalyticsTabConfig ? window.getAnalyticsTabConfig() : [];
         const activeTab = window.ensureActiveAnalyticsTab ? window.ensureActiveAnalyticsTab(tabs) : '';
+        
         tabs.forEach(tab => {
             const btn = tab.button;
             const panel = document.getElementById(tab.panelId);
@@ -111,8 +112,22 @@
         }
     };
 
+    window.syncAnalyticsVisibility = function() {
+        if (!window.state) return;
+        const displayMode = window.state.analyticsDisplayStrategy || 'series';
+        const tabBtnPerimeter = document.getElementById('tabBtnPerimeter');
+        if (tabBtnPerimeter) {
+            if (displayMode === 'inside') {
+                tabBtnPerimeter.classList.remove('hidden');
+            } else {
+                tabBtnPerimeter.classList.add('hidden');
+            }
+        }
+    };
+
     window.renderAnalytics = function () {
         if (!window.state) return;
+        if (window.syncAnalyticsVisibility) window.syncAnalyticsVisibility();
         const tabs = window.getAnalyticsTabConfig(), activeTab = window.ensureActiveAnalyticsTab(tabs);
         window.applyAnalyticsTabUI();
         const activeConfig = tabs.find(tab => tab.key === activeTab);
@@ -124,6 +139,12 @@
     window.setAnalyticsDisplayStrategy = function (val) {
         if (!window.state) return;
         window.state.analyticsDisplayStrategy = val;
+        
+        // If switching away from 'inside', and perimeter tab is active, switch to terminal
+        if (val !== 'inside' && window.state.currentAnalyticsTab === 'perimeter') {
+            window.state.currentAnalyticsTab = 'strategy';
+        }
+
         window.renderAnalytics();
         if (window.saveSessionData) window.saveSessionData();
     };
@@ -309,13 +330,23 @@
 
         let keys = strategy && strategy.PATTERN_ORDER ? [...strategy.PATTERN_ORDER] : Object.keys(meta);
         if (keys.length === 0) keys = Object.keys(patternData);
+        
+        // If we are in perimeter mode, try to load labels from Inside strategy if available
+        let displayMeta = meta;
+        if (strategyKey === 'perimeter' && window.StrategyRegistry && window.StrategyRegistry.inside) {
+            displayMeta = window.StrategyRegistry.inside.PATTERN_FILTER_META || {};
+        }
 
         let hasData = false;
         let html = '';
 
         keys.forEach(key => {
-            const config = meta[key] || {};
-            const label = config.label || key;
+            const data = patternData[key];
+            if (!data) return;
+
+            const m = displayMeta[key] || {};
+            const label = m.label || key;
+            const accent = m.accent || '#30D158';
             // Lookup stats using key first, fallback to label for legacy session data
             const stats = patternData[key] || patternData[label] || { wins: 0, losses: 0 };
             const total = stats.wins + stats.losses;
