@@ -24,11 +24,11 @@
 }
 
 .roulette-racetrack {
-    width: auto;
-    height: 100%;
+    width: 100%;
+    height: auto;
     max-width: 100%;
-    max-height: 100%;
-    aspect-ratio: 360 / 920;
+    max-height: none;
+    aspect-ratio: 240 / 920;
     display: block;
     margin: 0;
     pointer-events: auto;
@@ -38,7 +38,7 @@
 
 .rt-num {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 800;
     pointer-events: none;
     dominant-baseline: central;
@@ -105,14 +105,32 @@
 
 .rt-core-shell {
     fill: url(#rtCoreGrad);
-    stroke: rgba(255, 244, 214, 0.14);
-    stroke-width: 1px;
+    stroke: rgba(255, 244, 214, 0.22);
+    stroke-width: 1.15px;
 }
 
 .rt-core-glow {
-    fill: rgba(255, 255, 255, 0.02);
-    stroke: rgba(255, 255, 255, 0.06);
+    fill: rgba(255, 255, 255, 0.015);
+    stroke: rgba(255, 255, 255, 0.04);
     stroke-width: 0.8px;
+}
+
+.rt-zero-zone {
+    fill: rgba(41, 46, 88, 0.92);
+    stroke: rgba(255, 244, 214, 0.58);
+    stroke-width: 1.3px;
+}
+
+.rt-core-divider {
+    stroke: rgba(255, 244, 214, 0.22);
+    stroke-width: 1px;
+}
+
+.rt-guide-line {
+    fill: none;
+    stroke: rgba(255, 244, 214, 0.18);
+    stroke-width: 1.2px;
+    stroke-linecap: round;
 }
 
 .rt-fill-red {
