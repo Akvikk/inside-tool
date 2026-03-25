@@ -11,7 +11,7 @@
     display: flex;
     align-items: stretch;
     justify-content: center;
-    padding: 6px 4px;
+    padding: 2px;
     border-radius: 30px;
     background:
         radial-gradient(circle at top center, rgba(191, 90, 242, 0.12), transparent 40%),
@@ -28,7 +28,7 @@
     height: auto;
     max-width: 100%;
     max-height: none;
-    aspect-ratio: 240 / 920;
+    aspect-ratio: 220 / 640;
     display: block;
     margin: 0;
     pointer-events: auto;
@@ -110,9 +110,9 @@
 }
 
 .rt-core-glow {
-    fill: rgba(255, 255, 255, 0.015);
-    stroke: rgba(255, 255, 255, 0.04);
-    stroke-width: 0.8px;
+    fill: rgba(255, 255, 255, 0.01);
+    stroke: rgba(255, 255, 255, 0.03);
+    stroke-width: 0.6px;
 }
 
 .rt-zero-zone {

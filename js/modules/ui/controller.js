@@ -106,15 +106,15 @@
     window.handleGridClick = handleGridClick;
 
     function buildRacetrackSVG() {
-        const svgW = 240;
-        const svgH = 920;
+        const svgW = 220;
+        const svgH = 640;
 
         const boardX = 6;
-        const boardY = 4;
-        const boardW = 228;
-        const boardH = 900;
+        const boardY = 12;
+        const boardW = 208;
+        const boardH = 616;
         const outerR = boardW / 2;
-        const trackThickness = 56;
+        const trackThickness = 48;
         const innerR = outerR - trackThickness;
         const cx = boardX + outerR;
         const cyTop = boardY + outerR;
@@ -129,13 +129,12 @@
         const leftArray = [32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8];
         const topArc = [23, 10];
         const bottomArc = [3, 26, 0];
-        const tierY = cyTop + (blockH * 3.15);
-        const orphelinsY = cyTop + (blockH * 7.6);
-        const voisinsY = cyTop + (blockH * 12.05);
-        const zeroCapsuleH = 156;
-        const zeroCapsuleY = cyBottom - zeroCapsuleH - 10;
-        const zeroCapsuleW = centerW - 8;
-        const dividerInset = 18;
+        const tierY = 214;
+        const orphelinsY = 324;
+        const voisinsY = 432;
+        const zeroCapsuleH = 154;
+        const zeroCapsuleY = 400;
+        const zeroCapsuleW = 88;
 
         let getWedgePath = (cx, cy, rIn, rOut, a1Deg, a2Deg) => {
             const a1 = a1Deg * Math.PI / 180;
@@ -165,30 +164,25 @@
         let defs = `
             <defs>
                 <linearGradient id="rtBoardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#0D0F1E" />
-                    <stop offset="48%" stop-color="#171330" />
-                    <stop offset="100%" stop-color="#132A58" />
-                </linearGradient>
-                <linearGradient id="rtZoneGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#20275E" />
-                    <stop offset="100%" stop-color="#141C42" />
+                    <stop offset="0%" stop-color="#12152C" />
+                    <stop offset="46%" stop-color="#181637" />
+                    <stop offset="100%" stop-color="#142653" />
                 </linearGradient>
                 <linearGradient id="rtCoreGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#0F1634" />
-                    <stop offset="50%" stop-color="#121B3E" />
-                    <stop offset="100%" stop-color="#0C1431" />
+                    <stop offset="0%" stop-color="#262248" />
+                    <stop offset="100%" stop-color="#1A234A" />
                 </linearGradient>
                 <linearGradient id="rtSegRed" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#D13A22" />
-                    <stop offset="100%" stop-color="#9A2016" />
+                    <stop offset="0%" stop-color="#CB341F" />
+                    <stop offset="100%" stop-color="#A22218" />
                 </linearGradient>
                 <linearGradient id="rtSegBlack" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#0B0D14" />
-                    <stop offset="100%" stop-color="#131827" />
+                    <stop offset="0%" stop-color="#0D101A" />
+                    <stop offset="100%" stop-color="#13192A" />
                 </linearGradient>
                 <linearGradient id="rtSegGreen" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#1F9A5E" />
-                    <stop offset="100%" stop-color="#0D7042" />
+                    <stop offset="0%" stop-color="#21945C" />
+                    <stop offset="100%" stop-color="#0F7243" />
                 </linearGradient>
             </defs>
         `;
@@ -198,15 +192,9 @@
 
         chrome += `<rect x="${boardX}" y="${boardY}" width="${boardW}" height="${boardH}" rx="${outerR}" class="rt-board" />`;
         chrome += `<path d="M ${centerX} ${cyTop} L ${centerX} ${cyBottom} A ${innerR} ${innerR} 0 0 0 ${centerX + centerW} ${cyBottom} L ${centerX + centerW} ${cyTop} A ${innerR} ${innerR} 0 0 0 ${centerX} ${cyTop} Z" class="rt-core-shell" />`;
-        chrome += `<path d="M ${centerX + 10} ${cyTop + 12} L ${centerX + 10} ${cyBottom - 12} A ${innerR - 10} ${innerR - 10} 0 0 0 ${centerX + centerW - 10} ${cyBottom - 12} L ${centerX + centerW - 10} ${cyTop + 12} A ${innerR - 10} ${innerR - 10} 0 0 0 ${centerX + 10} ${cyTop + 12} Z" class="rt-core-glow" />`;
+        chrome += `<path d="M ${centerX + 4} ${cyTop + 5} L ${centerX + 4} ${cyBottom - 5} A ${innerR - 4} ${innerR - 4} 0 0 0 ${centerX + centerW - 4} ${cyBottom - 5} L ${centerX + centerW - 4} ${cyTop + 5} A ${innerR - 4} ${innerR - 4} 0 0 0 ${centerX + 4} ${cyTop + 5} Z" class="rt-core-glow" />`;
         chrome += `<rect x="${cx - (zeroCapsuleW / 2)}" y="${zeroCapsuleY}" width="${zeroCapsuleW}" height="${zeroCapsuleH}" rx="${zeroCapsuleW / 2}" class="rt-zero-zone" />`;
-        chrome += `<path d="M ${boardX - 6} ${cyTop - 18} h 56" class="rt-guide-line" />`;
-        chrome += `<path d="M ${boardX + boardW - 50} ${cyTop - 18} h 56" class="rt-guide-line" />`;
-        chrome += `<path d="M ${boardX - 6} ${cyBottom + 18} h 56" class="rt-guide-line" />`;
-        chrome += `<path d="M ${boardX + boardW - 50} ${cyBottom + 18} h 56" class="rt-guide-line" />`;
 
-        paths += `<line x1="${centerX + dividerInset}" y1="${cyTop + (blockH * 5.1)}" x2="${centerX + centerW - dividerInset}" y2="${cyTop + (blockH * 5.1)}" class="rt-core-divider" />`;
-        paths += `<line x1="${centerX + dividerInset}" y1="${cyTop + (blockH * 10.1)}" x2="${centerX + centerW - dividerInset}" y2="${cyTop + (blockH * 10.1)}" class="rt-core-divider" />`;
         texts += `<text x="${cx}" y="${tierY}" transform="rotate(90, ${cx}, ${tierY})" class="rt-label">TIER</text>`;
         texts += `<text x="${cx}" y="${orphelinsY}" transform="rotate(90, ${cx}, ${orphelinsY})" class="rt-label">ORPHELINS</text>`;
         texts += `<text x="${cx}" y="${voisinsY}" transform="rotate(90, ${cx}, ${voisinsY})" class="rt-label">VOISINS</text>`;
