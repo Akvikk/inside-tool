@@ -1,7 +1,7 @@
 /* --- RACETRACK (PROGRADE) --- */
 #desktopGrid.racetrack-mode {
-    width: clamp(320px, 28vw, 430px);
-    padding: 4px;
+    width: clamp(430px, 34vw, 580px);
+    padding: 10px;
     overflow: hidden;
 }
 
@@ -9,24 +9,31 @@
     width: 100%;
     height: 100%;
     min-height: 0;
-    padding: 0;
+    padding: 18px 14px;
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at top left, rgba(191, 90, 242, 0.14), transparent 42%),
+        radial-gradient(circle at bottom right, rgba(10, 132, 255, 0.18), transparent 48%),
+        linear-gradient(180deg, rgba(15, 10, 36, 0.94), rgba(9, 19, 52, 0.9));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .roulette-racetrack {
     width: 100%;
-    height: 100%;
-    max-width: none;
-    max-height: 100%;
+    height: auto;
+    max-width: 100%;
+    aspect-ratio: 860 / 260;
     display: block;
     margin: 0;
     pointer-events: auto;
     overflow: visible;
-    filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
+    filter: drop-shadow(0 20px 28px rgba(0, 0, 0, 0.34));
 }
 
 .rt-num {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
+    font-size: 16px;
     font-weight: 800;
     pointer-events: none;
     dominant-baseline: central;
@@ -56,16 +63,13 @@
 }
 
 .rt-seg path {
-    fill: rgba(28, 28, 30, 0.65);
-    stroke: rgba(255, 255, 255, 0.08);
-    stroke-width: 1px;
+    stroke: rgba(255, 245, 220, 0.92);
+    stroke-width: 1.5px;
     transition: all 0.2s var(--ease-strike);
 }
 
 .rt-seg:hover path {
-    fill: rgba(255, 255, 255, 0.12);
-    stroke: rgba(255, 255, 255, 0.4);
-    filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.15));
+    filter: brightness(1.1);
 }
 
 .rt-seg:active {
@@ -73,44 +77,63 @@
 }
 
 .rt-seg:active path {
-    fill: rgba(255, 255, 255, 0.2);
     transition: all 0.05s;
 }
 
 .rt-seg:hover .rt-num {
-    font-size: 15px;
+    font-size: 17px;
     text-shadow: 0 0 12px currentColor;
 }
 
-.rt-inner {
-    fill: rgba(20, 20, 22, 0.4);
-    stroke: rgba(255, 255, 255, 0.1);
+.rt-board {
+    fill: url(#rtBoardGrad);
+    stroke: rgba(255, 244, 214, 0.92);
+    stroke-width: 1.6px;
+}
+
+.rt-board-sheen {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.18);
+    stroke-width: 1.4px;
+    stroke-linecap: round;
+}
+
+.rt-zone {
+    fill: url(#rtZoneGrad);
+    stroke: rgba(255, 244, 214, 0.9);
     stroke-width: 1.5px;
 }
 
+.rt-fill-red {
+    fill: url(#rtSegRed);
+}
+
+.rt-fill-black {
+    fill: url(#rtSegBlack);
+}
+
+.rt-fill-green {
+    fill: url(#rtSegGreen);
+}
+
 .rt-label {
-    font-family: 'Inter', sans-serif;
-    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
     font-weight: 800;
-    letter-spacing: 0.3em;
+    letter-spacing: 0.08em;
     text-anchor: middle;
     dominant-baseline: central;
-    fill: rgba(235, 235, 245, 0.25);
+    fill: rgba(249, 232, 203, 0.94);
     pointer-events: none;
     transition: fill 0.3s var(--ease-strike);
 }
 
 .roulette-racetrack:hover .rt-label {
-    fill: rgba(235, 235, 245, 0.4);
-}
-
-.rt-div-line {
-    stroke: rgba(255, 255, 255, 0.08);
-    stroke-width: 1.5px;
+    fill: rgba(255, 245, 220, 1);
 }
 
 @media (max-width: 1279px) {
     #desktopGrid.racetrack-mode {
-        width: clamp(280px, 30vw, 360px);
+        width: clamp(380px, 40vw, 500px);
     }
 }
