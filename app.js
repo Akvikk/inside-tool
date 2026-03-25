@@ -379,64 +379,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             filterBtn.classList.remove('px-3', 'px-4');
             filterBtn.classList.add('px-2', 'flex', 'items-center', 'justify-center');
 
-            // 2. Correct Strategy Switcher Injection into tools container
-            const shellParent = filterBtn.closest('#patternFilterShell') || filterBtn;
-            const toolsGroup = shellParent.closest('.gap-1\\.5') || shellParent.parentNode;
-
-            if (toolsGroup && !document.getElementById('strategySwitcherBtn')) {
-                // Enforce proper header gap spacing and click-target height on the tools container
-                if (toolsGroup.classList.contains('gap-1.5')) {
-                    toolsGroup.classList.replace('gap-1.5', 'gap-2');
-                }
-
-                // (Button resize removed — handled via CSS for responsive sizing)
-
-                const container = document.createElement('div');
-                container.className = 'relative hidden sm:flex items-center';
-
-                const switcher = document.createElement('button');
-                switcher.id = 'strategySwitcherBtn';
-                switcher.className = "flex items-center justify-center h-8 w-8 bg-white/5 hover:bg-white/10 text-[#BF5AF2] rounded-xl border border-[#BF5AF2]/10 transition-all duration-300 active:scale-[0.98]";
-                switcher.innerHTML = '<i class="fas fa-repeat text-sm"></i>';
-
-                const dropdown = document.createElement('div');
-                dropdown.id = 'strategyDropdown';
-                dropdown.className = "hidden absolute top-full right-0 mt-2 w-44 rounded-2xl border border-white/10 bg-[#1C1C1E]/95 backdrop-blur-[40px] shadow-2xl z-[100] overflow-hidden opacity-0 scale-95 transition-all duration-200 origin-top-right";
-
-                const strategies = [
-                    { key: 'series', label: 'SERIES', color: '#0A84FF' },
-                    { key: 'combo', label: 'COMBOS', color: '#BF5AF2' },
-                    { key: 'inside', label: 'PATTERN MODE', color: '#30D158' }
-                ];
-
-                strategies.forEach(s => {
-                    const opt = document.createElement('div');
-                    opt.className = "px-4 py-3 flex items-center gap-3 hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5 last:border-0";
-                    opt.innerHTML = `<div class="w-1.5 h-1.5 rounded-full" style="background: ${s.color}"></div><span class="text-[10px] font-black tracking-widest text-white/70">${s.label}</span>`;
-                    opt.onclick = (e) => {
-                        e.stopPropagation();
-                        if (window.setGameplayStrategy) window.setGameplayStrategy(s.key);
-                        dropdown.classList.add('hidden', 'opacity-0', 'scale-95');
-                    };
-                    dropdown.appendChild(opt);
-                });
-
-                switcher.onclick = (e) => {
-                    e.stopPropagation();
-                    const isHidden = dropdown.classList.contains('hidden');
-                    document.querySelectorAll('#strategyDropdown').forEach(d => d.classList.add('hidden', 'opacity-0', 'scale-95'));
-                    if (isHidden) {
-                        dropdown.classList.remove('hidden');
-                        setTimeout(() => dropdown.classList.remove('opacity-0', 'scale-95'), 10);
-                    }
-                };
-
-                document.addEventListener('click', () => dropdown.classList.add('hidden', 'opacity-0', 'scale-95'));
-
-                container.appendChild(switcher);
-                container.appendChild(dropdown);
-                toolsGroup.insertBefore(container, shellParent.nextSibling);
-            }
+            // (Strategy Switcher handled via index.html for better responsive stability)
         }
 
         const intelBtn = document.getElementById('tabBtnIntelligence');
@@ -483,27 +426,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     const resetBtn = document.getElementById('confirmResetBtn');
     if (resetBtn) resetBtn.addEventListener('click', window.resetData);
 
-    // MORE MENU LOGIC
-    const moreMenuBtn = document.getElementById('moreMenuBtn');
-    const moreMenuDropdown = document.getElementById('moreMenuDropdown');
-    if (moreMenuBtn && moreMenuDropdown) {
-        moreMenuBtn.onclick = (e) => {
-            e.stopPropagation();
-            const isHidden = moreMenuDropdown.classList.contains('hidden');
-            if (isHidden) {
-                moreMenuDropdown.classList.remove('hidden');
-                setTimeout(() => moreMenuDropdown.classList.remove('opacity-0', 'scale-95'), 10);
-            } else {
-                moreMenuDropdown.classList.add('opacity-0', 'scale-95');
-                setTimeout(() => moreMenuDropdown.classList.add('hidden'), 200);
-            }
-        };
-
-        document.addEventListener('click', () => {
-            moreMenuDropdown.classList.add('opacity-0', 'scale-95');
-            setTimeout(() => moreMenuDropdown.classList.add('hidden'), 200);
+    // (More Menu Logic handled via index.html inline onclick for better reliability)
+    
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.dropdown-layer').forEach(d => {
+            d.classList.add('opacity-0', 'scale-95');
+            setTimeout(() => d.classList.add('hidden'), 200);
         });
-    }
+    });
 
     // STRATEGY CYCLING HELPER
     window.cycleGameplayStrategy = function() {
