@@ -8,7 +8,7 @@
         faceGaps: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
         predictionPerimeterWindow: 14,
         perimeterRuleEnabled: true,
-        showOnlyPerimeterBets: false,
+        showOnlyPerimeterBets: true,
         advancementLog: [],
         chatMessageHistory: [],
         patternConfig: {},

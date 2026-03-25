@@ -50,16 +50,18 @@ window.EngineCore = {
         stats.netUnits += unitChange;
         stats.bankrollHistory.push(stats.netUnits);
 
-        if (!stats.patternStats[patternName]) {
-            stats.patternStats[patternName] = { wins: 0, losses: 0 };
+        const groupKey = rawPattern || patternName;
+        if (!stats.patternStats[groupKey]) {
+            stats.patternStats[groupKey] = { wins: 0, losses: 0 };
         }
-        if (isWin) stats.patternStats[patternName].wins++;
-        else stats.patternStats[patternName].losses++;
+        if (isWin) stats.patternStats[groupKey].wins++;
+        else stats.patternStats[groupKey].losses++;
 
         stats.signalLog.push({
             result: isWin ? 'WIN' : 'LOSS',
             units: unitChange,
             patternName: patternName,
+            filterKey: groupKey,
             rawStrategy: rawStrategy,
             rawPattern: rawPattern,
             spinIndex: spinIndex,
@@ -257,6 +259,7 @@ window.EngineCore = {
                             const count = window.FACES && window.FACES[bet.targetFace] ? window.FACES[bet.targetFace].nums.length : 0;
                             const unitChange = isWin ? (35 - count) : -count;
                             const pName = bet.patternName || 'Unknown';
+                            const fKey = bet.filterKey || pName;
 
                             if (isWin) {
                                 eStats.totalWins++;
@@ -268,11 +271,11 @@ window.EngineCore = {
                             eStats.netUnits += unitChange;
                             eStats.bankrollHistory.push(eStats.netUnits);
 
-                            if (!eStats.patternStats[pName]) eStats.patternStats[pName] = { wins: 0, losses: 0 };
-                            if (isWin) eStats.patternStats[pName].wins++;
-                            else eStats.patternStats[pName].losses++;
+                            if (!eStats.patternStats[fKey]) eStats.patternStats[fKey] = { wins: 0, losses: 0 };
+                            if (isWin) eStats.patternStats[fKey].wins++;
+                            else eStats.patternStats[fKey].losses++;
 
-                            eStats.signalLog.push({ result: isWin ? 'WIN' : 'LOSS', units: unitChange, patternName: pName, spinIndex: spin.index, spinNum: spin.num });
+                            eStats.signalLog.push({ result: isWin ? 'WIN' : 'LOSS', units: unitChange, patternName: pName, filterKey: fKey, spinIndex: spin.index, spinNum: spin.num });
 
                             if (bet.confirmed && window.updateUserStats) window.updateUserStats(isWin, bet, spin.index, unitChange);
                         });

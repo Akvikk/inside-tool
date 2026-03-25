@@ -50,6 +50,12 @@
             const titleColor = bet.confirmed ? 'text-white drop-shadow-md' : 'text-white/80';
             const subColor = bet.confirmed ? 'text-white/80' : 'text-white/40';
 
+            const stats = (state.engineStats && state.engineStats.patternStats) ? state.engineStats.patternStats : {};
+            const pStat = stats[filterKey] || stats[bet.patternName] || { wins: 0, losses: 0 };
+            const total = pStat.wins + pStat.losses;
+            const accuracy = total > 0 ? Math.round((pStat.wins / total) * 100) : 0;
+            const accuracyHTML = total > 0 ? `<span class="text-xs font-bold opacity-50 ml-1">(${accuracy}%)</span>` : '';
+
             cards.push(`
                 <div class="min-w-[240px] min-h-[60px] px-3.5 py-2 rounded-[16px] flex items-center justify-between cursor-pointer select-none transition-all duration-300 hover:-translate-y-0.5"
                      ondblclick="if(window.toggleBetConfirmation) window.toggleBetConfirmation(${index})"
@@ -59,7 +65,7 @@
                         <div class="w-1 h-8 rounded-full" style="background: ${accent}; box-shadow: 0 0 8px ${accent};"></div>
                         <div class="flex flex-col min-w-0">
                             <div class="flex items-center">
-                                <span class="text-[15px] leading-tight font-black tracking-widest uppercase ${titleColor}">F${bet.targetFace} TARGET</span>
+                                <span class="text-[15px] leading-tight font-black tracking-widest uppercase ${titleColor}">F${bet.targetFace}${accuracyHTML}</span>
                                 ${perimeterBadge}
                             </div>
                             <span class="text-[9px] leading-tight font-bold tracking-widest uppercase ${subColor} mt-0.5 truncate max-w-[140px]">${subtitle}</span>
