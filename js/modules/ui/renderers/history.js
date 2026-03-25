@@ -26,25 +26,14 @@
 
         if (spin.resolvedBets && spin.resolvedBets.length > 0) {
             const resultsHtml = spin.resolvedBets.map(bet => {
-                const icon = bet.isWin ? '<i class="fas fa-check-circle text-[10px]"></i>' : '<i class="fas fa-times-circle text-[10px]"></i>';
-                const status = bet.isWin ? 'WIN' : 'LOSS';
-                const tone = bet.isWin ? 'prediction-entry--win' : 'prediction-entry--loss';
+                const icon = bet.isWin ? '<i class="fas fa-check-circle animate-pulse"></i>' : '<i class="fas fa-times-circle"></i>';
                 const detail = window.formatPredictionDetail(bet) || 'Perimeter';
                 const color = bet.isWin ? '#30D158' : '#FF453A';
 
-                return `
-                    <div class="prediction-entry ${tone} flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-white/5 bg-white/5" style="border-left: 2px solid ${color};">
-                        <span class="prediction-entry-status flex items-center gap-1 font-black text-[9px]">${icon}${status}</span>
-                        <span class="prediction-entry-detail opacity-60 text-[9px] font-bold">${detail}</span>
-                    </div>
-                `;
-            }).join('');
+                return `<span class="inline-flex items-center gap-1.5 font-black text-[10px] tracking-tight uppercase" style="color: ${color}; text-shadow: 0 0 8px ${color}33;">${icon}<span class="text-white/90 font-bold">${detail}</span></span>`;
+            }).join('<span class="mx-2 text-white/10 font-thin">|</span>');
 
-            blocks.push(`
-                <div class="prediction-entry-block flex flex-wrap gap-1 mb-1.5">
-                    ${resultsHtml}
-                </div>
-            `);
+            blocks.push(`<div class="flex flex-wrap items-center leading-none py-1">${resultsHtml}</div>`);
         }
 
         const signals = spin.newSignals || [];
@@ -283,7 +272,7 @@
                     // 1. Resolve Turn (for the bets made after the PREVIOUS spin)
                     if (window.EngineCore && typeof window.EngineCore.resolveTurn === 'function') {
                         try {
-                            window.EngineCore.resolveTurn(val, matchedFaceMask, stateRef.activeBets, stateRef.currentGameplayStrategy, null, {
+                            window.EngineCore.resolveTurn(val, matchedFaceMask, stateRef.activeBets, stateRef.currentGameplayStrategy, window.updateUserStats, {
                                 historyLength: stateRef.history.length,
                                 faceMasks: faceMasks,
                                 faces: faces
@@ -348,6 +337,18 @@
             const alerts = window.scanAllStrategies ? await window.scanAllStrategies() : [];
             if (window.renderDashboardSafe) window.renderDashboardSafe(alerts);
             if (window.HudManager) window.HudManager.update();
+            
+            // CRITICAL: Ensure the global engineStats.signalLog is synced with the internal EngineCore stats
+            if (window.state && window.state.engineStats && window.EngineCore && window.EngineCore.stats) {
+                window.state.engineStats.signalLog = [...(window.EngineCore.stats.signalLog || [])];
+                window.state.engineStats.totalWins = window.EngineCore.stats.totalWins;
+                window.state.engineStats.totalLosses = window.EngineCore.stats.totalLosses;
+                window.state.engineStats.netUnits = window.EngineCore.stats.netUnits;
+                window.state.engineStats.currentStreak = window.EngineCore.stats.currentStreak;
+                window.state.engineStats.bankrollHistory = [...(window.EngineCore.stats.bankrollHistory || [0])];
+                window.state.engineStats.patternStats = JSON.parse(JSON.stringify(window.EngineCore.stats.patternStats || {}));
+            }
+
             if (window.saveSessionData) window.saveSessionData();
             if (window.syncAppStore) window.syncAppStore();
         } finally {
