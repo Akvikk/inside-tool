@@ -308,6 +308,18 @@
                         <div class="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-[#FF9F0A] transition-all duration-300 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all after:duration-300 peer-checked:after:translate-x-full after:shadow-md"></div>
                     </label>
                 </div>
+                <!-- Show Only Perimeter Bets Toggle Row -->
+                <div id="showOnlyPerimeterRow" class="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.02]">
+                    <span class="text-[11px] font-bold text-white/70 tracking-wide flex items-center">
+                        <i class="fas fa-filter mr-2 text-[#FF9F0A] text-[10px]"></i>
+                        Show Only Perimeter Bets
+                    </span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="showOnlyPerimeterToggle" class="sr-only peer"
+                            onchange="if(window.toggleShowOnlyPerimeterBets) window.toggleShowOnlyPerimeterBets()">
+                        <div class="w-9 h-5 bg-white/10 rounded-full peer peer-checked:bg-[#FF9F0A] transition-all duration-300 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all after:duration-300 peer-checked:after:translate-x-full after:shadow-md"></div>
+                    </label>
+                </div>
                 <!-- Slider Row -->
                 <div id="perimeterSliderContainer" class="p-2.5 rounded-lg bg-white/[0.02]">
                     <div class="flex items-center justify-between mb-2">

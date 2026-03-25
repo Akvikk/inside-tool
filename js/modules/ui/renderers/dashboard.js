@@ -14,6 +14,12 @@
             const filterKey = bet.filterKey || bet.patternName;
             if (patternConf[filterKey] === false) return;
 
+            // If "Show Only Perimeter Bets" is on, skip bets with no perimeter hits
+            if (state.showOnlyPerimeterBets && state.perimeterRuleEnabled && typeof window.calculatePerimeterFrequency === 'function') {
+                const freq = window.calculatePerimeterFrequency(bet);
+                if (freq === 0) return;
+            }
+
             const subtitle = bet.subtitle || (bet.comboLabel ? `${bet.comboLabel} combo` : bet.patternName);
             const accent = bet.accentColor || '#FF3B30';
 

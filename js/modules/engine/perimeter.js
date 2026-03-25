@@ -107,7 +107,7 @@
 
         state.perimeterRuleEnabled = !state.perimeterRuleEnabled;
 
-        // Sync the toggle UI
+        // Sync the main enable toggle UI
         const toggle = document.getElementById('perimeterToggle');
         if (toggle) toggle.checked = state.perimeterRuleEnabled;
 
@@ -118,7 +118,41 @@
             sliderContainer.style.pointerEvents = state.perimeterRuleEnabled ? 'auto' : 'none';
         }
 
+        // When perimeter is disabled, reset & grey-out the "show only" filter toggle
+        const filterToggleRow = document.getElementById('showOnlyPerimeterRow');
+        const filterToggle = document.getElementById('showOnlyPerimeterToggle');
+        if (!state.perimeterRuleEnabled) {
+            state.showOnlyPerimeterBets = false;
+            if (filterToggle) filterToggle.checked = false;
+        }
+        if (filterToggleRow) {
+            filterToggleRow.style.opacity = state.perimeterRuleEnabled ? '1' : '0.3';
+            filterToggleRow.style.pointerEvents = state.perimeterRuleEnabled ? 'auto' : 'none';
+        }
+
         // Re-render dashboard to show/hide perimeter badges
+        if (window.renderDashboardSafe) {
+            window.renderDashboardSafe(state.activeBets || []);
+        }
+
+        if (window.saveSessionData) window.saveSessionData();
+    };
+
+    /**
+     * Toggle the "show only perimeter bets" filter on/off.
+     * When on, the dashboard only renders bets that have freq > 0 in the perimeter window.
+     */
+    window.toggleShowOnlyPerimeterBets = function () {
+        const state = window.state;
+        if (!state || !state.perimeterRuleEnabled) return;
+
+        state.showOnlyPerimeterBets = !state.showOnlyPerimeterBets;
+
+        // Sync the checkbox
+        const toggle = document.getElementById('showOnlyPerimeterToggle');
+        if (toggle) toggle.checked = state.showOnlyPerimeterBets;
+
+        // Re-render dashboard with the new filter applied
         if (window.renderDashboardSafe) {
             window.renderDashboardSafe(state.activeBets || []);
         }
@@ -157,18 +191,28 @@
         const state = window.state;
         if (!state) return;
 
+        const enabled = state.perimeterRuleEnabled !== false;
+
         const toggle = document.getElementById('perimeterToggle');
         const slider = document.getElementById('perimeterSlider');
         const label = document.getElementById('perimeterWindowLabel');
         const sliderContainer = document.getElementById('perimeterSliderContainer');
+        const filterToggleRow = document.getElementById('showOnlyPerimeterRow');
+        const filterToggle = document.getElementById('showOnlyPerimeterToggle');
 
-        if (toggle) toggle.checked = state.perimeterRuleEnabled !== false;
+        if (toggle) toggle.checked = enabled;
         if (slider) slider.value = state.predictionPerimeterWindow || 14;
         if (label) label.textContent = state.predictionPerimeterWindow || 14;
         if (sliderContainer) {
-            const enabled = state.perimeterRuleEnabled !== false;
             sliderContainer.style.opacity = enabled ? '1' : '0.3';
             sliderContainer.style.pointerEvents = enabled ? 'auto' : 'none';
+        }
+
+        // Sync the "show only" filter toggle
+        if (filterToggle) filterToggle.checked = enabled ? (state.showOnlyPerimeterBets === true) : false;
+        if (filterToggleRow) {
+            filterToggleRow.style.opacity = enabled ? '1' : '0.3';
+            filterToggleRow.style.pointerEvents = enabled ? 'auto' : 'none';
         }
     };
 
