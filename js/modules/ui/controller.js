@@ -106,17 +106,17 @@
     window.handleGridClick = handleGridClick;
 
     function buildRacetrackSVG() {
-        const svgW = 200;
-        const svgH = 520;
+        const svgW = 300;
+        const svgH = 560;
 
-        const trackThickness = 36;
-        const innerR = 26;
-        const outerR = innerR + trackThickness; // 62
+        const trackThickness = 60;
+        const innerR = 58;
+        const outerR = innerR + trackThickness; // 118
 
-        const cx = 100;
-        const cy1 = 84;
-        const cy2 = 436; // 84 + (16 * 22)
-        const blockH = 22; // 16 * 22 = 352
+        const cx = 150;
+        const cy1 = 90;
+        const blockH = 23.75;
+        const cy2 = cy1 + (16 * blockH);
 
         const rightArray = [5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35];
         const leftArray = [32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8];
@@ -152,15 +152,15 @@
         paths += `<path d="M ${cx - innerR} ${cy1} L ${cx - innerR} ${cy2} A ${innerR} ${innerR} 0 0 0 ${cx + innerR} ${cy2} L ${cx + innerR} ${cy1} A ${innerR} ${innerR} 0 0 0 ${cx - innerR} ${cy1} Z" class="rt-inner" />`;
 
         // Division Lines inside the track
-        paths += `<line x1="${cx - innerR}" y1="180" x2="${cx + innerR}" y2="180" class="rt-div-line" />`;
-        paths += `<line x1="${cx - innerR}" y1="280" x2="${cx + innerR}" y2="280" class="rt-div-line" />`;
-        paths += `<path d="M ${cx - innerR} 380 C ${cx - innerR + 10} 360, ${cx + innerR - 10} 360, ${cx + innerR} 380" fill="none" class="rt-div-line" />`;
+        paths += `<line x1="${cx - innerR}" y1="188" x2="${cx + innerR}" y2="188" class="rt-div-line" />`;
+        paths += `<line x1="${cx - innerR}" y1="298" x2="${cx + innerR}" y2="298" class="rt-div-line" />`;
+        paths += `<path d="M ${cx - innerR} 410 C ${cx - innerR + 18} 384, ${cx + innerR - 18} 384, ${cx + innerR} 410" fill="none" class="rt-div-line" />`;
 
         // Static text overlays (Rotated down for elegant fit)
-        texts += `<text x="${cx}" y="130" transform="rotate(90, ${cx}, 130)" class="rt-label">TIER</text>`;
-        texts += `<text x="${cx}" y="230" transform="rotate(90, ${cx}, 230)" class="rt-label">ORPHELINS</text>`;
-        texts += `<text x="${cx}" y="330" transform="rotate(90, ${cx}, 330)" class="rt-label">VOISINS</text>`;
-        texts += `<text x="${cx}" y="415" transform="rotate(90, ${cx}, 415)" class="rt-label">ZERO</text>`;
+        texts += `<text x="${cx}" y="138" transform="rotate(90, ${cx}, 138)" class="rt-label">TIER</text>`;
+        texts += `<text x="${cx}" y="248" transform="rotate(90, ${cx}, 248)" class="rt-label">ORPHELINS</text>`;
+        texts += `<text x="${cx}" y="360" transform="rotate(90, ${cx}, 360)" class="rt-label">VOISINS</text>`;
+        texts += `<text x="${cx}" y="458" transform="rotate(90, ${cx}, 458)" class="rt-label">ZERO</text>`;
 
         let createGroup = (num, pathD, tx, ty) => {
             return `<g class="rt-seg cursor-pointer transition-all duration-300 hover:brightness-125 active:scale-[0.92] origin-center" style="transform-box: fill-box;" onclick="handleGridClick(${num})">
