@@ -196,7 +196,7 @@
         paths += createGroup(10, getWedgePath(cx, cy1, innerR, outerR, 270, 360), cx + tr * Math.cos(315 * Math.PI / 180), cy1 + tr * Math.sin(315 * Math.PI / 180));
 
         return `
-            <svg id="racetrackSvg" width="100%" viewBox="0 0 ${svgW} ${svgH}" class="roulette-racetrack">
+            <svg id="racetrackSvg" width="100%" height="100%" viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="none" class="roulette-racetrack">
                 ${paths}
                 ${texts}
             </svg>
@@ -207,13 +207,14 @@
         const grid = document.getElementById('desktopGrid');
         if (!grid) return;
         const layout = (window.state && window.state.currentInputLayout) ? window.state.currentInputLayout : 'grid';
+        grid.classList.toggle('racetrack-mode', layout === 'racetrack');
         if (layout === 'racetrack') {
             grid.innerHTML = `
-                <div class="flex items-center justify-center h-full w-full py-4 fade-in">
+                <div class="racetrack-shell flex items-center justify-center h-full w-full fade-in">
                     ${buildRacetrackSVG()}
                 </div>
             `;
-            grid.classList.remove('p-3');
+            grid.classList.remove('p-2', 'p-3');
         } else {
             const RED_NUMS = window.config && window.config.RED_NUMS ? window.config.RED_NUMS : [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
             let gridHtml = '<div class="grid grid-cols-3 gap-1.5 w-full">';
