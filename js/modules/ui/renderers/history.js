@@ -44,7 +44,10 @@
         // 2. Yield & Signal Lines (Combined)
         let totalYield = 0;
         const yieldLines = resolved.map(bet => {
-            const uc = bet.unitChange !== undefined ? bet.unitChange : (bet.isWin ? 29 : -7);
+            let betSize = 7;
+            const face = parseInt(bet.targetFace);
+            if (face === 2 || face === 4 || face === 5) betSize = 9;
+            const uc = bet.unitChange !== undefined ? bet.unitChange : (bet.isWin ? (36 - betSize) : -betSize);
             totalYield += uc;
             const sign = uc >= 0 ? '+' : '-';
             const color = uc >= 0 ? '#30D158' : '#FF453A';
