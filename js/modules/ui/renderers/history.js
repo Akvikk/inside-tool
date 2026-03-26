@@ -41,43 +41,30 @@
             return `<span class="inline-flex items-center gap-1.5 font-black text-[10px] tracking-tight uppercase" style="color: ${color}; text-shadow: 0 0 8px ${color}33;">${icon}<span class="text-white/90 font-bold">${detail}</span></span>`;
         }).join('<span class="mx-2 text-white/10 font-thin">|</span>');
 
-        // 2. Yield Tooltip Content
+        // 2. Yield & Signal Lines (Combined)
         let totalYield = 0;
-        const yieldLines = resolved.map((bet, index) => {
+        const yieldLines = resolved.map(bet => {
             const uc = bet.unitChange !== undefined ? bet.unitChange : (bet.isWin ? 29 : -7);
             totalYield += uc;
             const sign = uc >= 0 ? '+' : '-';
             const color = uc >= 0 ? '#30D158' : '#FF453A';
             const detail = window.formatPredictionDetail(bet) || 'Bet';
-            const delay = 50 + (index * 40);
-            return `<div class="mb-1.5 last:mb-0 opacity-0 translate-y-1 animate-in fill-mode-forwards transition-all duration-300 flex items-center justify-between gap-4" style="animation-delay: ${delay}ms">
-                        <span class="font-bold text-white/70">${detail}</span>
-                        <span class="font-black" style="color: ${color};">${Math.abs(uc)} U ${sign}</span>
+            return `<div class="mb-1 last:mb-0 flex items-center justify-between gap-4 font-bold text-white/80">
+                        <span>${detail}</span>
+                        <span style="color: ${color};">(${Math.abs(uc)} U ${sign})</span>
+                    </div>`;
+        }).join('');
+
+        const signalLines = signals.map(sig => {
+            const detail = window.formatPredictionDetail(sig) || 'Prediction';
+            return `<div class="mb-1 last:mb-0 flex items-center justify-between gap-4 font-bold text-white/40 italic">
+                        <span>${detail}</span>
+                        <span>(Live)</span>
                     </div>`;
         }).join('');
 
         const totalColor = totalYield >= 0 ? '#30D158' : '#FF453A';
         const totalSign = totalYield >= 0 ? '+' : '-';
-
-        // 3. Signals Tooltip Content
-        const signalLines = signals.map((sig, index) => {
-            const detail = window.formatPredictionDetail(sig) || 'Prediction Perimeter';
-            const reasonStr = sig.reason ? `<div class="text-white/50 text-[9px] mt-0.5 leading-tight">${sig.reason}</div>` : '';
-            let metaColor = null;
-            let metaIcon = 'fa-bolt';
-            if (strategy && strategy.PATTERN_FILTER_META && strategy.PATTERN_FILTER_META[sig.filterKey]) {
-                metaColor = strategy.PATTERN_FILTER_META[sig.filterKey].accent;
-                if (strategy.PATTERN_FILTER_META[sig.filterKey].icon) metaIcon = strategy.PATTERN_FILTER_META[sig.filterKey].icon;
-            }
-            const color = sig.accentColor || metaColor || '#BF5AF2';
-            const delay = 100 + (index * 60);
-            return `<div class="mb-1.5 last:mb-0 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out" style="transition-delay: ${delay}ms">
-                        <div class="font-bold tracking-wide flex items-center gap-1.5" style="color: ${color}; text-shadow: 0 2px 4px rgba(0,0,0,0.5), 0 0 10px currentColor;">
-                            <i class="fas ${metaIcon} opacity-80 text-[10px]"></i><span>${detail}</span>
-                        </div>
-                        ${reasonStr}
-                    </div>`;
-        }).join('');
 
         // 4. Combined Assembly
         const yieldLabel = `<span class="text-white/40 group-hover:text-[#30D158] transition-all duration-300 ml-auto"><i class="fas fa-wallet mr-1"></i>Yield</span>`;
@@ -96,19 +83,15 @@
                             ${yieldLabel}
                         </div>
                     </div>
-                    <div class="absolute bottom-full right-0 mb-2 w-max min-w-[190px] p-3 bg-[#1C1C1E]/95 border border-white/[0.08] text-white/90 text-[10px] rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-[110] backdrop-blur-3xl pointer-events-none">
+                    <!-- Simplified Clean-Box Tooltip -->
+                    <div class="absolute bottom-full right-0 mb-2 w-max min-w-[190px] p-2.5 bg-[#1C1C1E]/98 border border-white/[0.12] text-white/90 text-[10px] rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[120] backdrop-blur-3xl pointer-events-none">
+                        ${yieldLines}
+                        ${signalLines}
                         ${resolved.length > 0 ? `
-                            <div class="text-[9px] font-black uppercase tracking-widest text-white/30 mb-2 pb-1 border-b border-white/5">Performance</div>
-                            ${yieldLines}
-                            <div class="mt-2 pt-2 border-t border-white/10 flex items-center justify-between font-black uppercase tracking-widest text-[9px]">
-                                <span>NET UNIT</span>
-                                <span style="color: ${totalColor}; text-shadow: 0 0 10px ${totalColor}55;">${Math.abs(totalYield)} U ${totalSign}</span>
+                            <div class="mt-2 pt-2 border-t border-white/10 flex items-center justify-between font-black uppercase tracking-widest text-[10px]">
+                                <span>NET UNIT -</span>
+                                <span style="color: ${totalColor}; text-shadow: 0 0 10px ${totalColor}55;">(${Math.abs(totalYield)} U ${totalSign})</span>
                             </div>
-                        ` : ''}
-                        
-                        ${signals.length > 0 ? `
-                            <div class="text-[9px] font-black uppercase tracking-widest text-white/30 mb-2 ${resolved.length > 0 ? 'mt-4' : ''} pb-1 border-b border-white/5">Live Alerts</div>
-                            ${signalLines}
                         ` : ''}
                     </div>
                 </div>

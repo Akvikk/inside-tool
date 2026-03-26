@@ -62,19 +62,19 @@
             const accuracyHTML = total > 0 ? `<span class="text-[10px] font-bold opacity-50 ml-1">(${accuracy}%)</span>` : '';
             const bgClass = bet.confirmed ? 'opacity-100' : 'opacity-90';
 
-            cards.push(`
-                <div class="min-w-[160px] min-h-[38px] px-2 py-1 rounded-[12px] flex items-center justify-between cursor-pointer select-none transition-all duration-300 hover:bg-white/[0.05] ${bgClass}"
+             cards.push(`
+                <div class="min-w-[160px] min-h-[38px] px-3 py-1.5 rounded-[12px] flex items-center justify-between cursor-pointer select-none prediction-card-premium ${bgClass}"
                      ondblclick="if(window.toggleBetConfirmation) window.toggleBetConfirmation(${index})"
                      title="Double-click to ${bet.confirmed ? 'unselect' : 'select'}"
-                     style="${bgStyle} ${borderStyle}">
+                     style="${bgStyle} ${borderStyle} --card-accent-var: ${accent};">
                     <div class="flex items-center gap-2 min-w-0">
-                        <div class="w-1 h-6 rounded-full" style="background: ${accent}; box-shadow: 0 0 6px ${accent};"></div>
+                        <div class="w-1 h-6 rounded-full" style="background: ${accent}; box-shadow: 0 0 10px ${accent};"></div>
                         <div class="flex flex-col min-w-0">
                             <div class="flex items-center">
-                                <span class="text-[13px] leading-tight font-black tracking-widest uppercase ${titleColor}">F${bet.targetFace}${accuracyHTML}</span>
+                                <span class="text-[14px] leading-tight font-black tracking-tighter uppercase ${titleColor}">F${bet.targetFace}${accuracyHTML}</span>
                                 ${perimeterBadge}
                             </div>
-                            <span class="text-[8px] leading-tight font-bold tracking-widest uppercase ${subColor} mt-0.5 truncate max-w-[100px]">${subtitle}</span>
+                            <span class="text-[9px] leading-tight font-extrabold tracking-widest uppercase ${subColor} mt-0.5 truncate max-w-[100px]">${subtitle}</span>
                         </div>
                     </div>
                     ${iconHTML}
