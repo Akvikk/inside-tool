@@ -122,7 +122,7 @@ window.EngineCore = {
                 const mask = faceMasks[bet.targetFace] || 0;
                 const isWin = (matchedFaceMask & mask) !== 0;
                 const count = faces[bet.targetFace] ? faces[bet.targetFace].nums.length : 0;
-                const unitChange = isWin ? (35 - count) : -count;
+                const unitChange = isWin ? (36 - count) : -count;
 
                 const pFreq = (typeof window.calculatePerimeterFrequency === 'function') ? window.calculatePerimeterFrequency(bet) : (bet.perimeterFreq || 0);
                 this.updateStats(isWin, bet.patternName, unitChange, bet.strategy || currentGameplayStrategy, bet.filterKey || bet.patternName, historyLength, val, pFreq);
@@ -163,7 +163,7 @@ window.EngineCore = {
             bgBets.forEach(bet => {
                 const isWin = (matchedFaceMask & (faceMasks[bet.targetFace] || 0)) !== 0;
                 const count = faces[bet.targetFace] ? faces[bet.targetFace].nums.length : 0;
-                const unitChange = isWin ? (35 - count) : -count;
+                const unitChange = isWin ? (36 - count) : -count;
 
                 const pFreq = (typeof window.calculatePerimeterFrequency === 'function') ? window.calculatePerimeterFrequency(bet) : (bet.perimeterFreq || 0);
                 this.updateStats(isWin, bet.patternName, unitChange, bet.strategy || stratKey, bet.filterKey || bet.patternName, historyLength, val, pFreq);
