@@ -23,7 +23,7 @@
         if (state.currentGameplayStrategy !== 'inside') return 0;
 
         const history = state.history || [];
-        const windowSize = windowOverride || state.predictionPerimeterWindow || 14;
+        const windowSize = windowOverride || state.predictionPerimeterWindow || 8;
 
         if (history.length === 0) return 0;
 
@@ -170,7 +170,7 @@
         if (!state) return;
 
         const val = parseInt(value, 10);
-        if (isNaN(val) || val < 14 || val > 50) return;
+        if (isNaN(val) || val < 8 || val > 50) return;
 
         state.predictionPerimeterWindow = val;
 
@@ -203,8 +203,8 @@
         const filterToggle = document.getElementById('showOnlyPerimeterToggle');
 
         if (toggle) toggle.checked = enabled;
-        if (slider) slider.value = state.predictionPerimeterWindow || 14;
-        if (label) label.textContent = state.predictionPerimeterWindow || 14;
+        if (slider) slider.value = state.predictionPerimeterWindow || 8;
+        if (label) label.textContent = state.predictionPerimeterWindow || 8;
         if (sliderContainer) {
             sliderContainer.style.opacity = enabled ? '1' : '0.3';
             sliderContainer.style.pointerEvents = enabled ? 'auto' : 'none';
