@@ -245,7 +245,7 @@
             window.state.activeBets = [];
             window.state.faceGaps = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
             window.state.globalSpinIdCounter = 0;
-            if (!window.state.userStats) window.state.userStats = { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
+            window.state.userStats = { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
             if (!window.state.engineStats) window.state.engineStats = { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {}, signalLog: [] };
             window.state.engineSnapshot = null;
             window.state.currentNeuralSignal = null;
