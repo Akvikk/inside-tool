@@ -40,8 +40,8 @@
                 : `background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(24px) saturate(150%); -webkit-backdrop-filter: blur(24px) saturate(150%);`;
 
             const borderStyle = bet.confirmed
-                ? `border: 1px solid ${accent}80; box-shadow: 0 8px 32px ${accent}20, inset 0 1px 1px rgba(255,255,255,0.2);`
-                : `border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 4px 16px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.05);`;
+                ? `border: 1px solid ${accent}; box-shadow: 0 0 12px ${accent}40, inset 0 1px 1px rgba(255,255,255,0.2);`
+                : `border: 1px solid ${accent}40; box-shadow: 0 0 8px ${accent}20, inset 0 1px 1px rgba(255,255,255,0.05);`;
 
             const iconHTML = bet.confirmed
                 ? `<div class="h-6 w-6 rounded-full flex items-center justify-center shadow-lg" style="background: linear-gradient(135deg, ${accent}, ${accent}90)"><i class="fas fa-check text-[10px] text-white"></i></div>`

@@ -33,7 +33,7 @@
                 return `<span class="inline-flex items-center gap-1.5 font-black text-[10px] tracking-tight uppercase" style="color: ${color}; text-shadow: 0 0 8px ${color}33;">${icon}<span class="text-white/90 font-bold">${detail}</span></span>`;
             }).join('<span class="mx-2 text-white/10 font-thin">|</span>');
 
-            blocks.push(`<div class="flex flex-wrap items-center leading-none py-1">${resultsHtml}</div>`);
+            blocks.push(`<div class="flex flex-wrap items-center leading-none">${resultsHtml}</div>`);
         }
 
         const signals = spin.newSignals || [];

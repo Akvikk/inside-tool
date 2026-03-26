@@ -43,7 +43,7 @@
 .prediction-cell-content {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 2px;
     width: 100%;
     min-width: 0;
 }
@@ -51,7 +51,7 @@
 .prediction-entry-block {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 1px;
     width: 100%;
 }
 
@@ -72,7 +72,7 @@
     gap: 6px;
     flex-shrink: 0;
     font-family: inherit;
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 800;
     letter-spacing: normal;
     white-space: nowrap;
@@ -102,7 +102,7 @@
 .prediction-entry-detail {
     min-width: 0;
     color: rgba(255, 255, 255, 0.9);
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 800;
     line-height: 1.4;
     text-align: right;
