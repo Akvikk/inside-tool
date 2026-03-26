@@ -29,11 +29,42 @@
                 const icon = bet.isWin ? '<i class="fas fa-check-circle animate-pulse"></i>' : '<i class="fas fa-times-circle"></i>';
                 const detail = window.formatPredictionDetail(bet) || 'Perimeter';
                 const color = bet.isWin ? '#30D158' : '#FF453A';
-
                 return `<span class="inline-flex items-center gap-1.5 font-black text-[10px] tracking-tight uppercase" style="color: ${color}; text-shadow: 0 0 8px ${color}33;">${icon}<span class="text-white/90 font-bold">${detail}</span></span>`;
             }).join('<span class="mx-2 text-white/10 font-thin">|</span>');
 
-            blocks.push(`<div class="flex flex-wrap items-center leading-none">${resultsHtml}</div>`);
+            let totalYield = 0;
+            const yieldLines = spin.resolvedBets.map(bet => {
+                const uc = bet.unitChange || 0;
+                totalYield += uc;
+                const sign = uc >= 0 ? '+' : '-';
+                const color = uc >= 0 ? '#30D158' : '#FF453A';
+                const detail = window.formatPredictionDetail(bet) || 'Bet';
+                return `<div class="mb-1.5 last:mb-0 flex items-center justify-between gap-4">
+                            <span class="font-bold text-white/70">${detail}</span>
+                            <span class="font-black" style="color: ${color};">${Math.abs(uc)} U ${sign}</span>
+                        </div>`;
+            }).join('');
+
+            const totalColor = totalYield >= 0 ? '#30D158' : '#FF453A';
+            const totalSign = totalYield >= 0 ? '+' : '-';
+
+            blocks.push(`
+                <div class="prediction-entry-block group relative inline-block w-full">
+                    <div class="prediction-entry flex items-center justify-between">
+                        <div class="flex flex-wrap items-center leading-none">${resultsHtml}</div>
+                        <span class="prediction-entry-detail text-white/50 group-hover:text-[#30D158] transition-all duration-300 cursor-help ml-auto">
+                            <i class="fas fa-wallet mr-1"></i>Yield
+                        </span>
+                    </div>
+                    <div class="absolute bottom-full right-0 mb-2 w-max min-w-[170px] p-2.5 bg-[#1C1C1E]/95 border border-white/[0.08] text-white/90 text-[10px] rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-[101] backdrop-blur-xl pointer-events-none">
+                        ${yieldLines}
+                        <div class="mt-2 pt-2 border-t border-white/10 flex items-center justify-between font-black uppercase tracking-widest text-[9px]">
+                            <span>NET UNIT</span>
+                            <span style="color: ${totalColor}; text-shadow: 0 0 10px ${totalColor}55;">${Math.abs(totalYield)} U ${totalSign}</span>
+                        </div>
+                    </div>
+                </div>
+            `);
         }
 
         const signals = spin.newSignals || [];

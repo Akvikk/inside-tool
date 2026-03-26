@@ -148,7 +148,8 @@ window.EngineCore = {
                     reason: bet.reason || bet.subtitle || '',
                     mode: bet.mode || null,
                     status: bet.status || 'GO',
-                    signalSource: bet.signalSource || 'math'
+                    signalSource: bet.signalSource || 'math',
+                    unitChange: unitChange
                 });
             });
         }
