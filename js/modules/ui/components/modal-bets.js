@@ -95,7 +95,7 @@
                         <td class="p-4 text-white/40 font-mono text-[10px]">${stats.betLog.length - idx}</td>
                         <td class="p-4"><span class="px-2.5 py-1 rounded-md text-xs font-medium bg-white/5 border border-white/[0.08]" style="color: ${bet.accentColor || '#FFFFFF'};">${bet.patternName}</span></td>
                         <td class="p-4 text-center font-medium text-white/90 text-sm">F${bet.targetFace}</td>
-                        <td class="p-4 text-right font-medium ${bet.isWin ? 'text-[#32D74B]' : 'text-[#FF453A]'}">${bet.isWin ? 'SUCCESS' : 'DEFEAT'}</td>
+                        <td class="p-4 text-right font-medium ${bet.isWin ? 'text-[#32D74B]' : 'text-[#FF453A]'}">${bet.isWin ? '+' : ''}${bet.unitChange || (bet.isWin ? 35 : -1)}</td>
                     </tr>
                 `).join('');
             }

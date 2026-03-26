@@ -145,11 +145,6 @@
     window.renderAnalytics = function () {
         if (!window.state) return;
 
-        // Stats should always reflect the active gameplay mode.
-        if (window.state.currentGameplayStrategy && window.state.currentGameplayStrategy !== window.state.analyticsDisplayStrategy) {
-            window.state.analyticsDisplayStrategy = window.state.currentGameplayStrategy;
-        }
-
         if (window.syncAnalyticsVisibility) window.syncAnalyticsVisibility();
         const tabs = window.getAnalyticsTabConfig(), activeTab = window.ensureActiveAnalyticsTab(tabs);
         window.applyAnalyticsTabUI();
