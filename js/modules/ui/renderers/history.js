@@ -83,14 +83,16 @@
                             ${yieldLabel}
                         </div>
                     </div>
-                    <!-- Simplified Clean-Box Tooltip -->
-                    <div class="absolute bottom-full right-0 mb-2 w-max min-w-[190px] p-2.5 bg-[#1C1C1E]/98 border border-white/[0.12] text-white/90 text-[10px] rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[120] backdrop-blur-3xl pointer-events-none">
-                        ${yieldLines}
-                        ${signalLines}
+                    <!-- Solid 'Hardened' Clean-Box Tooltip -->
+                    <div class="absolute bottom-full right-0 mb-2 w-max min-w-[200px] p-3 bg-[#0A0A0B] border border-white/20 text-white text-[11px] rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[120] pointer-events-none">
+                        <div class="space-y-1.5">
+                            ${yieldLines}
+                            ${signalLines}
+                        </div>
                         ${resolved.length > 0 ? `
-                            <div class="mt-2 pt-2 border-t border-white/10 flex items-center justify-between font-black uppercase tracking-widest text-[10px]">
-                                <span>NET UNIT -</span>
-                                <span style="color: ${totalColor}; text-shadow: 0 0 10px ${totalColor}55;">(${Math.abs(totalYield)} U ${totalSign})</span>
+                            <div class="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between font-black uppercase tracking-widest text-[10px]">
+                                <span class="text-white/60">NET UNIT -</span>
+                                <span style="color: ${totalColor}; text-shadow: 0 0 12px ${totalColor}66;">(${Math.abs(totalYield)} U ${totalSign})</span>
                             </div>
                         ` : ''}
                     </div>
