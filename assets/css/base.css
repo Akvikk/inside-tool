@@ -62,7 +62,7 @@ header {
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
-    height: 56px !important;
+    min-height: 2.25rem; /* Allow Tailwind h-9 or similar to set height */
     flex-wrap: nowrap !important;
     white-space: nowrap !important;
 }

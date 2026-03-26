@@ -63,7 +63,7 @@
             const bgClass = bet.confirmed ? 'opacity-100' : 'opacity-90';
 
             cards.push(`
-                <div class="min-w-[160px] min-h-[52px] px-2 py-1.5 rounded-[12px] flex items-center justify-between cursor-pointer select-none transition-all duration-300 hover:bg-white/[0.05] ${bgClass}"
+                <div class="min-w-[160px] min-h-[38px] px-2 py-1 rounded-[12px] flex items-center justify-between cursor-pointer select-none transition-all duration-300 hover:bg-white/[0.05] ${bgClass}"
                      ondblclick="if(window.toggleBetConfirmation) window.toggleBetConfirmation(${index})"
                      title="Double-click to ${bet.confirmed ? 'unselect' : 'select'}"
                      style="${bgStyle} ${borderStyle}">
