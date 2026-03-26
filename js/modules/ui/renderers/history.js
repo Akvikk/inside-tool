@@ -80,9 +80,7 @@
         }).join('');
 
         // 4. Combined Assembly
-        const yieldLabel = resolved.length > 0 
-            ? `<span class="text-white/40 group-hover:text-[#30D158] transition-all duration-300 ml-auto"><i class="fas fa-wallet mr-1"></i>Yield</span>`
-            : `<span class="text-white/40 group-hover:text-white transition-all duration-300 ml-auto"><i class="fas fa-info-circle mr-1"></i>Details</span>`;
+        const yieldLabel = `<span class="text-white/40 group-hover:text-[#30D158] transition-all duration-300 ml-auto"><i class="fas fa-wallet mr-1"></i>Yield</span>`;
 
         const signalLabel = signals.length > 0 
             ? `<span class="prediction-entry-label transition-all duration-300 group-hover:text-[#BF5AF2] group-hover:[text-shadow:0_2px_4px_rgba(0,0,0,0.5),0_0_10px_currentColor]">Active Signals (${signals.length})</span>`
