@@ -64,6 +64,71 @@
     color: rgba(255, 255, 255, 0.9);
 }
 
+/* PREMIUM ICON DETAILING */
+
+#patternsToggleBtn {
+    box-shadow: 0 0 15px rgba(191, 90, 242, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.1) !important;
+    background: linear-gradient(180deg, rgba(191, 90, 242, 0.12), rgba(191, 90, 242, 0.05)) !important;
+}
+#patternsToggleBtn:hover {
+    box-shadow: 0 0 25px rgba(191, 90, 242, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
+    background: rgba(191, 90, 242, 0.1) !important;
+}
+#patternsToggleBtn i {
+    filter: drop-shadow(0 0 8px rgba(191, 90, 242, 0.6));
+}
+
+#patternsActiveCount {
+    background: #BF5AF2 !important;
+    box-shadow: 0 0 12px rgba(191, 90, 242, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+#strategySwitcherBtn {
+    box-shadow: 0 0 12px rgba(94, 92, 230, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.05) !important;
+    background: linear-gradient(180deg, rgba(94, 92, 230, 0.1), rgba(94, 92, 230, 0.02)) !important;
+}
+#strategySwitcherBtn:hover {
+    box-shadow: 0 0 20px rgba(94, 92, 230, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.1) !important;
+}
+#strategySwitcherBtn label, #strategySwitcherBtn span {
+    font-weight: 800 !important;
+    letter-spacing: 0.05em;
+}
+
+#headerBetsBtn {
+    box-shadow: 0 0 12px rgba(10, 132, 255, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.05) !important;
+    background: linear-gradient(180deg, rgba(10, 132, 255, 0.1), rgba(10, 132, 255, 0.02)) !important;
+}
+#headerBetsBtn i {
+    filter: drop-shadow(0 0 5px rgba(10, 132, 255, 0.5));
+}
+
+#headerStatsBtn {
+    box-shadow: 0 0 12px rgba(255, 214, 10, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.05) !important;
+    background: linear-gradient(180deg, rgba(255, 214, 10, 0.1), rgba(255, 214, 10, 0.02)) !important;
+}
+#headerStatsBtn i {
+    filter: drop-shadow(0 0 5px rgba(255, 214, 10, 0.5));
+}
+
+#hudToggleBtn {
+    box-shadow: 0 0 12px rgba(50, 215, 75, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.05) !important;
+    background: linear-gradient(180deg, rgba(50, 215, 75, 0.1), rgba(50, 215, 75, 0.02)) !important;
+}
+#hudToggleBtn i {
+    filter: drop-shadow(0 0 5px rgba(50, 215, 75, 0.5));
+}
+
+#headerMenuBtn {
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.05) !important;
+}
+#headerMenuBtn:hover {
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+}
+
 .pattern-toggle-btn {
     position: relative;
     overflow: visible;

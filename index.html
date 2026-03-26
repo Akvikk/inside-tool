@@ -123,7 +123,7 @@
             <div id="patternFilterShell" class="relative flex items-center h-full">
                 <button id="patternsToggleBtn"
                     class="relative group h-8 px-3 flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl transition-all duration-300 hover:border-[#BF5AF2]/40 hover:bg-[#BF5AF2]/5 active:scale-95">
-                    <i class="fas fa-wand-magic-sparkles text-[11px] text-[#BF5AF2] drop-shadow-[0_0_8px_rgba(191,90,242,0.4)]"></i>
+                    <i class="fas fa-filter text-[11px] text-[#BF5AF2] drop-shadow-[0_0_8px_rgba(191,90,242,0.4)]"></i>
                     <div id="patternsActiveCount" 
                          class="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#BF5AF2] text-[9px] font-black text-white shadow-[0_0_10px_rgba(191,90,242,0.4)] transition-all duration-300">
                         --
@@ -179,12 +179,12 @@
                 </button>
             </div>
 
-            <button onclick="toggleModal('betsModal'); renderUserAnalytics();"
+            <button id="headerBetsBtn" onclick="toggleModal('betsModal'); renderUserAnalytics();"
                 class="hidden sm:flex h-8 w-10 bg-white/5 hover:bg-white/10 text-[#0A84FF] rounded-lg border border-white/10 items-center justify-center transition-all duration-300 active:scale-[0.98]">
                 <i class="fas fa-receipt text-[11px]"></i>
             </button>
 
-            <button onclick="toggleModal('analyticsModal'); renderAnalytics();"
+            <button id="headerStatsBtn" onclick="toggleModal('analyticsModal'); renderAnalytics();"
                 class="flex h-8 w-10 bg-white/5 hover:bg-white/10 text-[#FFD60A] rounded-lg border border-white/10 items-center justify-center transition-all duration-300 active:scale-[0.98]">
                 <i class="fas fa-chart-simple text-[11px]"></i>
             </button>
@@ -205,7 +205,7 @@
 
     <!-- HAMBURGER DROPDOWN MENU -->
     <div id="hamburgerMenu"
-        class="hidden opacity-0 pointer-events-none scale-95 fixed top-[72px] right-4 w-[280px] rounded-[24px] border border-white/10 bg-[#1C1C1E]/80 backdrop-blur-[40px] saturate-150 shadow-2xl z-50 overflow-hidden transform origin-top-right transition-all duration-300 flex flex-col">
+        class="hidden opacity-0 pointer-events-none scale-95 fixed top-[72px] right-4 w-[280px] max-h-[min(700px,calc(100vh-100px))] rounded-[24px] border border-white/10 bg-[#1C1C1E]/80 backdrop-blur-[40px] saturate-150 shadow-2xl z-50 overflow-y-auto custom-scrollbar transform origin-top-right transition-all duration-300 flex flex-col">
 
         <!-- STOPWATCH SECTION -->
         <div class="p-4 flex flex-col items-center justify-center relative">
