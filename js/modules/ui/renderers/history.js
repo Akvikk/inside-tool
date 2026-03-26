@@ -22,89 +22,100 @@
     };
 
     window.renderPredictionCell = function (spin) {
-        const blocks = [];
+        const resolved = spin.resolvedBets || [];
+        const signals = spin.newSignals || [];
 
-        if (spin.resolvedBets && spin.resolvedBets.length > 0) {
-            const resultsHtml = spin.resolvedBets.map(bet => {
-                const icon = bet.isWin ? '<i class="fas fa-check-circle animate-pulse"></i>' : '<i class="fas fa-times-circle"></i>';
-                const detail = window.formatPredictionDetail(bet) || 'Perimeter';
-                const color = bet.isWin ? '#30D158' : '#FF453A';
-                return `<span class="inline-flex items-center gap-1.5 font-black text-[10px] tracking-tight uppercase" style="color: ${color}; text-shadow: 0 0 8px ${color}33;">${icon}<span class="text-white/90 font-bold">${detail}</span></span>`;
-            }).join('<span class="mx-2 text-white/10 font-thin">|</span>');
+        if (resolved.length === 0 && signals.length === 0) {
+            return '<span class="prediction-empty text-white/5">—</span>';
+        }
 
-            let totalYield = 0;
-            const yieldLines = spin.resolvedBets.map(bet => {
-                const uc = bet.unitChange || 0;
-                totalYield += uc;
-                const sign = uc >= 0 ? '+' : '-';
-                const color = uc >= 0 ? '#30D158' : '#FF453A';
-                const detail = window.formatPredictionDetail(bet) || 'Bet';
-                return `<div class="mb-1.5 last:mb-0 flex items-center justify-between gap-4">
-                            <span class="font-bold text-white/70">${detail}</span>
-                            <span class="font-black" style="color: ${color};">${Math.abs(uc)} U ${sign}</span>
-                        </div>`;
-            }).join('');
+        const registry = window.StrategyRegistry || {};
+        const stratKey = window.state?.currentGameplayStrategy || 'series';
+        const strategy = registry[stratKey];
 
-            const totalColor = totalYield >= 0 ? '#30D158' : '#FF453A';
-            const totalSign = totalYield >= 0 ? '+' : '-';
+        // 1. Resolved Bets (Results) HTML
+        const resultsHtml = resolved.map(bet => {
+            const icon = bet.isWin ? '<i class="fas fa-check-circle animate-pulse"></i>' : '<i class="fas fa-times-circle"></i>';
+            const detail = window.formatPredictionDetail(bet) || 'Perimeter';
+            const color = bet.isWin ? '#30D158' : '#FF453A';
+            return `<span class="inline-flex items-center gap-1.5 font-black text-[10px] tracking-tight uppercase" style="color: ${color}; text-shadow: 0 0 8px ${color}33;">${icon}<span class="text-white/90 font-bold">${detail}</span></span>`;
+        }).join('<span class="mx-2 text-white/10 font-thin">|</span>');
 
-            blocks.push(`
+        // 2. Yield Tooltip Content
+        let totalYield = 0;
+        const yieldLines = resolved.map((bet, index) => {
+            const uc = bet.unitChange !== undefined ? bet.unitChange : (bet.isWin ? 29 : -7);
+            totalYield += uc;
+            const sign = uc >= 0 ? '+' : '-';
+            const color = uc >= 0 ? '#30D158' : '#FF453A';
+            const detail = window.formatPredictionDetail(bet) || 'Bet';
+            const delay = 50 + (index * 40);
+            return `<div class="mb-1.5 last:mb-0 opacity-0 translate-y-1 animate-in fill-mode-forwards transition-all duration-300 flex items-center justify-between gap-4" style="animation-delay: ${delay}ms">
+                        <span class="font-bold text-white/70">${detail}</span>
+                        <span class="font-black" style="color: ${color};">${Math.abs(uc)} U ${sign}</span>
+                    </div>`;
+        }).join('');
+
+        const totalColor = totalYield >= 0 ? '#30D158' : '#FF453A';
+        const totalSign = totalYield >= 0 ? '+' : '-';
+
+        // 3. Signals Tooltip Content
+        const signalLines = signals.map((sig, index) => {
+            const detail = window.formatPredictionDetail(sig) || 'Prediction Perimeter';
+            const reasonStr = sig.reason ? `<div class="text-white/50 text-[9px] mt-0.5 leading-tight">${sig.reason}</div>` : '';
+            let metaColor = null;
+            let metaIcon = 'fa-bolt';
+            if (strategy && strategy.PATTERN_FILTER_META && strategy.PATTERN_FILTER_META[sig.filterKey]) {
+                metaColor = strategy.PATTERN_FILTER_META[sig.filterKey].accent;
+                if (strategy.PATTERN_FILTER_META[sig.filterKey].icon) metaIcon = strategy.PATTERN_FILTER_META[sig.filterKey].icon;
+            }
+            const color = sig.accentColor || metaColor || '#BF5AF2';
+            const delay = 100 + (index * 60);
+            return `<div class="mb-1.5 last:mb-0 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out" style="transition-delay: ${delay}ms">
+                        <div class="font-bold tracking-wide flex items-center gap-1.5" style="color: ${color}; text-shadow: 0 2px 4px rgba(0,0,0,0.5), 0 0 10px currentColor;">
+                            <i class="fas ${metaIcon} opacity-80 text-[10px]"></i><span>${detail}</span>
+                        </div>
+                        ${reasonStr}
+                    </div>`;
+        }).join('');
+
+        // 4. Combined Assembly
+        const yieldLabel = resolved.length > 0 
+            ? `<span class="text-white/40 group-hover:text-[#30D158] transition-all duration-300 ml-auto"><i class="fas fa-wallet mr-1"></i>Yield</span>`
+            : `<span class="text-white/40 group-hover:text-white transition-all duration-300 ml-auto"><i class="fas fa-info-circle mr-1"></i>Details</span>`;
+
+        const signalLabel = signals.length > 0 
+            ? `<span class="prediction-entry-label transition-all duration-300 group-hover:text-[#BF5AF2] group-hover:[text-shadow:0_2px_4px_rgba(0,0,0,0.5),0_0_10px_currentColor]">Active Signals (${signals.length})</span>`
+            : '';
+
+        return `
+            <div class="prediction-cell-content">
                 <div class="prediction-entry-block group relative inline-block w-full">
-                    <div class="prediction-entry flex items-center justify-between">
-                        <div class="flex flex-wrap items-center leading-none">${resultsHtml}</div>
-                        <span class="prediction-entry-detail text-white/50 group-hover:text-[#30D158] transition-all duration-300 cursor-help ml-auto">
-                            <i class="fas fa-wallet mr-1"></i>Yield
-                        </span>
-                    </div>
-                    <div class="absolute bottom-full right-0 mb-2 w-max min-w-[170px] p-2.5 bg-[#1C1C1E]/95 border border-white/[0.08] text-white/90 text-[10px] rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-[101] backdrop-blur-xl pointer-events-none">
-                        ${yieldLines}
-                        <div class="mt-2 pt-2 border-t border-white/10 flex items-center justify-between font-black uppercase tracking-widest text-[9px]">
-                            <span>NET UNIT</span>
-                            <span style="color: ${totalColor}; text-shadow: 0 0 10px ${totalColor}55;">${Math.abs(totalYield)} U ${totalSign}</span>
+                    <div class="prediction-entry flex flex-col gap-1 cursor-help">
+                        ${resultsHtml ? `<div class="flex flex-wrap items-center leading-none">${resultsHtml}</div>` : ''}
+                        <div class="flex items-center justify-between w-full">
+                            ${signalLabel || '<span class="text-[10px] font-black text-white/10 uppercase tracking-widest">Protocol Stored</span>'}
+                            ${yieldLabel}
                         </div>
                     </div>
-                </div>
-            `);
-        }
-
-        const signals = spin.newSignals || [];
-        if (signals.length > 0) {
-            const registry = window.StrategyRegistry || {};
-            const stratKey = window.state?.currentGameplayStrategy || 'series';
-            const strategy = registry[stratKey];
-
-            let tooltipContent = signals.map((sig, index) => {
-                const detail = window.formatPredictionDetail(sig) || 'Prediction Perimeter';
-                const reasonStr = sig.reason ? `<div class="text-white/50 text-[9px] mt-0.5 leading-tight">${sig.reason}</div>` : '';
-
-                let metaColor = null;
-                let metaIcon = 'fa-bolt'; // Default fallback icon
-                if (strategy && strategy.PATTERN_FILTER_META && strategy.PATTERN_FILTER_META[sig.filterKey]) {
-                    metaColor = strategy.PATTERN_FILTER_META[sig.filterKey].accent;
-                    if (strategy.PATTERN_FILTER_META[sig.filterKey].icon) {
-                        metaIcon = strategy.PATTERN_FILTER_META[sig.filterKey].icon;
-                    }
-                }
-                const color = sig.accentColor || metaColor || '#BF5AF2';
-                const delay = 100 + (index * 75); // Stagger delays by 75ms
-                return `<div class="mb-1.5 last:mb-0 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out" style="transition-delay: ${delay}ms"><div class="font-bold tracking-wide flex items-center gap-1.5" style="color: ${color}; text-shadow: 0 2px 4px rgba(0,0,0,0.5), 0 0 10px currentColor;"><i class="fas ${metaIcon} opacity-80 text-[10px]"></i><span>${detail}</span></div>${reasonStr}</div>`;
-            }).join('');
-
-            blocks.push(`
-                <div class="prediction-entry-block group relative inline-block w-full">
-                    <div class="prediction-entry prediction-entry--signal cursor-help flex items-center justify-between">
-                        <span class="prediction-entry-label transition-all duration-300 group-hover:text-[#BF5AF2] group-hover:[text-shadow:0_2px_4px_rgba(0,0,0,0.5),0_0_10px_currentColor]">Active Signals (${signals.length})</span>
-                        <span class="prediction-entry-detail text-white/50 group-hover:text-white transition-colors ml-2"><i class="fas fa-info-circle mr-1"></i>Details</span>
-                    </div>
-                    <div class="absolute bottom-full right-0 mb-2 w-max max-w-[240px] p-2.5 bg-[#1C1C1E]/95 border border-white/[0.08] text-white/90 text-[10px] rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-[100] backdrop-blur-xl whitespace-normal text-left pointer-events-none">
-                        ${tooltipContent}
+                    <div class="absolute bottom-full right-0 mb-2 w-max min-w-[190px] p-3 bg-[#1C1C1E]/95 border border-white/[0.08] text-white/90 text-[10px] rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-[110] backdrop-blur-3xl pointer-events-none">
+                        ${resolved.length > 0 ? `
+                            <div class="text-[9px] font-black uppercase tracking-widest text-white/30 mb-2 pb-1 border-b border-white/5">Performance</div>
+                            ${yieldLines}
+                            <div class="mt-2 pt-2 border-t border-white/10 flex items-center justify-between font-black uppercase tracking-widest text-[9px]">
+                                <span>NET UNIT</span>
+                                <span style="color: ${totalColor}; text-shadow: 0 0 10px ${totalColor}55;">${Math.abs(totalYield)} U ${totalSign}</span>
+                            </div>
+                        ` : ''}
+                        
+                        ${signals.length > 0 ? `
+                            <div class="text-[9px] font-black uppercase tracking-widest text-white/30 mb-2 ${resolved.length > 0 ? 'mt-4' : ''} pb-1 border-b border-white/5">Live Alerts</div>
+                            ${signalLines}
+                        ` : ''}
                     </div>
                 </div>
-            `);
-        }
-
-        if (blocks.length === 0) return '<span class="prediction-empty text-white/5">—</span>';
-        return `<div class="prediction-cell-content">${blocks.join('')}</div>`;
+            </div>
+        `;
     };
 
     window.renderComboCell = function (spin) {
