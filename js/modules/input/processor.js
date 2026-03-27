@@ -251,10 +251,6 @@
             spinObj.newSignals = stateRef.activeBets.map(b => ({
                 patternName: b.patternName,
                 filterKey: b.filterKey || b.patternName,
-                targetFace: b.targetFace,
-                comboLabel: b.comboLabel || null,
-                confidence: Number.isFinite(b.confidence) ? b.confidence : null,
-                reason: b.reason || b.subtitle || '',
                 mode: b.mode || null,
                 status: b.status || 'GO',
                 signalSource: b.signalSource || 'math',
