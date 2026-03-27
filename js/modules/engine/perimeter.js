@@ -38,24 +38,32 @@
         let count = 0;
 
         for (let i = 0; i < recentSpins.length; i++) {
-            const spin = recentSpins[i];
-            if (!spin) continue;
+            const currentSpin = recentSpins[i];
+            if (!currentSpin) continue;
 
-            // Check if this spin's result matches the target face
-            // History entries store faces as an array (spin.faces), primary face is [0].
-            // Fall back to spin.face / spin.faceIndex for any legacy entries.
-            const spinFace = (Array.isArray(spin.faces) && spin.faces.length > 0)
-                ? spin.faces[0]
-                : (spin.face !== undefined ? spin.face : spin.faceIndex);
+            // 1. Identify the signals that were active PRIOR to this spin.
+            // These are stored on the previous history entry's newSignals array.
+            const absoluteIndex = startIndex + i;
+            if (absoluteIndex <= 0) continue; // No previous spin signals for the very first entry
+
+            const prevSpin = history[absoluteIndex - 1];
+            if (!prevSpin || !prevSpin.newSignals) continue;
+
+            // 2. Check if this spin's result matches the target face
+            const spinFace = (Array.isArray(currentSpin.faces) && currentSpin.faces.length > 0)
+                ? currentSpin.faces[0]
+                : (currentSpin.face !== undefined ? currentSpin.face : currentSpin.faceIndex);
+            
             if (spinFace == null || spinFace != targetFace) continue; // eslint-disable-line eqeqeq
 
-            // Check if any signal on this spin matches the pattern key
-            const spinSignals = spin.newSignals || [];
-            for (let s = 0; s < spinSignals.length; s++) {
-                const ss = spinSignals[s];
-                const ssKey = _buildSignalKey(ss);
-                if (ssKey === signalKey) {
+            // 3. Check if the pattern was active on the previous turn
+            const prevSignals = prevSpin.newSignals || [];
+            for (let s = 0; s < prevSignals.length; s++) {
+                const ps = prevSignals[s];
+                const psKey = _buildSignalKey(ps);
+                if (psKey === signalKey) {
                     count++;
+                    console.log(`[Perimeter DEBUG] Match Found! Spin #${absoluteIndex} Win for Face ${spinFace} matched Pattern Key: ${psKey}`);
                     break; // Only count once per spin
                 }
             }
@@ -87,17 +95,18 @@
     function _buildSignalKey(signal) {
         if (!signal) return '';
 
-        // Use filterKey if available (most reliable for inside patterns)
-        if (signal.filterKey) return signal.filterKey;
+        // Determine base key
+        let base = '';
+        if (signal.filterKey) base = signal.filterKey;
+        else if (signal.comboLabel) base = 'combo:' + signal.comboLabel;
+        else if (signal.sequenceName) base = 'seq:' + signal.sequenceName;
+        else base = signal.patternName || 'unknown';
 
-        // For combos, use comboLabel
-        if (signal.comboLabel) return 'combo:' + signal.comboLabel;
-
-        // For series, use sequenceName or patternName
-        if (signal.sequenceName) return 'seq:' + signal.sequenceName;
-
-        // Fallback to patternName
-        return signal.patternName || 'unknown';
+        // STRICT MATCHING: include face and strategy to prevent cross-pattern collisions
+        const strategy = signal.strategy || '';
+        const face = signal.targetFace || '';
+        
+        return `${strategy}|${base}|f${face}`;
     }
 
     /**
