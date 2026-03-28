@@ -141,6 +141,42 @@ window.syncUIWithStrategyMode = function () {
     if (strategySelect) strategySelect.value = strategyKey;
 
     const switcherBtn = document.getElementById('strategySwitcherBtn');
+        window.currentAlerts = [];
+        if (window.EngineCore && window.EngineCore.reset) window.EngineCore.reset();
+        const tbody = document.getElementById('historyBody'); if (tbody) tbody.innerHTML = '';
+        if (window.renderGapStats) window.renderGapStats();
+        if (window.renderDashboardSafe) window.renderDashboardSafe([]);
+        if (window.HudManager && window.HudManager.update) window.HudManager.update();
+        if (window.syncAppStore) window.syncAppStore();
+        if (window.saveSessionData) window.saveSessionData();
+    }
+
+    if (window.UiController && typeof window.UiController.showToast === 'function') {
+        window.UiController.showToast('Session data reset successfully.', 'info');
+    }
+};
+window.performReset = window.resetData;
+
+window.syncUIWithStrategyMode = function () {
+    const strategyKey = window.state && window.state.currentGameplayStrategy ? window.state.currentGameplayStrategy : 'inside';
+    const comboHeader = document.getElementById('historyComboHeader');
+
+    if (comboHeader) {
+        if (strategyKey === 'series') {
+            comboHeader.innerHTML = "SEQUENCE";
+        } else if (strategyKey === 'combo') {
+            comboHeader.innerHTML = "COMBO";
+        } else if (strategyKey === 'inside') {
+            comboHeader.innerHTML = "PATTERN";
+        } else {
+            comboHeader.innerHTML = "COMBO";
+        }
+    }
+
+    const strategySelect = document.getElementById('hamburgerStrategySelect');
+    if (strategySelect) strategySelect.value = strategyKey;
+
+    const switcherBtn = document.getElementById('strategySwitcherBtn');
     const switcherLabel = document.getElementById('strategySwitcherLabel');
     if (switcherBtn && switcherLabel) {
         let label = 'INSIDE';
@@ -155,6 +191,10 @@ window.syncUIWithStrategyMode = function () {
             label = 'SERIES';
             color = '#0A84FF'; // Blue
             borderColor = 'rgba(10, 132, 255, 0.1)';
+        } else if (strategyKey === 'exibitl') {
+            label = 'EXIBITL';
+            color = '#BF5AF2'; // Violet
+            borderColor = 'rgba(191, 90, 242, 0.1)';
         }
 
         switcherLabel.innerText = label;
@@ -210,7 +250,7 @@ window.setGameplayStrategy = async function (strategyKey) {
 
 window.cycleGameplayStrategy = async function () {
     if (!window.state) return;
-    const modes = ['series', 'combo', 'inside'];
+    const modes = ['series', 'combo', 'inside', 'exibitl'];
     const currentMode = window.state.currentGameplayStrategy || 'series';
     const nextIdx = (modes.indexOf(currentMode) + 1) % modes.length;
     await window.setGameplayStrategy(modes[nextIdx]);
@@ -442,7 +482,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // STRATEGY CYCLING HELPER
     window.cycleGameplayStrategy = function() {
-        const order = ['inside', 'series', 'combo'];
+        const order = ['inside', 'series', 'combo', 'exibitl'];
         const current = window.state.currentGameplayStrategy || 'inside';
         const next = order[(order.indexOf(current) + 1) % order.length];
         if (window.setGameplayStrategy) window.setGameplayStrategy(next);
