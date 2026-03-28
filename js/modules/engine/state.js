@@ -18,8 +18,8 @@
             bankrollHistory: [0],
             betLog: []
         },
-        currentPredictionStrategy: 'series',
-        currentGameplayStrategy: 'inside', // 'series', 'combo', 'inside'
+        currentPredictionStrategy: 'none',
+        currentGameplayStrategy: 'none',
         strategies: {},
         changeStrategyTimeout: null,
         cachedAddSpinBtn: null,
@@ -32,9 +32,9 @@
         lastActionableComboLabel: null,
         lastActionableTargetFace: null,
         lastActionableCheckpointSpin: 0,
-        analyticsDisplayStrategy: 'inside',
+        analyticsDisplayStrategy: 'none',
         historyRenderVersion: 0,
-        strategySyncCache: { series: null, combo: null, inside: null }
+        strategySyncCache: {}
     };
     window.currentAlerts = [];
 
