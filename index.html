@@ -122,7 +122,7 @@
         <div class="flex items-center gap-2 px-2 h-full">
             <div id="patternFilterShell" class="relative flex items-center h-full">
                 <button id="patternsToggleBtn"
-                    class="relative group h-8 px-3 flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl transition-all duration-300 hover:border-[#BF5AF2]/40 hover:bg-[#BF5AF2]/5 active:scale-95">
+                    class="hidden sm:flex relative group h-8 px-3 items-center gap-2 rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl transition-all duration-300 hover:border-[#BF5AF2]/40 hover:bg-[#BF5AF2]/5 active:scale-95">
                     <i class="fas fa-filter text-[11px] text-[#BF5AF2] drop-shadow-[0_0_8px_rgba(191,90,242,0.4)]"></i>
                     <div id="patternsActiveCount" 
                          class="flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#BF5AF2] text-[9px] font-black text-white shadow-[0_0_10px_rgba(191,90,242,0.4)] transition-all duration-300">
@@ -185,7 +185,7 @@
             </button>
 
             <button id="headerStatsBtn"
-                class="flex h-8 w-10 bg-white/5 hover:bg-white/10 text-[#FFD60A] rounded-lg border border-white/10 items-center justify-center transition-all duration-300 active:scale-[0.98]">
+                class="hidden sm:flex h-8 w-10 bg-white/5 hover:bg-white/10 text-[#FFD60A] rounded-lg border border-white/10 items-center justify-center transition-all duration-300 active:scale-[0.98]">
                 <i class="fas fa-chart-simple text-[11px]"></i>
             </button>
 
@@ -195,6 +195,11 @@
             </button>
 
             <div class="hidden sm:block h-3 w-[1px] bg-white/10 mx-0.5"></div>
+
+            <button id="headerMoreBtn" onclick="if(window.toggleMobileMoreMenu) window.toggleMobileMoreMenu();"
+                class="flex sm:hidden h-8 w-10 bg-white/5 hover:bg-white/10 text-white/70 rounded-lg border border-white/10 items-center justify-center transition-all duration-300 active:scale-[0.98]">
+                <i class="fas fa-ellipsis-v text-sm"></i>
+            </button>
 
             <button id="headerMenuBtn"
                 class="h-8 w-10 bg-white/5 hover:bg-white/10 text-white/70 rounded-lg border border-white/10 flex items-center justify-center transition-all duration-300 active:scale-[0.98]">
@@ -376,6 +381,29 @@
                     class="fas fa-power-off mr-3 text-[#FF453A]/70 group-hover:text-[#FF453A] w-4 text-center transition-colors"></i>
                 <span class="text-[11px] font-bold text-[#FF453A]/90 group-hover:text-[#FF453A] tracking-wide">Reset
                     Session</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- MOBILE MORE MENU (3-DOT) -->
+    <div id="mobileMoreMenu"
+        class="hidden opacity-0 pointer-events-none scale-95 fixed top-[72px] right-14 sm:hidden w-[220px] max-h-[min(400px,calc(100vh-100px))] rounded-[20px] border border-white/10 bg-[#1C1C1E]/95 backdrop-blur-[50px] shadow-2xl z-50 overflow-y-auto custom-scrollbar transform origin-top-right transition-all duration-300 flex flex-col">
+        <div class="p-2 flex flex-col gap-1 text-white">
+            <button onclick="if(window.toggleMobileMoreMenu) window.toggleMobileMoreMenu(); if(window.togglePatternFilterPopover) window.togglePatternFilterPopover();" class="flex items-center p-3 rounded-xl hover:bg-white/10 active:scale-[0.98] transition-all text-left border-b border-white/5">
+                <i class="fas fa-filter text-[#BF5AF2] w-6 text-center"></i>
+                <span class="text-[11px] font-bold tracking-wide">Pattern Filter</span>
+            </button>
+            <button onclick="if(window.toggleMobileMoreMenu) window.toggleMobileMoreMenu(); if(window.setAnalyticsDisplayStrategy && window.state && window.state.currentGameplayStrategy) window.setAnalyticsDisplayStrategy(window.state.currentGameplayStrategy); if(window.toggleModal) window.toggleModal('analyticsModal'); if(window.renderAnalytics) window.renderAnalytics();" class="flex items-center p-3 rounded-xl hover:bg-white/10 active:scale-[0.98] transition-all text-left border-b border-white/5">
+                <i class="fas fa-chart-simple text-[#FFD60A] w-6 text-center"></i>
+                <span class="text-[11px] font-bold tracking-wide">Analytics Stats</span>
+            </button>
+            <button onclick="if(window.toggleMobileMoreMenu) window.toggleMobileMoreMenu(); if(window.toggleModal) window.toggleModal('betsModal'); if(window.renderUserAnalytics) window.renderUserAnalytics();" class="flex items-center p-3 rounded-xl hover:bg-white/10 active:scale-[0.98] transition-all text-left border-b border-white/5">
+                <i class="fas fa-receipt text-[#0A84FF] w-6 text-center"></i>
+                <span class="text-[11px] font-bold tracking-wide">Header Bets</span>
+            </button>
+            <button onclick="if(window.toggleMobileMoreMenu) window.toggleMobileMoreMenu(); if(window.toggleAnalyticsHUD) window.toggleAnalyticsHUD();" class="flex items-center p-3 rounded-xl hover:bg-white/10 active:scale-[0.98] transition-all text-left">
+                <i class="fas fa-gauge-high text-[#32D74B] w-6 text-center"></i>
+                <span class="text-[11px] font-bold tracking-wide">Analytics HUD</span>
             </button>
         </div>
     </div>
