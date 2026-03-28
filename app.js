@@ -141,42 +141,6 @@ window.syncUIWithStrategyMode = function () {
     if (strategySelect) strategySelect.value = strategyKey;
 
     const switcherBtn = document.getElementById('strategySwitcherBtn');
-        window.currentAlerts = [];
-        if (window.EngineCore && window.EngineCore.reset) window.EngineCore.reset();
-        const tbody = document.getElementById('historyBody'); if (tbody) tbody.innerHTML = '';
-        if (window.renderGapStats) window.renderGapStats();
-        if (window.renderDashboardSafe) window.renderDashboardSafe([]);
-        if (window.HudManager && window.HudManager.update) window.HudManager.update();
-        if (window.syncAppStore) window.syncAppStore();
-        if (window.saveSessionData) window.saveSessionData();
-    }
-
-    if (window.UiController && typeof window.UiController.showToast === 'function') {
-        window.UiController.showToast('Session data reset successfully.', 'info');
-    }
-};
-window.performReset = window.resetData;
-
-window.syncUIWithStrategyMode = function () {
-    const strategyKey = window.state && window.state.currentGameplayStrategy ? window.state.currentGameplayStrategy : 'inside';
-    const comboHeader = document.getElementById('historyComboHeader');
-
-    if (comboHeader) {
-        if (strategyKey === 'series') {
-            comboHeader.innerHTML = "SEQUENCE";
-        } else if (strategyKey === 'combo') {
-            comboHeader.innerHTML = "COMBO";
-        } else if (strategyKey === 'inside') {
-            comboHeader.innerHTML = "PATTERN";
-        } else {
-            comboHeader.innerHTML = "COMBO";
-        }
-    }
-
-    const strategySelect = document.getElementById('hamburgerStrategySelect');
-    if (strategySelect) strategySelect.value = strategyKey;
-
-    const switcherBtn = document.getElementById('strategySwitcherBtn');
     const switcherLabel = document.getElementById('strategySwitcherLabel');
     if (switcherBtn && switcherLabel) {
         let label = 'INSIDE';
