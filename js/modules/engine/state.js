@@ -27,19 +27,20 @@
         currentAnalyticsTab: 'strategy',
         currentIntelligenceMode: 'brief',
         isHudColdMode: false,
-        strategies: {},
-        changeStrategyTimeout: null,
-        cachedAddSpinBtn: null,
-        perimeterStatsCache: {},
-        currentAnalyticsTab: 'strategy',
-        currentIntelligenceMode: 'brief',
-        isHudColdMode: false,
         hudHistoryScope: 'all',
         engineSnapshot: null,
         lastActionableComboLabel: null,
         lastActionableTargetFace: null,
         lastActionableCheckpointSpin: 0,
         analyticsDisplayStrategy: 'inside',
+        historyRenderVersion: 0,
+        strategySyncCache: { series: null, combo: null, inside: null, exibitl: null }
+    };
+    window.currentAlerts = [];
+
+    window.updateUserStats = function(isWin, bet, spinIndex, unitChange) {
+        if (!window.state || !window.state.userStats) return;
+        const stats = window.state.userStats;
 
         if (isWin) {
             stats.totalWins++;
@@ -55,7 +56,8 @@
         stats.betLog.unshift({
             id: stats.totalWins + stats.totalLosses,
             patternName: bet.patternName || bet.comboLabel || 'Unknown',
-            targetFace: bet.targetFace,
+            targetFace: bet.targetFace || null,
+            targetNums: bet.targetNums || null,
             accentColor: bet.accentColor || '#ffffff',
             isWin: isWin,
             spinIndex: spinIndex,
