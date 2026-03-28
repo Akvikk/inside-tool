@@ -175,7 +175,7 @@
                 <button id="strategySwitcherBtn" onclick="if(window.cycleGameplayStrategy) window.cycleGameplayStrategy()"
                     class="flex items-center justify-center h-8 w-auto px-3 bg-white/5 hover:bg-white/10 text-[#5E5CE6] rounded-lg border border-white/10 transition-all duration-300 active:scale-[0.98] gap-2">
                     <i class="fas fa-shuffle text-[11px]"></i>
-                    <span id="strategySwitcherLabel" class="text-[10px] font-black uppercase tracking-wider">NONE</span>
+                    <span id="strategySwitcherLabel" class="text-[10px] font-black uppercase tracking-wider">INSIDE</span>
                 </button>
             </div>
 
@@ -306,7 +306,9 @@
                     </label>
                     <select id="hamburgerStrategySelect" onchange="setGameplayStrategy(this.value)"
                         class="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-3 text-[11px] font-bold text-white/90 tracking-wide focus:outline-none focus:ring-1 focus:ring-[#30D158] transition-all cursor-pointer">
-                        <option value="none">NO STRATEGY</option>
+                        <option value="series">SERIES</option>
+                        <option value="combo">COMBOS</option>
+                        <option value="inside">INSIDE PATTERNS</option>
                     </select>
                 </div>
             </div>
@@ -630,7 +632,18 @@
     <script src="js/modules/engine/adapter.js?v=apple_v15"></script>
 
     <!-- 5. STRATEGIES -->
-    <!-- Add new strategies here -->
+    <script src="js/strategies/strategy.series.js?v=apple_v15"></script>
+    <script src="js/strategies/strategy.combo.js?v=apple_v15"></script>
+
+    <!-- INSIDE PATTERNS (Modular Directory) -->
+    <script src="js/strategies/inside/index.js?v=apple_v15"></script>
+    <script src="js/strategies/inside/patterns/pattern.rptng.js?v=apple_v15"></script>
+    <script src="js/strategies/inside/patterns/pattern.1c-rptng.js?v=apple_v15"></script>
+    <script src="js/strategies/inside/patterns/pattern.brkt.js?v=apple_v15"></script>
+    <script src="js/strategies/inside/patterns/pattern.121.js?v=apple_v15"></script>
+    <script src="js/strategies/inside/patterns/pattern.123.js?v=apple_v15"></script>
+    <script src="js/strategies/inside/patterns/pattern.22.js?v=apple_v15"></script>
+    <script src="js/strategies/inside/patterns/pattern.seqvarbrkt.js?v=apple_v15"></script>
 
     <!-- 6. UI RENDERERS & COMPONENTS -->
     <script src="js/modules/ui/renderers/history.js?v=apple_v15"></script>

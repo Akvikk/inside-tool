@@ -100,8 +100,8 @@ window.resetData = async function () {
             window.state.userStats = { totalWins: 0, totalLosses: 0, netUnits: 0, bankrollHistory: [0], betLog: [] };
             window.state.engineStats = { totalWins: 0, totalLosses: 0, netUnits: 0, currentStreak: 0, bankrollHistory: [0], patternStats: {}, signalLog: [] };
             window.state.globalSpinIdCounter = 0;
-            window.state.currentGameplayStrategy = 'none';
-            window.state.analyticsDisplayStrategy = 'none';
+            window.state.currentGameplayStrategy = 'inside';
+            window.state.analyticsDisplayStrategy = 'inside';
             window.state.patternConfig = {};
             if (window.ensureActivePatternConfig) window.ensureActivePatternConfig();
         }
@@ -210,7 +210,7 @@ window.setGameplayStrategy = async function (strategyKey) {
 
 window.cycleGameplayStrategy = async function () {
     if (!window.state) return;
-    const modes = ['none'];
+    const modes = ['series', 'combo', 'inside'];
     const currentMode = window.state.currentGameplayStrategy || 'series';
     const nextIdx = (modes.indexOf(currentMode) + 1) % modes.length;
     await window.setGameplayStrategy(modes[nextIdx]);
@@ -397,7 +397,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const restoredSession = window.loadSessionData ? window.loadSessionData() : false;
 
     if (window.state && !window.state.currentGameplayStrategy) {
-        window.state.currentGameplayStrategy = 'none';
+        window.state.currentGameplayStrategy = 'inside';
     }
     if (window.state && !window.state.analyticsDisplayStrategy) {
         window.state.analyticsDisplayStrategy = window.state.currentGameplayStrategy || 'inside';
@@ -442,7 +442,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // STRATEGY CYCLING HELPER
     window.cycleGameplayStrategy = function() {
-        const order = ['none'];
+        const order = ['inside', 'series', 'combo'];
         const current = window.state.currentGameplayStrategy || 'inside';
         const next = order[(order.indexOf(current) + 1) % order.length];
         if (window.setGameplayStrategy) window.setGameplayStrategy(next);
