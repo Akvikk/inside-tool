@@ -178,23 +178,40 @@
         let resolvedBets = [];
         if (stateRef.activeBets && stateRef.activeBets.length > 0) {
             stateRef.activeBets.forEach(bet => {
-                if (bet.status === 'SIT_OUT' || !bet.targetFace) return;
-                const targetMask = faceMasks[bet.targetFace] || 0;
-                const isWin = (matchedFaceMask & targetMask) !== 0;
+                if (bet.status === 'SIT_OUT') return;
+                if (!bet.targetFace && (!bet.targetNums || !Array.isArray(bet.targetNums))) return;
+                
+                let isWin = false;
+                let targetLabel = '';
+                
+                if (bet.targetNums && Array.isArray(bet.targetNums)) {
+                    isWin = bet.targetNums.includes(val);
+                    targetLabel = `BET [${bet.targetNums.length} nums]`;
+                } else {
+                    const targetMask = faceMasks[bet.targetFace] || 0;
+                    isWin = (matchedFaceMask & targetMask) !== 0;
+                    targetLabel = `BET F${bet.targetFace}`;
+                }
+
                 resolvedBets.push({
                     patternName: bet.patternName || 'Unknown',
                     filterKey: bet.filterKey || bet.patternName,
                     strategy: bet.strategy || '',
-                    targetFace: bet.targetFace,
+                    targetFace: bet.targetFace || null,
+                    targetNums: bet.targetNums || null,
                     isWin: isWin,
-                    label: `BET F${bet.targetFace}`,
+                    label: targetLabel,
                     confirmed: bet.confirmed === true
                 });
             });
         }
 
         // Also call the engine's internal resolver so it can update its own internal state if needed
-        if (window.EngineCore && typeof window.EngineCore.resolveTurn === 'function') {
+        if (stateRef.currentGameplayStrategy === 'exibitl' && window.StrategyRegistry && window.StrategyRegistry.exibitl && window.StrategyRegistry.exibitl.updateAnalytics) {
+            try {
+                window.StrategyRegistry.exibitl.updateAnalytics(val, stateRef.activeBets, currentSpinIndex);
+            } catch (e) { console.error("ExibitL resolve error:", e); }
+        } else if (window.EngineCore && typeof window.EngineCore.resolveTurn === 'function') {
             try {
                 window.EngineCore.resolveTurn(val, matchedFaceMask, stateRef.activeBets, stateRef.currentGameplayStrategy, window.updateUserStats, {
                     historyLength: currentSpinIndex,
