@@ -93,6 +93,14 @@
                     window.toggleHamburgerMenu();
                 }
             }
+
+            const mobileMoreMenu = document.getElementById('mobileMoreMenu');
+            const moreBtn = document.getElementById('headerMoreBtn');
+            if (mobileMoreMenu && !mobileMoreMenu.classList.contains('hidden')) {
+                if (!mobileMoreMenu.contains(e.target) && (!moreBtn || !moreBtn.contains(e.target))) {
+                    window.toggleMobileMoreMenu();
+                }
+            }
         });
     }
 
@@ -775,6 +783,23 @@
         } else {
             content.classList.add('hidden');
             if (icon) icon.style.transform = 'rotate(0deg)';
+        }
+    };
+
+    window.toggleMobileMoreMenu = function () {
+        const menu = document.getElementById('mobileMoreMenu');
+        if (!menu) return;
+
+        const isHidden = menu.classList.contains('hidden') || menu.classList.contains('opacity-0');
+        if (isHidden) {
+            menu.classList.remove('hidden');
+            void menu.offsetWidth;
+            menu.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
+            menu.classList.add('opacity-100', 'scale-100');
+        } else {
+            menu.classList.remove('opacity-100', 'scale-100');
+            menu.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
+            setTimeout(() => { if (menu.classList.contains('opacity-0')) menu.classList.add('hidden'); }, 300);
         }
     };
 
