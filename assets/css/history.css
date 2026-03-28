@@ -290,3 +290,38 @@
     color: #ffffff !important;
     z-index: 10;
 }
+
+/* --- MOBILE SPECIFIC OVERRIDES --- */
+@media (max-width: 639px) {
+    /* Hide the # column */
+    .history-table th:first-child,
+    .history-table td:first-child,
+    .history-table colgroup col:first-child {
+        display: none;
+    }
+
+    /* Reduce font size of SPIN and FACE labels to prevent wrapping */
+    .history-table th {
+        font-size: 8px;
+        padding: 4px 6px;
+        letter-spacing: 0.1em;
+    }
+
+    .num-box {
+        width: 24px;
+        height: 24px;
+        font-size: 0.75rem;
+        border-radius: 6px;
+    }
+
+    .face-tag {
+        min-width: 28px;
+        padding: 2px 5px;
+        font-size: 0.65rem;
+    }
+
+    .prediction-entry {
+        font-size: 13px;
+        gap: 6px;
+    }
+}
