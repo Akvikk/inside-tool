@@ -205,13 +205,8 @@
                 });
             });
         }
-
-        // Also call the engine's internal resolver so it can update its own internal state if needed
-        if (stateRef.currentGameplayStrategy === 'exibitl' && window.StrategyRegistry && window.StrategyRegistry.exibitl && window.StrategyRegistry.exibitl.updateAnalytics) {
-            try {
-                window.StrategyRegistry.exibitl.updateAnalytics(val, stateRef.activeBets, currentSpinIndex);
-            } catch (e) { console.error("ExibitL resolve error:", e); }
-        } else if (window.EngineCore && typeof window.EngineCore.resolveTurn === 'function') {
+        // Resolve turn with EngineCore
+        if (window.EngineCore && typeof window.EngineCore.resolveTurn === 'function') {
             try {
                 window.EngineCore.resolveTurn(val, matchedFaceMask, stateRef.activeBets, stateRef.currentGameplayStrategy, window.updateUserStats, {
                     historyLength: currentSpinIndex,

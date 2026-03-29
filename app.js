@@ -158,11 +158,6 @@ window.syncUIWithStrategyMode = function () {
             color = '#0A84FF'; // Blue
             borderColor = 'rgba(10, 132, 255, 0.1)';
             iconClass = 'fas fa-layer-group text-[11px]';
-        } else if (strategyKey === 'exibitl') {
-            label = 'EXIBITL';
-            color = '#BF5AF2'; // Violet
-            borderColor = 'rgba(191, 90, 242, 0.1)';
-            iconClass = 'fas fa-bolt text-[11px]';
         }
 
         switcherLabel.innerText = label;
@@ -221,7 +216,7 @@ window.setGameplayStrategy = async function (strategyKey) {
 
 window.cycleGameplayStrategy = async function () {
     if (!window.state) return;
-    const modes = ['series', 'combo', 'inside', 'exibitl'];
+    const modes = ['series', 'combo', 'inside'];
     const currentMode = window.state.currentGameplayStrategy || 'series';
     const nextIdx = (modes.indexOf(currentMode) + 1) % modes.length;
     await window.setGameplayStrategy(modes[nextIdx]);
