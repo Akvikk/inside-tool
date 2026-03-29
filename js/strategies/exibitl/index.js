@@ -58,28 +58,10 @@
             if (targetArray && Array.isArray(targetArray) && targetArray.length > 0) {
                 const uniqueNumTargets = Array.from(new Set(targetArray.map(Number)));
                 
-                // --- FACE COVERAGE ANALYSIS ---
-                // Identify if any Face Group (F1-F5) is 100% matched by this trigger set
-                const faceMatches = [];
-                const faces = window.FACES || {};
-                
-                for (const faceId in faces) {
-                    const faceNums = faces[faceId].nums;
-                    const missing = faceNums.filter(n => !uniqueNumTargets.includes(n));
-                    if (missing.length === 0) {
-                        faceMatches.push(parseInt(faceId));
-                    }
-                }
-
-                // Identify Residuals (Numbers in the prediction NOT part of a 100% matched face)
-                let residuals = uniqueNumTargets;
-                if (faceMatches.length > 0) {
-                    const allMatchedFaceNums = new Set();
-                    faceMatches.forEach(fId => {
-                        faces[fId].nums.forEach(n => allMatchedFaceNums.add(n));
-                    });
-                    residuals = uniqueNumTargets.filter(n => !allMatchedFaceNums.has(n));
-                }
+                // Use the modular analyst for face/residual calculation
+                const analyzerResult = window.FaceAnalyzer ? window.FaceAnalyzer.checkFaceCoverage(uniqueNumTargets, window.FACES) : { matches: [], residuals: uniqueNumTargets };
+                const faceMatches = analyzerResult.matches;
+                const residuals = analyzerResult.residuals;
 
                 notifications.push({
                     type: 'ACTIVE',
@@ -117,6 +99,25 @@
             }
 
             return { notifications, nextBets };
+        },
+
+        /**
+         * Specialized UI Formatter for ExibitL Mode.
+         * Creates the "F[x] and [residuals]" string.
+         */
+        formatPrediction(entry) {
+            if (!entry) return '';
+            const matches = entry.faceMatches || [];
+            const residuals = entry.residuals || [];
+            
+            if (matches.length > 0) {
+                const faceStr = matches.map(fId => `F${fId}`).join(', ');
+                if (residuals.length > 0) {
+                    return `${faceStr} AND ${residuals.slice(0, 5).join(', ')}${residuals.length > 5 ? '...' : ''}`;
+                }
+                return faceStr;
+            }
+            return entry.patternName || `Trigger ${entry.fA || '?'}`;
         }
     };
 })();

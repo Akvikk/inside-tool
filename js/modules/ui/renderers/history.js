@@ -4,19 +4,15 @@
     window.formatPredictionDetail = function (entry) {
         if (!entry) return '';
 
-        // --- ENHANCED EXIBITL FORMATTING ---
-        const matches = entry.faceMatches || [];
-        const residuals = entry.residuals || [];
-        
-        if (matches.length > 0) {
-            const faceStr = matches.map(fId => `F${fId}`).join(', ');
-            if (residuals.length > 0) {
-                return `${faceStr} AND ${residuals.join(', ')}`;
-            }
-            return faceStr;
+        const stratKey = window.state?.currentGameplayStrategy || 'series';
+        const strategy = window.StrategyRegistry ? window.StrategyRegistry[stratKey] : null;
+
+        // 1. MODULAR DELEGATION: If the strategy has a custom formatter, use it
+        if (strategy && typeof strategy.formatPrediction === 'function') {
+            return strategy.formatPrediction(entry);
         }
 
-        // --- STANDARD FORMATTING FALLBACK ---
+        // 2. STANDARD FORMATTING FALLBACK
         const parts = [];
         if (entry.targetFace !== undefined && entry.targetFace !== null && entry.targetFace !== '?') {
             parts.push(`F${entry.targetFace}`);
@@ -24,7 +20,6 @@
             parts.push(`[${entry.targetNums.length} NUMS]`);
         }
 
-        const stratKey = window.state?.currentGameplayStrategy || 'series';
         let label = '';
         if (stratKey === 'series') label = entry?.sequenceName || entry?.patternName || entry?.comboLabel;
         else if (stratKey === 'combo') label = entry?.comboLabel || entry?.patternName;
