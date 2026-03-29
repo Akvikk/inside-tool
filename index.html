@@ -94,7 +94,7 @@
 
     <!-- 1. REFINED GLOBAL HEADER -->
     <header
-        class="flex items-center shrink-0 z-50 h-9 w-full max-w-[100vw] overflow-hidden bg-[#1C1C1E]/70 backdrop-blur-[40px] saturate-150 border-b border-white/[0.08] shadow-sm transition-colors duration-300">
+        class="flex items-center shrink-0 z-50 h-9 w-full max-w-[100vw] bg-[#1C1C1E]/70 backdrop-blur-[40px] saturate-150 border-b border-white/[0.08] shadow-sm transition-colors duration-300">
         
         <!-- LEFT: INPUTS (Now far left of main area) -->
         <div class="flex items-center gap-2 px-2 h-full">
@@ -390,19 +390,19 @@
     <div id="mobileMoreMenu"
         class="hidden opacity-0 pointer-events-none scale-95 fixed top-[72px] right-14 sm:hidden w-[220px] max-h-[min(400px,calc(100vh-100px))] rounded-[20px] border border-white/10 bg-[#1C1C1E]/95 backdrop-blur-[50px] shadow-2xl z-50 overflow-y-auto custom-scrollbar transform origin-top-right transition-all duration-300 flex flex-col">
         <div class="p-2 flex flex-col gap-1 text-white">
-            <button onclick="if(window.toggleMobileMoreMenu) window.toggleMobileMoreMenu(); if(window.togglePatternFilterPopover) window.togglePatternFilterPopover();" class="flex items-center p-3 rounded-xl hover:bg-white/10 active:scale-[0.98] transition-all text-left border-b border-white/5">
+            <button onclick="event.stopPropagation(); if(window.toggleMobileMoreMenu) window.toggleMobileMoreMenu(); if(window.togglePatternFilterPopover) window.togglePatternFilterPopover();" class="flex items-center p-3 rounded-xl hover:bg-white/10 active:scale-[0.98] transition-all text-left border-b border-white/5">
                 <i class="fas fa-filter text-[#BF5AF2] w-6 text-center"></i>
                 <span class="text-[11px] font-bold tracking-wide">Pattern Filter</span>
             </button>
-            <button onclick="if(window.toggleMobileMoreMenu) window.toggleMobileMoreMenu(); if(window.setAnalyticsDisplayStrategy && window.state && window.state.currentGameplayStrategy) window.setAnalyticsDisplayStrategy(window.state.currentGameplayStrategy); if(window.toggleModal) window.toggleModal('analyticsModal'); if(window.renderAnalytics) window.renderAnalytics();" class="flex items-center p-3 rounded-xl hover:bg-white/10 active:scale-[0.98] transition-all text-left border-b border-white/5">
+            <button onclick="event.stopPropagation(); if(window.toggleMobileMoreMenu) window.toggleMobileMoreMenu(); if(window.setAnalyticsDisplayStrategy && window.state && window.state.currentGameplayStrategy) window.setAnalyticsDisplayStrategy(window.state.currentGameplayStrategy); if(window.toggleModal) window.toggleModal('analyticsModal'); if(window.renderAnalytics) window.renderAnalytics();" class="flex items-center p-3 rounded-xl hover:bg-white/10 active:scale-[0.98] transition-all text-left border-b border-white/5">
                 <i class="fas fa-chart-simple text-[#FFD60A] w-6 text-center"></i>
                 <span class="text-[11px] font-bold tracking-wide">Analytics Stats</span>
             </button>
-            <button onclick="if(window.toggleMobileMoreMenu) window.toggleMobileMoreMenu(); if(window.toggleModal) window.toggleModal('betsModal'); if(window.renderUserAnalytics) window.renderUserAnalytics();" class="flex items-center p-3 rounded-xl hover:bg-white/10 active:scale-[0.98] transition-all text-left border-b border-white/5">
+            <button onclick="event.stopPropagation(); if(window.toggleMobileMoreMenu) window.toggleMobileMoreMenu(); if(window.toggleModal) window.toggleModal('betsModal'); if(window.renderUserAnalytics) window.renderUserAnalytics();" class="flex items-center p-3 rounded-xl hover:bg-white/10 active:scale-[0.98] transition-all text-left border-b border-white/5">
                 <i class="fas fa-receipt text-[#0A84FF] w-6 text-center"></i>
                 <span class="text-[11px] font-bold tracking-wide">Header Bets</span>
             </button>
-            <button onclick="if(window.toggleMobileMoreMenu) window.toggleMobileMoreMenu(); if(window.toggleAnalyticsHUD) window.toggleAnalyticsHUD();" class="flex items-center p-3 rounded-xl hover:bg-white/10 active:scale-[0.98] transition-all text-left">
+            <button onclick="event.stopPropagation(); if(window.toggleMobileMoreMenu) window.toggleMobileMoreMenu(); if(window.toggleAnalyticsHUD) window.toggleAnalyticsHUD();" class="flex items-center p-3 rounded-xl hover:bg-white/10 active:scale-[0.98] transition-all text-left">
                 <i class="fas fa-gauge-high text-[#32D74B] w-6 text-center"></i>
                 <span class="text-[11px] font-bold tracking-wide">Analytics HUD</span>
             </button>
