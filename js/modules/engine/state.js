@@ -34,7 +34,7 @@
         lastActionableCheckpointSpin: 0,
         analyticsDisplayStrategy: 'inside',
         historyRenderVersion: 0,
-        strategySyncCache: { series: null, combo: null, inside: null, exibitl: null }
+        strategySyncCache: { series: null, combo: null, inside: null }
     };
     window.currentAlerts = [];
 
