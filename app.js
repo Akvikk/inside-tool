@@ -478,7 +478,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // STRATEGY CYCLING HELPER
     window.cycleGameplayStrategy = function() {
-        const order = ['inside', 'series', 'combo', 'exibitl'];
+        const order = ['inside', 'series', 'combo'];
         const current = window.state.currentGameplayStrategy || 'inside';
         const next = order[(order.indexOf(current) + 1) % order.length];
         if (window.setGameplayStrategy) window.setGameplayStrategy(next);
