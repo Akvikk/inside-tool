@@ -56,17 +56,41 @@
             const targetArray = window.EXIBITL_MAP ? window.EXIBITL_MAP[latestSpin.num] : null;
 
             if (targetArray && Array.isArray(targetArray) && targetArray.length > 0) {
-                // Ensure array contains unique numbers between 0-36 properly parsed
                 const uniqueNumTargets = Array.from(new Set(targetArray.map(Number)));
+                
+                // --- FACE COVERAGE ANALYSIS ---
+                // Identify if any Face Group (F1-F5) is 100% matched by this trigger set
+                const faceMatches = [];
+                const faces = window.FACES || {};
+                
+                for (const faceId in faces) {
+                    const faceNums = faces[faceId].nums;
+                    const missing = faceNums.filter(n => !uniqueNumTargets.includes(n));
+                    if (missing.length === 0) {
+                        faceMatches.push(parseInt(faceId));
+                    }
+                }
+
+                // Identify Residuals (Numbers in the prediction NOT part of a 100% matched face)
+                let residuals = uniqueNumTargets;
+                if (faceMatches.length > 0) {
+                    const allMatchedFaceNums = new Set();
+                    faceMatches.forEach(fId => {
+                        faces[fId].nums.forEach(n => allMatchedFaceNums.add(n));
+                    });
+                    residuals = uniqueNumTargets.filter(n => !allMatchedFaceNums.has(n));
+                }
 
                 notifications.push({
                     type: 'ACTIVE',
                     fA: latestSpin.num,
-                    fB: null, // Specific UI overrides may handle null dynamically
+                    fB: null,
                     count: uniqueNumTargets.length,
                     strategy: 'ExibitL',
                     patternName: `Trigger ${latestSpin.num}`,
-                    filterKey: 'ExibitL'
+                    filterKey: 'ExibitL',
+                    faceMatches,
+                    residuals
                 });
 
                 nextBets.push({
@@ -77,7 +101,9 @@
                     patternName: `Trigger ${latestSpin.num}`,
                     filterKey: 'ExibitL',
                     confirmed: false,
-                    accentColor: '#BF5AF2' // Violet
+                    accentColor: '#BF5AF2',
+                    faceMatches,
+                    residuals
                 });
             } else {
                 notifications.push({

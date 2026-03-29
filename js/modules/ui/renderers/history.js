@@ -2,10 +2,25 @@
     'use strict';
 
     window.formatPredictionDetail = function (entry) {
+        if (!entry) return '';
+
+        // --- ENHANCED EXIBITL FORMATTING ---
+        const matches = entry.faceMatches || [];
+        const residuals = entry.residuals || [];
+        
+        if (matches.length > 0) {
+            const faceStr = matches.map(fId => `F${fId}`).join(', ');
+            if (residuals.length > 0) {
+                return `${faceStr} AND ${residuals.join(', ')}`;
+            }
+            return faceStr;
+        }
+
+        // --- STANDARD FORMATTING FALLBACK ---
         const parts = [];
-        if (entry && entry.targetFace !== undefined && entry.targetFace !== null && entry.targetFace !== '?') {
+        if (entry.targetFace !== undefined && entry.targetFace !== null && entry.targetFace !== '?') {
             parts.push(`F${entry.targetFace}`);
-        } else if (entry && entry.targetNums && Array.isArray(entry.targetNums)) {
+        } else if (entry.targetNums && Array.isArray(entry.targetNums)) {
             parts.push(`[${entry.targetNums.length} NUMS]`);
         }
 
@@ -17,7 +32,7 @@
         else label = entry?.comboLabel || entry?.patternName;
 
         if (label) parts.push(label);
-        if (entry && Number.isFinite(entry.confidence) && entry.confidence > 0) {
+        if (Number.isFinite(entry.confidence) && entry.confidence > 0) {
             parts.push(`${entry.confidence}%`);
         }
         return parts.join(' • ');
