@@ -146,24 +146,31 @@ window.syncUIWithStrategyMode = function () {
         let label = 'INSIDE';
         let color = '#BF5AF2';
         let borderColor = 'rgba(191, 90, 242, 0.1)';
+        let iconClass = 'fas fa-crosshairs text-[11px]';
 
         if (strategyKey === 'combo') {
             label = 'COMBOS';
             color = '#30D158'; // Green
             borderColor = 'rgba(48, 209, 88, 0.1)';
+            iconClass = 'fas fa-link text-[11px]';
         } else if (strategyKey === 'series') {
             label = 'SERIES';
             color = '#0A84FF'; // Blue
             borderColor = 'rgba(10, 132, 255, 0.1)';
+            iconClass = 'fas fa-layer-group text-[11px]';
         } else if (strategyKey === 'exibitl') {
             label = 'EXIBITL';
             color = '#BF5AF2'; // Violet
             borderColor = 'rgba(191, 90, 242, 0.1)';
+            iconClass = 'fas fa-bolt text-[11px]';
         }
 
         switcherLabel.innerText = label;
         switcherBtn.style.color = color;
         switcherBtn.style.borderColor = borderColor;
+
+        const switcherIcon = document.getElementById('strategySwitcherIcon');
+        if (switcherIcon) switcherIcon.className = iconClass;
     }
 
     // Re-render the pattern filter list so it instantly rebuilds with correct toggles
@@ -218,6 +225,31 @@ window.cycleGameplayStrategy = async function () {
     const currentMode = window.state.currentGameplayStrategy || 'series';
     const nextIdx = (modes.indexOf(currentMode) + 1) % modes.length;
     await window.setGameplayStrategy(modes[nextIdx]);
+};
+
+window.toggleStrategyDropdown = function(e) {
+    if (e) e.stopPropagation();
+    const menu = document.getElementById('strategyDropdownMenu');
+    if (!menu) return;
+    const isHidden = menu.classList.contains('hidden') || menu.classList.contains('opacity-0');
+    
+    document.querySelectorAll('.dropdown-layer').forEach(d => {
+        if (d !== menu) {
+            d.classList.add('opacity-0', 'scale-95');
+            setTimeout(() => d.classList.add('hidden'), 200);
+        }
+    });
+
+    if (isHidden) {
+        menu.classList.remove('hidden');
+        void menu.offsetWidth;
+        menu.classList.remove('scale-95', 'opacity-0');
+        menu.classList.add('scale-100', 'opacity-100');
+    } else {
+        menu.classList.remove('scale-100', 'opacity-100');
+        menu.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => { if (menu.classList.contains('opacity-0')) menu.classList.add('hidden'); }, 200);
+    }
 };
 
 window.addEventListener('DOMContentLoaded', async () => {

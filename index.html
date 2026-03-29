@@ -171,12 +171,31 @@
                 </div>
             </div>
 
-            <div id="strategySwitcherContainer" class="relative hidden sm:flex items-center">
-                <button id="strategySwitcherBtn" onclick="if(window.cycleGameplayStrategy) window.cycleGameplayStrategy()"
+            <div id="strategySwitcherContainer" class="relative hidden sm:flex items-center z-[55]">
+                <button id="strategySwitcherBtn" onclick="if(window.toggleStrategyDropdown) window.toggleStrategyDropdown(event)"
                     class="flex items-center justify-center h-8 w-auto px-3 bg-white/5 hover:bg-white/10 text-[#5E5CE6] rounded-lg border border-white/10 transition-all duration-300 active:scale-[0.98] gap-2">
-                    <i class="fas fa-shuffle text-[11px]"></i>
+                    <i class="fas fa-crosshairs text-[11px]" id="strategySwitcherIcon"></i>
                     <span id="strategySwitcherLabel" class="text-[10px] font-black uppercase tracking-wider">INSIDE</span>
+                    <i class="fas fa-chevron-down text-[8px] opacity-60 ml-0.5"></i>
                 </button>
+                <div id="strategyDropdownMenu" class="dropdown-layer hidden absolute top-full left-0 mt-2 w-36 bg-[#1C1C1E]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_15px_30px_rgba(0,0,0,0.8)] z-[80] overflow-hidden flex flex-col p-1.5 transform origin-top scale-95 opacity-0 transition-all duration-200">
+                    <button onclick="if(window.setGameplayStrategy) window.setGameplayStrategy('inside');" class="flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg hover:bg-white/[0.08] transition-colors group">
+                        <i class="fas fa-crosshairs w-4 text-center text-[#BF5AF2] text-[10px]"></i>
+                        <span class="text-[10px] font-black tracking-wider text-white uppercase">Inside</span>
+                    </button>
+                    <button onclick="if(window.setGameplayStrategy) window.setGameplayStrategy('combo');" class="flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg hover:bg-white/[0.08] transition-colors group">
+                        <i class="fas fa-link w-4 text-center text-[#30D158] text-[10px]"></i>
+                        <span class="text-[10px] font-black tracking-wider text-white uppercase">Combos</span>
+                    </button>
+                    <button onclick="if(window.setGameplayStrategy) window.setGameplayStrategy('series');" class="flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg hover:bg-white/[0.08] transition-colors group">
+                        <i class="fas fa-layer-group w-4 text-center text-[#0A84FF] text-[10px]"></i>
+                        <span class="text-[10px] font-black tracking-wider text-white uppercase">Series</span>
+                    </button>
+                    <button onclick="if(window.setGameplayStrategy) window.setGameplayStrategy('exibitl');" class="flex items-center gap-2 px-3 py-2 w-full text-left rounded-lg hover:bg-white/[0.08] transition-colors group">
+                        <i class="fas fa-bolt w-4 text-center text-[#BF5AF2] text-[10px]"></i>
+                        <span class="text-[10px] font-black tracking-wider text-white uppercase">Exibitl</span>
+                    </button>
+                </div>
             </div>
 
             <button id="headerBetsBtn"
