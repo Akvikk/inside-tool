@@ -12,12 +12,27 @@
             return strategy.formatPrediction(entry);
         }
 
-        // 2. STANDARD FORMATTING FALLBACK
+        // 2. UNIVERSAL FACE GROUP DETECTION (On-the-fly analyzer)
+        // If the entry has targetNums but no pre-computed faceMatches, compute them now
+        const targetNums = entry.targetNums || [];
+        if (targetNums.length > 0 && (!entry.faceMatches || entry.faceMatches.length === 0)) {
+            const analyzerResult = window.FaceAnalyzer ? window.FaceAnalyzer.checkFaceCoverage(targetNums, window.FACES) : { matches: [], residuals: targetNums };
+            if (analyzerResult.matches.length > 0) {
+                const faceStr = analyzerResult.matches.map(fId => `F${fId}`).join(', ');
+                let displayStr = faceStr;
+                if (analyzerResult.residuals.length > 0) {
+                    displayStr += ` AND ${analyzerResult.residuals.slice(0, 5).join(', ')}${analyzerResult.residuals.length > 5 ? '...' : ''}`;
+                }
+                return displayStr;
+            }
+        }
+
+        // 3. STANDARD FORMATTING FALLBACK
         const parts = [];
         if (entry.targetFace !== undefined && entry.targetFace !== null && entry.targetFace !== '?') {
             parts.push(`F${entry.targetFace}`);
-        } else if (entry.targetNums && Array.isArray(entry.targetNums)) {
-            parts.push(`[${entry.targetNums.length} NUMS]`);
+        } else if (targetNums.length > 0) {
+            parts.push(`[${targetNums.length} NUMS]`);
         }
 
         let label = '';
@@ -361,6 +376,9 @@
                             patternName: b.patternName,
                             filterKey: b.filterKey || b.patternName,
                             targetFace: b.targetFace,
+                            targetNums: b.targetNums, // Preserve target numbers for the universal analyzer
+                            faceMatches: b.faceMatches,
+                            residuals: b.residuals,
                             comboLabel: b.comboLabel || null,
                             confidence: Number.isFinite(b.confidence) ? b.confidence : null,
                             reason: b.reason || b.subtitle || '',
