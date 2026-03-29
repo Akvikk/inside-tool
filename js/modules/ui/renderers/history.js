@@ -5,6 +5,8 @@
         const parts = [];
         if (entry && entry.targetFace !== undefined && entry.targetFace !== null && entry.targetFace !== '?') {
             parts.push(`F${entry.targetFace}`);
+        } else if (entry && entry.targetNums && Array.isArray(entry.targetNums)) {
+            parts.push(`[${entry.targetNums.length} NUMS]`);
         }
 
         const stratKey = window.state?.currentGameplayStrategy || 'series';

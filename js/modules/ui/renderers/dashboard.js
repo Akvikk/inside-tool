@@ -62,19 +62,31 @@
             const accuracyHTML = total > 0 ? `<span class="text-[10px] font-bold opacity-50 ml-1">(${accuracy}%)</span>` : '';
             const bgClass = bet.confirmed ? 'opacity-100' : 'opacity-90';
 
+            let titleHTML = '';
+            let detailsHTML = '';
+            
+            if (bet.targetNums && Array.isArray(bet.targetNums)) {
+                titleHTML = `<span class="text-[14px] leading-tight font-black tracking-tighter uppercase ${titleColor}">${bet.targetNums.length} NUMS${accuracyHTML}</span>`;
+                // Add a slightly larger width and wrap properties so we can see all numbers clearly
+                detailsHTML = `<span class="text-[9px] leading-tight font-extrabold tracking-widest uppercase ${subColor} mt-0.5 max-w-[200px] break-words !whitespace-normal block">${bet.targetNums.join(', ')}</span>`;
+            } else {
+                titleHTML = `<span class="text-[14px] leading-tight font-black tracking-tighter uppercase ${titleColor}">F${bet.targetFace}${accuracyHTML}</span>`;
+                detailsHTML = `<span class="text-[9px] leading-tight font-extrabold tracking-widest uppercase ${subColor} mt-0.5 truncate max-w-[100px] block">${subtitle}</span>`;
+            }
+
              cards.push(`
                 <div class="min-w-[160px] min-h-[39px] px-3 py-1.5 rounded-[12px] flex items-center justify-between cursor-pointer select-none prediction-card-premium ${bgClass}"
                      ondblclick="if(window.toggleBetConfirmation) window.toggleBetConfirmation(${index})"
                      title="Double-click to ${bet.confirmed ? 'unselect' : 'select'}"
                      style="${bgStyle} ${borderStyle} --card-accent-var: ${accent};">
-                    <div class="flex items-center gap-2 min-w-0">
-                        <div class="w-1 h-6 rounded-full" style="background: ${accent}; box-shadow: 0 0 10px ${accent};"></div>
-                        <div class="flex flex-col min-w-0">
+                    <div class="flex items-center gap-2 min-w-0 flex-1">
+                        <div class="w-1 min-h-[24px] rounded-full self-stretch" style="background: ${accent}; box-shadow: 0 0 10px ${accent};"></div>
+                        <div class="flex flex-col min-w-0 flex-1 py-0.5">
                             <div class="flex items-center">
-                                <span class="text-[14px] leading-tight font-black tracking-tighter uppercase ${titleColor}">F${bet.targetFace}${accuracyHTML}</span>
+                                ${titleHTML}
                                 ${perimeterBadge}
                             </div>
-                            <span class="text-[9px] leading-tight font-extrabold tracking-widest uppercase ${subColor} mt-0.5 truncate max-w-[100px]">${subtitle}</span>
+                            ${detailsHTML}
                         </div>
                     </div>
                     ${iconHTML}
